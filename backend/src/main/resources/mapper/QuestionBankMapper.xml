@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.knowledge.questioncard.mapper.QuestionBankMapper">
+
+    <resultMap id="BaseResultMap" type="com.knowledge.questioncard.entity.QuestionBank">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="description" property="description" />
+        <result column="topic" property="topic" />
+        <result column="type" property="type" />
+        <result column="card_count" property="cardCount" />
+        <result column="view_count" property="viewCount" />
+        <result column="favorite_count" property="favoriteCount" />
+        <result column="created_at" property="createdAt" />
+        <result column="tags" property="tags" />
+        <result column="difficulty" property="difficulty" />
+        <result column="user_id" property="userId" />
+        <result column="tenant_id" property="tenantId" />
+        <result column="updated_at" property="updatedAt" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.knowledge.questioncard.entity.QuestionBank" 
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO question_banks (name, description, topic, type, card_count, view_count, favorite_count, created_at, 
+            tags, difficulty, language, user_id, tenant_id, updated_at)
+        VALUES (#{name}, #{description}, #{topic}, #{type}, COALESCE(#{cardCount}, 0), COALESCE(#{viewCount}, 0), COALESCE(#{favoriteCount}, 0), #{createdAt}, 
+            #{tags}, #{difficulty}, #{language}, #{userId}, #{tenantId}, #{updatedAt})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM question_banks WHERE id = #{id}
+    </delete>
+
+    <update id="updateById" parameterType="com.knowledge.questioncard.entity.QuestionBank">
+        UPDATE question_banks
+        SET name = #{name},
+            description = #{description},
+            topic = #{topic},
+            type = #{type},
+            card_count = #{cardCount},
+            difficulty = #{difficulty},
+            language = #{language},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM question_banks WHERE id = #{id}
+    </select>
+
+    <select id="selectByTopicAndType" resultMap="BaseResultMap">
+        SELECT * FROM question_banks 
+        WHERE type = #{type}
+        <if test="topic != null and topic != ''">
+            AND topic LIKE CONCAT('%', #{topic}, '%')
+        </if>
+    </select>
+
+    <select id="selectByTopic" resultMap="BaseResultMap">
+        SELECT * FROM question_banks WHERE topic = #{topic}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM question_banks
+    </select>
+    
+    <select id="searchBanks" resultMap="BaseResultMap">
+        SELECT * FROM question_banks
+        <where>
+            <if test="topic != null and topic != ''">
+                AND topic LIKE CONCAT('%', #{topic}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+            <if test="difficulty != null and difficulty != ''">
+                AND difficulty = #{difficulty}
+            </if>
+            <if test="tags != null and tags != ''">
+                AND tags LIKE CONCAT('%', #{tags}, '%')
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="minCards != null">
+                AND card_count &gt;= #{minCards}
+            </if>
+            <if test="maxCards != null">
+                AND card_count &lt;= #{maxCards}
+            </if>
+        </where>
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY ${sortBy}
+            <if test="sortOrder != null and sortOrder != ''">
+                ${sortOrder}
+            </if>
+        </if>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+    
+    <select id="countBanks" resultType="long">
+        SELECT COUNT(*) FROM question_banks
+        <where>
+            <if test="topic != null and topic != ''">
+                AND topic LIKE CONCAT('%', #{topic}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+            <if test="difficulty != null and difficulty != ''">
+                AND difficulty = #{difficulty}
+            </if>
+            <if test="tags != null and tags != ''">
+                AND tags LIKE CONCAT('%', #{tags}, '%')
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="minCards != null">
+                AND card_count &gt;= #{minCards}
+            </if>
+            <if test="maxCards != null">
+                AND card_count &lt;= #{maxCards}
+            </if>
+        </where>
+    </select>
+    
+    <update id="incrementViewCount">
+        UPDATE question_banks 
+        SET view_count = view_count + 1,
+            updated_at = NOW()
+        WHERE id = #{bankId}
+    </update>
+    
+    <update id="updateStatistics">
+        UPDATE question_banks 
+        SET card_count = #{cardCount},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+    
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM question_banks WHERE id = #{id}
+    </select>
+    
+    <update id="update" parameterType="com.knowledge.questioncard.entity.QuestionBank">
+        UPDATE question_banks
+        SET name = #{name},
+            description = #{description},
+            difficulty = #{difficulty},
+            language = #{language},
+            tags = #{tags},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="delete">
+        DELETE FROM question_banks WHERE id = #{id}
+    </delete>
+
+</mapper>

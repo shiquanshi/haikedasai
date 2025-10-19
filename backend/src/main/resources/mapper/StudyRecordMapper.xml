@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.knowledge.questioncard.mapper.StudyRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.knowledge.questioncard.entity.StudyRecord">
+        <id column="id" property="id" />
+        <result column="user_id" property="userId" />
+        <result column="bank_id" property="bankId" />
+        <result column="tenant_id" property="tenantId" />
+        <result column="total_cards" property="totalCards" />
+        <result column="completed_cards" property="completedCards" />
+        <result column="correct_count" property="correctCount" />
+        <result column="wrong_count" property="wrongCount" />
+        <result column="mastery_level" property="masteryLevel" />
+        <result column="study_duration" property="studyDuration" />
+        <result column="last_study_at" property="lastStudyAt" />
+        <result column="created_at" property="createdAt" />
+        <result column="updated_at" property="updatedAt" />
+    </resultMap>
+
+    <insert id="insert" parameterType="com.knowledge.questioncard.entity.StudyRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO study_records (
+            user_id, bank_id, tenant_id, total_cards, completed_cards, 
+            correct_count, wrong_count, mastery_level, study_duration, 
+            last_study_at, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{bankId}, #{tenantId}, #{totalCards}, #{completedCards},
+            #{correctCount}, #{wrongCount}, #{masteryLevel}, #{studyDuration},
+            #{lastStudyAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.knowledge.questioncard.entity.StudyRecord">
+        UPDATE study_records
+        SET completed_cards = #{completedCards},
+            correct_count = #{correctCount},
+            wrong_count = #{wrongCount},
+            mastery_level = #{masteryLevel},
+            study_duration = #{studyDuration},
+            last_study_at = #{lastStudyAt},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByUserAndBank" resultMap="BaseResultMap">
+        SELECT * FROM study_records
+        WHERE user_id = #{userId} AND bank_id = #{bankId}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT * FROM study_records
+        WHERE user_id = #{userId}
+        ORDER BY last_study_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM study_records WHERE id = #{id}
+    </delete>
+
+</mapper>

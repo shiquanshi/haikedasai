@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: question-card
+  
+  # 数据源配置 (MySQL)
+  datasource:
+    url: jdbc:mysql://113.45.11.167:3306/question_card_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: quanshi666
+  
+  # SQL初始化配置 (已禁用,使用DataInitializer代替)
+  # sql:
+  #   init:
+  #     mode: always
+  #     schema-locations: classpath:schema.sql
+  #     encoding: utf-8
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  # MVC配置 - 异步请求超时设置
+  mvc:
+    async:
+      request-timeout: 600000  # 10分钟(毫秒) - 用于SSE长连接
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.knowledge.questioncard.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# 火山引擎配置
+volcengine:
+  api:
+    key: bd747896-e89b-46f4-a5ab-0a232d086845
+    endpoint: https://ark.cn-beijing.volces.com/api/v3
+    model: ep-20251015101857-wc8xz
+    image-model: ep-20251015102102-x2n2t
+  tts:
+    api-key: d25b6d5c-f298-4d7b-8239-3525184232d8
+    endpoint: https://openspeech.bytedance.com/api/v3/tts/unidirectional
+
+# MinIO配置
+minio:
+  endpoint: http://113.45.203.178:9150
+  access-key: quanshi
+  secret-key: quanshi666
+  bucket-name: question-card-images
+
+# JWT配置
+jwt:
+  secret: your-secret-key-change-this-in-production-at-least-256-bits
+  expiration: 604800000  # 7天(毫秒)
+  refresh-expiration: 259200000  # 3天(毫秒)
+  token-prefix: Bearer 
+  header: Authorization
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.knowledge: DEBUG

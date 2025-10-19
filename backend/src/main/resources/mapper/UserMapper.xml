@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.knowledge.questioncard.mapper.UserMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.knowledge.questioncard.entity.User">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="email" property="email"/>
+        <result column="nickname" property="nickname"/>
+        <result column="phone" property="phone"/>
+        <result column="avatar" property="avatar"/>
+        <result column="role" property="role"/>
+        <result column="status" property="status"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="last_login_at" property="lastLoginAt"/>
+    </resultMap>
+
+    <!-- 插入用户 -->
+    <insert id="insert" parameterType="com.knowledge.questioncard.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+            username, password, email, nickname, phone, avatar, 
+            role, status, tenant_id, created_at, updated_at
+        ) VALUES (
+            #{username}, #{password}, #{email}, #{nickname}, #{phone}, #{avatar},
+            #{role}, COALESCE(#{status}, 1), #{tenantId}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 根据ID删除用户 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM users WHERE id = #{id}
+    </delete>
+
+    <!-- 更新用户信息 -->
+    <update id="updateById" parameterType="com.knowledge.questioncard.entity.User">
+        UPDATE users
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="status != null">status = #{status},</if>
+            updated_at = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID查询用户 -->
+    <select id="selectById" parameterType="long" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+
+    <!-- 根据用户名查询用户 -->
+    <select id="selectByUsername" parameterType="string" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE username = #{username}
+    </select>
+
+    <!-- 根据邮箱查询用户 -->
+    <select id="selectByEmail" parameterType="string" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+
+    <!-- 根据手机号查询用户 -->
+    <select id="selectByPhone" parameterType="string" resultMap="BaseResultMap">
+        SELECT * FROM users WHERE phone = #{phone}
+    </select>
+
+    <!-- 查询租户下的所有用户 -->
+    <select id="selectByTenantId" parameterType="long" resultMap="BaseResultMap">
+        SELECT * FROM users 
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 分页查询用户 -->
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM users
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 统计用户数量 -->
+    <select id="countUsers" resultType="int">
+        SELECT COUNT(*) FROM users
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 更新最后登录时间 -->
+    <update id="updateLastLoginAt">
+        UPDATE users
+        SET last_login_at = #{lastLoginAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新用户状态 -->
+    <update id="updateStatus">
+        UPDATE users
+        SET status = #{status}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>
