@@ -1,7 +1,7 @@
 package com.knowledge.questioncard.entity;
 
 import lombok.Data;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class QuestionCard {
@@ -11,6 +11,6 @@ public class QuestionCard {
     private String questionImage;
     private String answerImage;
     private Long bankId;
-    private Date createdAt;
-    private Date updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

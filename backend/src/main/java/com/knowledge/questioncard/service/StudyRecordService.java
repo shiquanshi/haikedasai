@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,8 +31,8 @@ public class StudyRecordService {
         
         if (existing != null) {
             // 更新现有记录
-            existing.setLastStudyAt(new Date());
-            existing.setUpdatedAt(new Date());
+            existing.setLastStudyAt(LocalDateTime.now());
+            existing.setUpdatedAt(LocalDateTime.now());
             studyRecordMapper.update(existing);
             return convertToDTO(existing);
         } else {
@@ -46,9 +46,9 @@ public class StudyRecordService {
             record.setWrongCount(0);
             record.setMasteryLevel(BigDecimal.ZERO);
             record.setStudyDuration(0);
-            record.setLastStudyAt(new Date());
-            record.setCreatedAt(new Date());
-            record.setUpdatedAt(new Date());
+            record.setLastStudyAt(LocalDateTime.now());
+            record.setCreatedAt(LocalDateTime.now());
+            record.setUpdatedAt(LocalDateTime.now());
             
             studyRecordMapper.insert(record);
             log.info("创建学习记录: userId={}, bankId={}", userId, bankId);
@@ -79,8 +79,8 @@ public class StudyRecordService {
         double mastery = accuracy * progress * 100;
         record.setMasteryLevel(BigDecimal.valueOf(mastery));
         
-        record.setLastStudyAt(new Date());
-        record.setUpdatedAt(new Date());
+        record.setLastStudyAt(LocalDateTime.now());
+        record.setUpdatedAt(LocalDateTime.now());
         
         studyRecordMapper.update(record);
         log.info("更新学习进度: userId={}, bankId={}, 完成度={}%, 掌握度={}%", 

@@ -1,7 +1,6 @@
 package com.knowledge.questioncard.dto;
 
 import lombok.Data;
-import java.util.Date;
 
 @Data
 public class QuestionCardDTO {
@@ -11,6 +10,6 @@ public class QuestionCardDTO {
     private String answer;
     private String questionImage;
     private String answerImage;
-    private Date createdAt;
-    private Date updatedAt;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
 }

@@ -2,7 +2,7 @@ package com.knowledge.questioncard.dto;
 
 import lombok.Data;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class StudyRecordDTO {
@@ -17,8 +17,8 @@ public class StudyRecordDTO {
     private Integer wrongCount;
     private BigDecimal masteryLevel;
     private Integer studyDuration;
-    private Date lastStudyAt;
-    private Date createdAt;
+    private LocalDateTime lastStudyAt;
+    private LocalDateTime createdAt;
     
     // 计算进度百分比
     public Double getProgressPercentage() {

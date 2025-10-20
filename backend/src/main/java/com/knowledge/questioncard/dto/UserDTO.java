@@ -1,7 +1,7 @@
 package com.knowledge.questioncard.dto;
 
 import lombok.Data;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class UserDTO {
@@ -13,6 +13,6 @@ public class UserDTO {
     private String avatar;
     private String role;
     private Integer status;
-    private Date createdAt;
-    private Date lastLoginAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastLoginAt;
 }

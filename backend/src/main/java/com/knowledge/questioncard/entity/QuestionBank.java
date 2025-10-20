@@ -1,7 +1,7 @@
 package com.knowledge.questioncard.entity;
 
 import lombok.Data;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class QuestionBank {
@@ -10,7 +10,7 @@ public class QuestionBank {
     private String description;
     private String topic;
     private String type;
-    private Date createdAt;
+    private LocalDateTime createdAt;
     private Integer cardCount;
     private Integer viewCount;
     private Integer favoriteCount;
@@ -19,5 +19,5 @@ public class QuestionBank {
     private String language;
     private String generatedContent;
     private String userId;
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
 }

@@ -2,7 +2,7 @@ package com.knowledge.questioncard.entity;
 
 import lombok.Data;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class StudyRecord {
@@ -15,7 +15,7 @@ public class StudyRecord {
     private Integer wrongCount;
     private BigDecimal masteryLevel;
     private Integer studyDuration;
-    private Date lastStudyAt;
-    private Date createdAt;
-    private Date updatedAt;
+    private LocalDateTime lastStudyAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

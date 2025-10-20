@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,8 +54,8 @@ public class UserService {
         user.setPhone(request.getPhone());
         user.setRole("user");
         user.setStatus(1);
-        user.setCreatedAt(new Date());
-        user.setUpdatedAt(new Date());
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
         
         // 5. 插入用户
         userMapper.insert(user);
@@ -96,7 +96,7 @@ public class UserService {
         }
         
         // 4. 更新最后登录时间
-        userMapper.updateLastLoginAt(user.getId(), new Date());
+        userMapper.updateLastLoginAt(user.getId(), LocalDateTime.now());
         
         // 5. 生成Token
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
@@ -137,7 +137,7 @@ public class UserService {
             user.setPhone(userDTO.getPhone());
         }
         
-        user.setUpdatedAt(new Date());
+        user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
         
         return convertToDTO(user);
@@ -176,7 +176,7 @@ public class UserService {
         
         // 更新密码
         user.setPassword(encryptPassword(newPassword));
-        user.setUpdatedAt(new Date());
+        user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
     }
     
