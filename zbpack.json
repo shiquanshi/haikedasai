@@ -1,0 +1,4 @@
+{
+  "build_command": "cd backend && mvn clean package -DskipTests",
+  "start_command": "java -jar backend/target/question-card-1.0.0.jar"
+}
