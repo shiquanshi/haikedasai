@@ -151,6 +151,7 @@
             difficulty = #{difficulty},
             language = #{language},
             tags = #{tags},
+            card_count = #{cardCount},
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>

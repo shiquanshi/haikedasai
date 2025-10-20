@@ -926,6 +926,9 @@ public class QuestionBankService {
             throw new RuntimeException("题库不存在");
         }
         
+        log.info("删除题库权限检查 - bankId: {}, bank.getType(): {}, bank.getUserId(): {}, userId: {}", 
+                bankId, bank.getType(), bank.getUserId(), userId);
+        
         // 检查权限：只有创建者可以删除自定义题库
         if ("custom".equals(bank.getType())) {
             if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {

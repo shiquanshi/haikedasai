@@ -21,7 +21,7 @@ public class MinioService {
     private final com.knowledge.questioncard.config.MinioConfig minioConfig;
 
     /**
-     * 确保bucket存在
+     * 确保bucket存在并设置公共读取权限
      */
     public void ensureBucketExists() {
         try {
@@ -35,9 +35,21 @@ public class MinioService {
                         .build());
                 log.info("创建MinIO bucket: {}", bucketName);
             }
+            
+            // 设置bucket为公共读取权限
+            String policy = String.format(
+                "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}",
+                bucketName);
+            
+            minioClient.setBucketPolicy(SetBucketPolicyArgs.builder()
+                    .bucket(bucketName)
+                    .config(policy)
+                    .build());
+            log.info("已设置bucket {} 为公共读取权限", bucketName);
+            
         } catch (Exception e) {
-            log.error("创建bucket失败", e);
-            throw new RuntimeException("创建bucket失败: " + e.getMessage());
+            log.error("配置bucket失败", e);
+            throw new RuntimeException("配置bucket失败: " + e.getMessage());
         }
     }
 
