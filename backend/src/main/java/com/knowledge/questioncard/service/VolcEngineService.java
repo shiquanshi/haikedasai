@@ -36,6 +36,9 @@ public class VolcEngineService {
     @Autowired
     private VolcEngineConfig volcEngineConfig;
     
+    @Autowired
+    private MinioService minioService;
+    
     // 缓存ArkService实例,避免每次都创建
     private volatile ArkService arkService;
     
@@ -491,13 +494,23 @@ public class VolcEngineService {
             
             // 解析响应获取图片URL
             JsonNode root = objectMapper.readTree(response);
-            String imageUrl = root.path("data")
+            String volcImageUrl = root.path("data")
                 .get(0)
                 .path("url")
                 .asText();
             
-            log.info("图片生成成功，URL: {}", imageUrl);
-            return imageUrl;
+            log.info("火山引擎图片生成成功，URL: {}", volcImageUrl);
+            
+            // 将火山引擎的图片下载并上传到MinIO
+            try {
+                String minioUrl = minioService.uploadFromUrl(volcImageUrl);
+                log.info("图片已转存到MinIO: {}", minioUrl);
+                return minioUrl;
+            } catch (Exception e) {
+                log.error("转存图片到MinIO失败，返回原始URL: {}", volcImageUrl, e);
+                // 如果转存失败，返回原始URL作为降级方案
+                return volcImageUrl;
+            }
             
         } catch (HttpClientErrorException e) {
             log.error("生成图片失败 - HTTP错误: {}, 响应体: {}", e.getStatusCode(), e.getResponseBodyAsString());

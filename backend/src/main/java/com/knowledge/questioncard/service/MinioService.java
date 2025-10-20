@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -134,6 +135,48 @@ public class MinioService {
     public String getFileUrl(String fileName) {
         // 返回通过Nginx代理的相对路径
         return "/minio/" + minioConfig.getBucketName() + "/" + fileName;
+    }
+
+    /**
+     * 从URL下载图片并上传到MinIO
+     */
+    public String uploadFromUrl(String imageUrl) {
+        try {
+            ensureBucketExists();
+            
+            // 从URL下载图片
+            URL url = new URL(imageUrl);
+            InputStream inputStream = url.openStream();
+            
+            // 从URL中提取文件扩展名，如果没有则默认为.png
+            String extension = ".png";
+            String path = url.getPath();
+            if (path.contains(".")) {
+                extension = path.substring(path.lastIndexOf("."));
+                // 限制扩展名长度，防止异常
+                if (extension.length() > 5) {
+                    extension = ".png";
+                }
+            }
+            
+            String fileName = UUID.randomUUID().toString() + extension;
+            
+            // 上传到MinIO，使用-1让MinIO自动检测大小
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(fileName)
+                    .stream(inputStream, -1, 10485760) // 最大10MB
+                    .contentType("image/" + extension.substring(1))
+                    .build());
+            
+            inputStream.close();
+            
+            log.info("从URL上传图片成功: {} -> {}", imageUrl, fileName);
+            return getFileUrl(fileName);
+        } catch (Exception e) {
+            log.error("从URL上传图片失败: {}", imageUrl, e);
+            throw new RuntimeException("从URL上传图片失败: " + e.getMessage());
+        }
     }
 
     /**
