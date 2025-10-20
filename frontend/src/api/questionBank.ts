@@ -19,7 +19,8 @@ export const questionBankApi = {
     onComplete?: () => void
   ) {
     const token = localStorage.getItem('token')?.trim()
-    const url = `http://localhost:8080/api/question-bank/generate-stream?` +
+    // 使用相对路径,自动适配当前域名和协议
+    const url = `/api/question-bank/generate-stream?` +
       `topic=${encodeURIComponent(params.topic)}&` +
       `cardCount=${params.cardCount}&` +
       `difficulty=${encodeURIComponent(params.difficulty)}&` +
@@ -95,7 +96,8 @@ export const questionBankApi = {
   // AI批量生成题库(非流式,适用于外语内容)
   generateAIBankBatch(params: { topic: string; cardCount: number; difficulty: string; language: string; withImages?: boolean }) {
     const token = localStorage.getItem('token')?.trim()
-    const url = `http://localhost:8080/api/question-bank/generate-batch?` +
+    // 使用相对路径,自动适配当前域名和协议
+    const url = `/api/question-bank/generate-batch?` +
       `topic=${encodeURIComponent(params.topic)}&` +
       `cardCount=${params.cardCount}&` +
       `difficulty=${encodeURIComponent(params.difficulty)}&` +
