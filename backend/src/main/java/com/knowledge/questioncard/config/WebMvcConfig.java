@@ -1,6 +1,9 @@
 package com.knowledge.questioncard.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -20,5 +23,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/user/login",     // 排除登录
                     "/user/validate-token" // 排除token验证
                 );
+    }
+    
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        // 注册JavaTimeModule以支持Java 8日期时间类型
+        objectMapper.registerModule(new JavaTimeModule());
+        return objectMapper;
     }
 }

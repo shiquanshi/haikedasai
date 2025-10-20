@@ -54,7 +54,7 @@ public class QuestionBankService {
             bank.setDifficulty(difficulty);
             bank.setLanguage(language);
             bank.setUserId(String.valueOf(userId));
-            bank.setCreatedAt(java.time.LocalDateTime.now());
+            bank.setCreatedAt(new java.util.Date());
             questionBankMapper.insert(bank);
             
             // 解析JSON并创建卡片
@@ -62,7 +62,7 @@ public class QuestionBankService {
             JsonNode cardsArray = objectMapper.readTree(cardsJson);
             
             List<QuestionCard> cards = new ArrayList<>();
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.util.Date now = new java.util.Date();
             
             if (cardsArray.isArray()) {
                 for (JsonNode cardNode : cardsArray) {
@@ -122,14 +122,14 @@ public class QuestionBankService {
         bank.setTopic(topic);
         bank.setType("ai");
         bank.setUserId(String.valueOf(userId));
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         // 使用火山引擎AI生成问答卡片
         List<QuestionCard> cards = generateCardsFromAI(topic, bank.getId(), cardCount, difficulty, language);
         
         // 批量插入优化 - 一次性设置所有卡片的创建时间
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.util.Date now = new java.util.Date();
         cards.forEach(card -> card.setCreatedAt(now));
         
         // 批量插入数据库
@@ -205,7 +205,7 @@ public class QuestionBankService {
         bank.setDifficulty(difficulty != null ? difficulty : "medium"); // 设置默认难度
         bank.setLanguage(language != null ? language : "中文"); // 设置默认语言
         bank.setUserId(String.valueOf(userId));
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
         
         return convertToBankDTO(bank);
@@ -229,13 +229,13 @@ public class QuestionBankService {
             bank.setDifficulty("medium"); // 设置默认难度
             bank.setLanguage("中文"); // 设置默认语言
             bank.setUserId(String.valueOf(userId));
-            bank.setCreatedAt(java.time.LocalDateTime.now());
+            bank.setCreatedAt(new java.util.Date());
             questionBankMapper.insert(bank);
 
             // 从文档内容生成问答卡片
             List<QuestionCard> cards = generateQuestionsFromContent(content, bank.getId());
             for (QuestionCard card : cards) {
-                card.setCreatedAt(java.time.LocalDateTime.now());
+                card.setCreatedAt(new java.util.Date());
                 questionCardMapper.insert(card);
             }
 
@@ -516,7 +516,7 @@ public class QuestionBankService {
         
         // 获取要复制的卡片
         List<QuestionCard> newCards = new ArrayList<>();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.util.Date now = new java.util.Date();
         
         for (Long cardId : cardIds) {
             QuestionCard originalCard = questionCardMapper.selectById(cardId);
@@ -571,7 +571,7 @@ public class QuestionBankService {
         
         // 创建新卡片
         List<QuestionCard> newCards = new ArrayList<>();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.util.Date now = new java.util.Date();
         
         for (Map<String, String> content : cardContents) {
             QuestionCard newCard = new QuestionCard();
@@ -657,14 +657,14 @@ public class QuestionBankService {
 
         // 创建新题库
         QuestionBank bank = new QuestionBank();
-        bank.setName(bankName != null && !bankName.trim().isEmpty() ? bankName : "导入题库 - " + java.time.LocalDateTime.now());
+        bank.setName(bankName != null && !bankName.trim().isEmpty() ? bankName : "导入题库 - " + new java.util.Date());
         bank.setDescription(description != null && !description.trim().isEmpty() ? description : "从Excel文件导入的题库");
         bank.setTopic("通用"); // 设置默认主题
         bank.setType("custom");
         bank.setDifficulty(difficulty != null && !difficulty.trim().isEmpty() ? difficulty : "medium"); // 设置难度
         bank.setLanguage(language != null && !language.trim().isEmpty() ? language : "中文"); // 设置语言
         bank.setUserId(String.valueOf(userId));
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
         log.info("创建题库成功: {}", bank.getName());
 
@@ -673,7 +673,7 @@ public class QuestionBankService {
         Sheet sheet = workbook.getSheetAt(0);
 
         List<QuestionCard> cards = new ArrayList<>();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.util.Date now = new java.util.Date();
 
         // 从第二行开始读取(跳过表头)
         int successCount = 0;
@@ -905,7 +905,7 @@ public class QuestionBankService {
         bank.setDifficulty(bankDTO.getDifficulty());
         bank.setLanguage(bankDTO.getLanguage());
         bank.setTags(bankDTO.getTags());
-        bank.setUpdatedAt(java.time.LocalDateTime.now());
+        bank.setUpdatedAt(new java.util.Date());
         
         questionBankMapper.update(bank);
         
@@ -986,7 +986,7 @@ public class QuestionBankService {
         
         // 更新题库卡片数
         bank.setCardCount(bank.getCardCount() - 1);
-        bank.setUpdatedAt(java.time.LocalDateTime.now());
+        bank.setUpdatedAt(new java.util.Date());
         questionBankMapper.update(bank);
         
         // 清除缓存
@@ -1043,15 +1043,15 @@ public class QuestionBankService {
         card.setAnswer(answer);
         card.setQuestionImage(questionImage);
         card.setAnswerImage(answerImage);
-        card.setCreatedAt(java.time.LocalDateTime.now());
-        card.setUpdatedAt(java.time.LocalDateTime.now());
+        card.setCreatedAt(new java.util.Date());
+        card.setUpdatedAt(new java.util.Date());
         
         // 保存卡片
         questionCardMapper.insert(card);
         
         // 更新题库卡片数
         bank.setCardCount(bank.getCardCount() + 1);
-        bank.setUpdatedAt(java.time.LocalDateTime.now());
+        bank.setUpdatedAt(new java.util.Date());
         questionBankMapper.update(bank);
         
         // 清除缓存

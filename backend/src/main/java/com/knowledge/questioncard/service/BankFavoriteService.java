@@ -31,7 +31,7 @@ public class BankFavoriteService {
         BankFavorite favorite = new BankFavorite();
         favorite.setUserId(userId);
         favorite.setBankId(bankId);
-        favorite.setCreatedAt(java.time.LocalDateTime.now());
+        favorite.setCreatedAt(new java.util.Date());
         bankFavoriteMapper.insert(favorite);
         
         // 更新题库收藏数

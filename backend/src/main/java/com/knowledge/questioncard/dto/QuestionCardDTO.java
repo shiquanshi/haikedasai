@@ -10,6 +10,6 @@ public class QuestionCardDTO {
     private String answer;
     private String questionImage;
     private String answerImage;
-    private java.time.LocalDateTime createdAt;
-    private java.time.LocalDateTime updatedAt;
+    private java.util.Date createdAt;
+    private java.util.Date updatedAt;
 }

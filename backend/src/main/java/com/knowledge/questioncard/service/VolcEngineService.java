@@ -24,7 +24,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 火山引擎AI服务
@@ -161,55 +164,90 @@ public class VolcEngineService {
                     .messages(messages)
                     .build();
             
-            // 发送流式请求
+            // 发送流式请求 - 使用真正的异步流式处理
             // 使用StringBuilder累积所有增量片段
             final StringBuilder accumulatedContent = new StringBuilder();
             // 记录上一个token,用于智能添加空格
             final StringBuilder lastToken = new StringBuilder();
             
+            // 使用CountDownLatch等待流式完成
+            final CountDownLatch latch = new CountDownLatch(1);
+            final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+            
             service.streamChatCompletion(request)
-                    .doOnError(error -> {
-                        log.error("流式调用火山引擎API失败: {}", error.getMessage());
-                        try {
-                            emitter.send(SseEmitter.event().name("error").data("生成失败: " + error.getMessage()));
-                            emitter.complete();
-                        } catch (IOException e) {
-                            log.error("发送错误事件失败", e);
-                        }
-                    })
-                    .blockingForEach(response -> {
-                        try {
-                            if (response.getChoices() != null && !response.getChoices().isEmpty()) {
-                                // 获取本次返回的增量内容
-                                String incrementalContent = response.getChoices().get(0).getMessage().getContent().toString();
-                                
-                                if (incrementalContent != null && !incrementalContent.isEmpty()) {
-                                    // 直接使用AI返回的内容(AI已按提示词要求添加空格)
+                    .subscribe(
+                        response -> {
+                            try {
+                                if (response.getChoices() != null && !response.getChoices().isEmpty()) {
+                                    // 获取本次返回的增量内容
+                                    String incrementalContent = response.getChoices().get(0).getMessage().getContent().toString();
                                     
-                                    // 更新lastToken为当前内容的最后一个字符
-                                    lastToken.setLength(0);
-                                    if (incrementalContent.length() > 0) {
-                                        lastToken.append(incrementalContent.charAt(incrementalContent.length() - 1));
-                                    }
-                                    
-                                    // 累积到StringBuilder中
-                                    accumulatedContent.append(incrementalContent);
-                                    
-                                    log.info("[SSE流式发送] 本次增量={}, 累积总长={}",
-                                            incrementalContent,
-                                            accumulatedContent.length());
+                                    if (incrementalContent != null && !incrementalContent.isEmpty()) {
+                                        // 直接使用AI返回的内容(AI已按提示词要求添加空格)
+                                        
+                                        // 更新lastToken为当前内容的最后一个字符
+                                        lastToken.setLength(0);
+                                        if (incrementalContent.length() > 0) {
+                                            lastToken.append(incrementalContent.charAt(incrementalContent.length() - 1));
+                                        }
+                                        
+                                        // 累积到StringBuilder中
+                                        accumulatedContent.append(incrementalContent);
+                                        
+                                        log.info("[SSE流式发送] 本次增量={}, 累积总长={}",
+                                                incrementalContent,
+                                                accumulatedContent.length());
 
-                                    // 直接发送AI返回的内容
-                                    emitter.send(SseEmitter.event()
-                                            .name("message")
-                                            .data(incrementalContent));
+                                        // 立即发送AI返回的内容 - 真正的实时流式
+                                        emitter.send(SseEmitter.event()
+                                                .name("message")
+                                                .data(incrementalContent));
+                                    }
                                 }
+                            } catch (Exception e) {
+                                log.error("处理流式响应失败", e);
+                                errorRef.set(e);
+                                latch.countDown();
                             }
-                        } catch (Exception e) {
-                            log.error("处理流式响应失败", e);
-                            throw new RuntimeException(e);
+                        },
+                        error -> {
+                            log.error("流式调用火山引擎API失败: {}", error.getMessage());
+                            errorRef.set(error);
+                            try {
+                                emitter.send(SseEmitter.event().name("error").data("生成失败: " + error.getMessage()));
+                                emitter.complete();
+                            } catch (IOException e) {
+                                log.error("发送错误事件失败", e);
+                            }
+                            latch.countDown();
+                        },
+                        () -> {
+                            log.info("流式响应完成");
+                            latch.countDown();
                         }
-                    });
+                    );
+            
+            // 等待流式完成(最多5分钟)
+            try {
+                if (!latch.await(5, TimeUnit.MINUTES)) {
+                    log.error("流式响应超时");
+                    emitter.send(SseEmitter.event().name("error").data("生成超时"));
+                    emitter.complete();
+                    return null;
+                }
+            } catch (InterruptedException e) {
+                log.error("等待流式响应被中断", e);
+                Thread.currentThread().interrupt();
+                emitter.send(SseEmitter.event().name("error").data("生成被中断"));
+                emitter.complete();
+                return null;
+            }
+            
+            // 检查是否有错误
+            if (errorRef.get() != null) {
+                log.error("流式处理出错", errorRef.get());
+                return null;
+            }
 
             // 如果需要生成图片描述
             if (withImages != null && withImages) {
