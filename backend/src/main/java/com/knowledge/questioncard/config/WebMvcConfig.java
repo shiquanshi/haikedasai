@@ -18,8 +18,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                     "/user/register",  // 排除注册
                     "/user/login",     // 排除登录
-                    "/user/validate-token", // 排除token验证
-                    "/question-bank/generate-stream" // 排除SSE流式生成端点
+                    "/user/validate-token" // 排除token验证
                 );
     }
 }
