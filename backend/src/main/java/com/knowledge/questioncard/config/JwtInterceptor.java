@@ -23,18 +23,32 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
         
-        String token = request.getHeader(jwtConfig.getHeaderName());
-        if (token != null && token.startsWith(jwtConfig.getTokenPrefix())) {
-            token = token.substring(jwtConfig.getTokenPrefix().length()).trim();
-            
-            if (jwtUtil.validateToken(token)) {
-                // 将用户信息存入request attributes
-                request.setAttribute("userId", jwtUtil.getUserIdFromToken(token));
-                request.setAttribute("username", jwtUtil.getUsernameFromToken(token));
-                request.setAttribute("tenantId", jwtUtil.getTenantIdFromToken(token));
-                request.setAttribute("role", jwtUtil.getRoleFromToken(token));
-                return true;
+        String token = null;
+        
+        // 1. 优先从Header获取token
+        String authHeader = request.getHeader(jwtConfig.getHeaderName());
+        if (authHeader != null && authHeader.startsWith(jwtConfig.getTokenPrefix())) {
+            token = authHeader.substring(jwtConfig.getTokenPrefix().length()).trim();
+        }
+        
+        // 2. 如果Header中没有,尝试从URL参数获取(用于SSE等无法设置Header的场景)
+        if (token == null || token.isEmpty()) {
+            token = request.getParameter("token");
+            if (token != null) {
+                token = token.trim();
             }
+        }
+        
+        // 3. 验证token
+        if (token != null && !token.isEmpty() && jwtUtil.validateToken(token)) {
+            // 将用户信息存入request attributes
+            request.setAttribute("userId", jwtUtil.getUserIdFromToken(token));
+            request.setAttribute("username", jwtUtil.getUsernameFromToken(token));
+            // tenantId从Long转换为String,以便Controller中正确获取
+            Long tenantId = jwtUtil.getTenantIdFromToken(token);
+            request.setAttribute("tenantId", tenantId != null ? tenantId.toString() : null);
+            request.setAttribute("role", jwtUtil.getRoleFromToken(token));
+            return true;
         }
         
         // 未认证或token无效

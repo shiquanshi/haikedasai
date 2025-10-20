@@ -609,13 +609,15 @@ public class QuestionBankService {
                 String questionDesc = volcEngineService.generateImageDescription(question);
                 String questionImageUrl = null;
                 if (questionDesc != null) {
-                    questionImageUrl = volcEngineService.generateImage(questionDesc, 1, "1024x768");
+                    // 使用1024x1024尺寸(1048576像素),满足火山引擎最小921600像素要求
+                    questionImageUrl = volcEngineService.generateImage(questionDesc, 1, "1024x1024");
                 }
                 
                 String answerDesc = volcEngineService.generateImageDescription(answer);
                 String answerImageUrl = null;
                 if (answerDesc != null) {
-                    answerImageUrl = volcEngineService.generateImage(answerDesc, 1, "1024x768");
+                    // 使用1024x1024尺寸(1048576像素),满足火山引擎最小921600像素要求
+                    answerImageUrl = volcEngineService.generateImage(answerDesc, 1, "1024x1024");
                 }
                 
                 // 构建带图片URL的卡片对象
