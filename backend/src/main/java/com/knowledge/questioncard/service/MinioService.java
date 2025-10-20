@@ -120,17 +120,8 @@ public class MinioService {
      * 获取文件访问URL
      */
     public String getFileUrl(String fileName) {
-        try {
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
-                    .method(Method.GET)
-                    .bucket(minioConfig.getBucketName())
-                    .object(fileName)
-                    .expiry(7, TimeUnit.DAYS)
-                    .build());
-        } catch (Exception e) {
-            log.error("获取文件URL失败", e);
-            throw new RuntimeException("获取文件URL失败: " + e.getMessage());
-        }
+        // 返回通过Nginx代理的相对路径
+        return "/minio/" + minioConfig.getBucketName() + "/" + fileName;
     }
 
     /**
