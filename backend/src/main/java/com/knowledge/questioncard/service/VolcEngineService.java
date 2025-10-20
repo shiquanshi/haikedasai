@@ -28,6 +28,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * 火山引擎AI服务
@@ -46,14 +48,18 @@ public class VolcEngineService {
     private volatile ArkService arkService;
     
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+    private final Executor sseTaskExecutor;
     
     // 构造函数中初始化RestTemplate并配置超时
-    public VolcEngineService() {
+    @Autowired
+    public VolcEngineService(Executor sseTaskExecutor, ObjectMapper objectMapper) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(30000); // 连接超时30秒
         factory.setReadTimeout(60000);    // 读取超时60秒
         this.restTemplate = new RestTemplate(factory);
+        this.sseTaskExecutor = sseTaskExecutor;
+        this.objectMapper = objectMapper;
     }
     
     /**
@@ -270,71 +276,117 @@ public class VolcEngineService {
                         int totalCards = cardsArray.size();
                         int currentCard = 0;
                         
+                        // 🚀 优化：使用CompletableFuture并行生成图片
+                        List<CompletableFuture<Map<String, Object>>> futures = new ArrayList<>();
+                        
                         for (JsonNode cardNode : cardsArray) {
-                            currentCard++;
-                            log.info("📝 处理第 {}/{} 张卡片", currentCard, totalCards);
-                            Map<String, Object> card = new HashMap<>();
+                            final int cardIndex = ++currentCard;
                             
-                            // 安全获取字段值
-                            JsonNode questionNode = cardNode.get("question");
-                            JsonNode answerNode = cardNode.get("answer");
-                            
-                            if (questionNode == null || answerNode == null) {
-                                log.warn("卡片字段缺失，跳过: {}", cardNode.toString());
-                                continue;
-                            }
-                            
-                            String question = questionNode.asText();
-                            String answer = answerNode.asText();
-                            card.put("question", question);
-                            card.put("answer", answer);
-                            
-                            // 保留原始ID（如果存在）
-                            JsonNode idNode = cardNode.get("id");
-                            if (idNode != null) {
-                                card.put("id", idNode.asLong());
-                            }
-                            
-                            // 发送进度通知
-                            emitter.send(SseEmitter.event().name("status")
-                                .data(String.format("正在为第 %d/%d 张卡片生成图片描述...", currentCard, totalCards)));
-                            
-                            // 先生成问题的图片描述，再生成图片URL
-                            log.info("🎨 生成问题图片描述: {}", question.substring(0, Math.min(50, question.length())));
-                            String questionDesc = generateImageDescription(question);
-                            String questionImage = null;
-                            if (questionDesc != null) {
-                                log.info("🖼️ 根据描述生成问题图片: {}", questionDesc);
-                                questionImage = generateImage(questionDesc, 1, "2048x2048");
-                                if (questionImage == null) {
-                                    log.error("❌ 问题图片生成失败");
+                            // 为每张卡片创建异步任务
+                            CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
+                                try {
+                                    log.info("📝 处理第 {}/{} 张卡片", cardIndex, totalCards);
+                                    Map<String, Object> card = new HashMap<>();
+                                    
+                                    // 安全获取字段值
+                                    JsonNode questionNode = cardNode.get("question");
+                                    JsonNode answerNode = cardNode.get("answer");
+                                    
+                                    if (questionNode == null || answerNode == null) {
+                                        log.warn("卡片字段缺失，跳过: {}", cardNode.toString());
+                                        return null;
+                                    }
+                                    
+                                    String question = questionNode.asText();
+                                    String answer = answerNode.asText();
+                                    card.put("question", question);
+                                    card.put("answer", answer);
+                                    
+                                    // 保留原始ID（如果存在）
+                                    JsonNode idNode = cardNode.get("id");
+                                    if (idNode != null) {
+                                        card.put("id", idNode.asLong());
+                                    }
+                                    
+                                    // 并行生成问题和答案的图片
+                                    CompletableFuture<String> questionImageFuture = CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                            log.info("🎨 生成问题图片描述: {}", question.substring(0, Math.min(50, question.length())));
+                                            String questionDesc = generateImageDescription(question);
+                                            if (questionDesc != null) {
+                                                log.info("🖼️ 根据描述生成问题图片: {}", questionDesc);
+                                                String img = generateImage(questionDesc, 1, "2048x2048");
+                                                if (img == null) {
+                                                    log.error("❌ 问题图片生成失败");
+                                                }
+                                                return img;
+                                            } else {
+                                                log.warn("⚠️ 问题图片描述生成失败");
+                                                return null;
+                                            }
+                                        } catch (Exception e) {
+                                            log.error("问题图片生成异常", e);
+                                            return null;
+                                        }
+                                    }, sseTaskExecutor);
+                                    
+                                    CompletableFuture<String> answerImageFuture = CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                            log.info("🎨 生成答案图片描述: {}", answer.substring(0, Math.min(50, answer.length())));
+                                            String answerDesc = generateImageDescription(answer);
+                                            if (answerDesc != null) {
+                                                log.info("🖼️ 根据描述生成答案图片: {}", answerDesc);
+                                                String img = generateImage(answerDesc, 1, "2048x2048");
+                                                if (img == null) {
+                                                    log.error("❌ 答案图片生成失败");
+                                                }
+                                                return img;
+                                            } else {
+                                                log.warn("⚠️ 答案图片描述生成失败");
+                                                return null;
+                                            }
+                                        } catch (Exception e) {
+                                            log.error("答案图片生成异常", e);
+                                            return null;
+                                        }
+                                    }, sseTaskExecutor);
+                                    
+                                    // 等待两个图片都生成完成
+                                    String questionImage = questionImageFuture.join();
+                                    String answerImage = answerImageFuture.join();
+                                    
+                                    card.put("questionImage", questionImage);
+                                    card.put("answerImage", answerImage);
+                                    
+                                    log.info("✅ 第 {}/{} 张卡片图片处理完成", cardIndex, totalCards);
+                                    
+                                    // 发送进度通知
+                                    try {
+                                        emitter.send(SseEmitter.event().name("status")
+                                            .data(String.format("第 %d/%d 张卡片图片生成完成", cardIndex, totalCards)));
+                                    } catch (IOException e) {
+                                        log.error("发送进度通知失败", e);
+                                    }
+                                    
+                                    return card;
+                                } catch (Exception e) {
+                                    log.error("处理卡片异常", e);
+                                    return null;
                                 }
-                            } else {
-                                log.warn("⚠️ 问题图片描述生成失败");
+                            }, sseTaskExecutor);
+                            
+                            futures.add(future);
+                        }
+                        
+                        // 等待所有卡片处理完成
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                        
+                        // 收集结果
+                        for (CompletableFuture<Map<String, Object>> future : futures) {
+                            Map<String, Object> card = future.join();
+                            if (card != null) {
+                                updatedCards.add(card);
                             }
-                            card.put("questionImage", questionImage);
-                            
-                            // 先生成答案的图片描述，再生成图片URL
-                            log.info("🎨 生成答案图片描述: {}", answer.substring(0, Math.min(50, answer.length())));
-                            String answerDesc = generateImageDescription(answer);
-                            String answerImage = null;
-                            if (answerDesc != null) {
-                                log.info("🖼️ 根据描述生成答案图片: {}", answerDesc);
-                                answerImage = generateImage(answerDesc, 1, "2048x2048");
-                                if (answerImage == null) {
-                                    log.error("❌ 答案图片生成失败");
-                                }
-                            } else {
-                                log.warn("⚠️ 答案图片描述生成失败");
-                            }
-                            card.put("answerImage", answerImage);
-                            
-                            updatedCards.add(card);
-                            log.info("✅ 第 {}/{} 张卡片图片处理完成", currentCard, totalCards);
-                            
-                            // 发送进度通知
-                            emitter.send(SseEmitter.event().name("status")
-                                .data(String.format("第 %d/%d 张卡片图片生成完成", currentCard, totalCards)));
                         }
                         
                         // 发送更新后的完整JSON（包含图片URL）
