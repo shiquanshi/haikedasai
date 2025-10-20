@@ -32,7 +32,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY supervisord.conf /etc/supervisord.conf
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 8080
 
 # 使用 supervisor 同时运行 nginx 和 Spring Boot
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
