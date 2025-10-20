@@ -889,14 +889,14 @@ public class QuestionBankService {
         
         // 检查权限：只有创建者可以编辑自定义题库
         if ("custom".equals(bank.getType())) {
-            if (bank.getUserId() == null || !bank.getUserId().equals(userId)) {
+            if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
                 throw new RuntimeException("无权限编辑此题库");
             }
         }
         
-        // 系统题库和AI题库不允许编辑
-        if ("system".equals(bank.getType()) || "ai".equals(bank.getType())) {
-            throw new RuntimeException("系统题库和AI题库不允许编辑");
+        // AI题库不允许编辑
+        if ("ai".equals(bank.getType())) {
+            throw new RuntimeException("AI题库不允许编辑");
         }
         
         // 更新题库信息
@@ -928,14 +928,14 @@ public class QuestionBankService {
         
         // 检查权限：只有创建者可以删除自定义题库
         if ("custom".equals(bank.getType())) {
-            if (bank.getUserId() == null || !bank.getUserId().equals(userId)) {
+            if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
                 throw new RuntimeException("无权限删除此题库");
             }
         }
         
-        // 系统题库不允许删除
-        if ("system".equals(bank.getType())) {
-            throw new RuntimeException("系统题库不允许删除");
+        // AI题库不允许删除
+        if ("ai".equals(bank.getType())) {
+            throw new RuntimeException("AI题库不允许删除");
         }
         
         // 删除题库中的所有卡片
@@ -969,13 +969,14 @@ public class QuestionBankService {
         
         // 检查权限：只有自定义题库的创建者可以删除卡片
         if ("custom".equals(bank.getType())) {
-            if (bank.getUserId() == null || !bank.getUserId().equals(userId)) {
+            if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
                 throw new RuntimeException("无权限删除此卡片");
             }
-        } else {
-            // 系统题库和AI题库不允许删除卡片
-            throw new RuntimeException("系统题库和AI题库的卡片不允许删除");
+        } else if ("ai".equals(bank.getType())) {
+            // AI题库不允许删除卡片
+            throw new RuntimeException("AI题库的卡片不允许删除");
         }
+        // system类型题库允许所有用户删除卡片
         
         // 删除卡片
         questionCardMapper.deleteById(cardId);
