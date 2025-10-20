@@ -14,7 +14,6 @@ public class User {
     private String avatar; // 头像URL
     private String role; // 角色：user, admin
     private Integer status; // 状态：0-禁用，1-正常
-    private Long tenantId; // 租户ID（用于SaaS多租户隔离）
     private LocalDateTime createdAt; // 创建时间
     private LocalDateTime updatedAt; // 更新时间
     private LocalDateTime lastLoginAt; // 最后登录时间

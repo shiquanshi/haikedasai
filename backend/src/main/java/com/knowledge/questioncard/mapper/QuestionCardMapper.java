@@ -16,7 +16,7 @@ public interface QuestionCardMapper {
     
     QuestionCard selectById(Long id);
     
-    List<QuestionCard> selectByBankId(@Param("bankId") Long bankId, @Param("tenantId") String tenantId);
+    List<QuestionCard> selectByBankId(@Param("bankId") Long bankId);
     
     List<QuestionCard> selectAll();
     

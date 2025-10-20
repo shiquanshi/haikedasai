@@ -44,7 +44,7 @@ public class UserController {
      */
     @GetMapping("/info")
     public UserDTO getCurrentUserInfo(HttpServletRequest request) {
-        Long userId = getUserIdFromRequest(request);
+        String userId = getUserIdFromRequest(request);
         return userService.getUserInfo(userId);
     }
     
@@ -53,7 +53,7 @@ public class UserController {
      */
     @PutMapping("/info")
     public UserDTO updateCurrentUserInfo(HttpServletRequest request, @RequestBody UserDTO userDTO) {
-        Long userId = getUserIdFromRequest(request);
+        String userId = getUserIdFromRequest(request);
         return userService.updateUserInfo(userId, userDTO);
     }
     
@@ -62,7 +62,7 @@ public class UserController {
      */
     @PostMapping("/change-password")
     public Map<String, String> changePassword(HttpServletRequest request, @RequestBody Map<String, String> passwordMap) {
-        Long userId = getUserIdFromRequest(request);
+        String userId = getUserIdFromRequest(request);
         String oldPassword = passwordMap.get("oldPassword");
         String newPassword = passwordMap.get("newPassword");
         
@@ -74,7 +74,7 @@ public class UserController {
     }
     
     /**
-     * 分页查询租户用户（管理员功能）
+     * 分页查询用户(管理员功能)
      */
     @GetMapping("/list")
     public PageResponse<UserDTO> getUserList(
@@ -84,12 +84,11 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         
-        Long tenantId = getTenantIdFromRequest(request);
         PageRequest pageRequest = new PageRequest();
         pageRequest.setPage(page);
         pageRequest.setPageSize(size);
         
-        return userService.getUsersByTenant(tenantId, keyword, status, pageRequest);
+        return userService.getUsers(keyword, status, pageRequest);
     }
     
     /**
@@ -104,7 +103,6 @@ public class UserController {
             result.put("valid", true);
             result.put("userId", jwtUtil.getUserIdFromToken(token));
             result.put("username", jwtUtil.getUsernameFromToken(token));
-            result.put("tenantId", jwtUtil.getTenantIdFromToken(token));
             result.put("role", jwtUtil.getRoleFromToken(token));
         } else {
             result.put("valid", false);
@@ -116,23 +114,12 @@ public class UserController {
     /**
      * 从请求中获取用户ID
      */
-    private Long getUserIdFromRequest(HttpServletRequest request) {
+    private String getUserIdFromRequest(HttpServletRequest request) {
         String token = extractToken(request);
         if (token == null || !jwtUtil.validateToken(token)) {
             throw new RuntimeException("无效的token");
         }
         return jwtUtil.getUserIdFromToken(token);
-    }
-    
-    /**
-     * 从请求中获取租户ID
-     */
-    private Long getTenantIdFromRequest(HttpServletRequest request) {
-        String token = extractToken(request);
-        if (token == null || !jwtUtil.validateToken(token)) {
-            throw new RuntimeException("无效的token");
-        }
-        return jwtUtil.getTenantIdFromToken(token);
     }
     
     /**

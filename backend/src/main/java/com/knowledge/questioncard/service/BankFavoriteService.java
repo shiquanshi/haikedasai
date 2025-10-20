@@ -21,9 +21,9 @@ public class BankFavoriteService {
      * 收藏题库
      */
     @Transactional
-    public void addFavorite(Long userId, Long bankId, Long tenantId) {
+    public void addFavorite(Long userId, Long bankId) {
         // 检查是否已收藏
-        BankFavorite existing = bankFavoriteMapper.selectByUserAndBank(userId, bankId, tenantId);
+        BankFavorite existing = bankFavoriteMapper.selectByUserAndBank(userId, bankId, null);
         if (existing != null) {
             throw new RuntimeException("已经收藏过该题库");
         }
@@ -31,7 +31,6 @@ public class BankFavoriteService {
         BankFavorite favorite = new BankFavorite();
         favorite.setUserId(userId);
         favorite.setBankId(bankId);
-        favorite.setTenantId(tenantId);
         favorite.setCreatedAt(java.time.LocalDateTime.now());
         bankFavoriteMapper.insert(favorite);
         
@@ -44,8 +43,8 @@ public class BankFavoriteService {
      * 取消收藏
      */
     @Transactional
-    public void removeFavorite(Long userId, Long bankId, Long tenantId) {
-        int deleted = bankFavoriteMapper.deleteByUserAndBank(userId, bankId, tenantId);
+    public void removeFavorite(Long userId, Long bankId) {
+        int deleted = bankFavoriteMapper.deleteByUserAndBank(userId, bankId, null);
         if (deleted == 0) {
             throw new RuntimeException("未收藏该题库");
         }
@@ -58,15 +57,15 @@ public class BankFavoriteService {
     /**
      * 获取用户收藏的题库ID列表
      */
-    public List<Long> getUserFavoriteBankIds(Long userId, Long tenantId) {
-        return bankFavoriteMapper.selectBankIdsByUser(userId, tenantId);
+    public List<Long> getUserFavoriteBankIds(Long userId) {
+        return bankFavoriteMapper.selectBankIdsByUser(userId, null);
     }
     
     /**
      * 检查是否已收藏
      */
-    public boolean isFavorited(Long userId, Long bankId, Long tenantId) {
-        return bankFavoriteMapper.selectByUserAndBank(userId, bankId, tenantId) != null;
+    public boolean isFavorited(Long userId, Long bankId) {
+        return bankFavoriteMapper.selectByUserAndBank(userId, bankId, null) != null;
     }
     
     /**

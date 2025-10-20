@@ -10,11 +10,11 @@ public interface BankFavoriteMapper {
     
     int insert(BankFavorite favorite);
     
-    int deleteByUserAndBank(@Param("userId") Long userId, @Param("bankId") Long bankId, @Param("tenantId") Long tenantId);
+    int deleteByUserAndBank(@Param("userId") Long userId, @Param("bankId") Long bankId);
     
-    BankFavorite selectByUserAndBank(@Param("userId") Long userId, @Param("bankId") Long bankId, @Param("tenantId") Long tenantId);
+    BankFavorite selectByUserAndBank(@Param("userId") Long userId, @Param("bankId") Long bankId);
     
-    List<Long> selectBankIdsByUser(@Param("userId") Long userId, @Param("tenantId") Long tenantId);
+    List<Long> selectBankIdsByUser(@Param("userId") Long userId);
     
     Long countByBank(@Param("bankId") Long bankId);
 }

@@ -7,7 +7,6 @@ export interface UserInfo {
   id: number
   username: string
   email?: string
-  tenantId: string
 }
 
 export const useUserStore = defineStore('user', () => {

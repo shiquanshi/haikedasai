@@ -28,10 +28,8 @@ public class StudyRecordController {
         Integer totalCards = Integer.valueOf(request.get("totalCards").toString());
         
         Long userId = (Long) httpRequest.getAttribute("userId");
-        String tenantIdStr = (String) httpRequest.getAttribute("tenantId");
-        Long tenantId = tenantIdStr != null ? Long.parseLong(tenantIdStr) : null;
         
-        StudyRecordDTO record = studyRecordService.createOrUpdateRecord(userId, bankId, tenantId, totalCards);
+        StudyRecordDTO record = studyRecordService.createOrUpdateRecord(userId, bankId, totalCards);
         return Result.success(record);
     }
 

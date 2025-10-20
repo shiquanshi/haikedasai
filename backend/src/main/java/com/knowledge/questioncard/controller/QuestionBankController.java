@@ -47,11 +47,10 @@ public class QuestionBankController {
         String difficulty = request.get("difficulty") != null ? (String) request.get("difficulty") : "中等";
         String language = request.get("language") != null ? (String) request.get("language") : "zh";
         
-        // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
+        // 从请求中获取用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
-        String tenantId = (String) httpRequest.getAttribute("tenantId");
         
-        List<QuestionCardDTO> cards = questionBankService.generateAIBank(topic, cardCount, difficulty, language, userId, tenantId);
+        List<QuestionCardDTO> cards = questionBankService.generateAIBank(topic, cardCount, difficulty, language, userId);
         return Result.success(cards);
     }
 
@@ -72,7 +71,6 @@ public class QuestionBankController {
         
         // 获取用户信息
         Long userId = (Long) request.getAttribute("userId");
-        String tenantId = (String) request.getAttribute("tenantId");
         
         // 创建SSE发射器,超时时间设置为5分钟
         SseEmitter emitter = new SseEmitter(300000L);
@@ -86,7 +84,7 @@ public class QuestionBankController {
                 // 如果生成成功，保存到数据库
                 if (cardsJson != null && !cardsJson.trim().isEmpty()) {
                     List<QuestionCardDTO> savedCards = questionBankService.saveStreamGeneratedCards(
-                        cardsJson, topic, difficulty, language, userId, tenantId);
+                        cardsJson, topic, difficulty, language, userId);
                     
                     // 发送保存成功的卡片数据（包含真实ID）
                     ObjectMapper objectMapper = new ObjectMapper();
@@ -169,9 +167,8 @@ public class QuestionBankController {
         }
         
         Long userId = (Long) httpRequest.getAttribute("userId");
-        String tenantId = (String) httpRequest.getAttribute("tenantId");
         
-        QuestionBankDTO bank = questionBankService.createCustomBank(name, description, topic, difficulty, language, userId, tenantId);
+        QuestionBankDTO bank = questionBankService.createCustomBank(name, description, topic, difficulty, language, userId);
         return Result.success(bank);
     }
 
@@ -190,8 +187,7 @@ public class QuestionBankController {
     @GetMapping("/custom")
     public Result<List<QuestionBankDTO>> getUserCustomBanks(HttpServletRequest httpRequest) {
         Long userId = (Long) httpRequest.getAttribute("userId");
-        String tenantId = (String) httpRequest.getAttribute("tenantId");
-        List<QuestionBankDTO> banks = questionBankService.getUserCustomBanks(userId, tenantId);
+        List<QuestionBankDTO> banks = questionBankService.getUserCustomBanks(userId);
         return Result.success(banks);
     }
 
@@ -202,10 +198,8 @@ public class QuestionBankController {
     public Result<List<QuestionCardDTO>> getBankCards(
             @PathVariable Long bankId,
             HttpServletRequest httpRequest) {
-        // 从请求中获取租户ID(由JWT拦截器设置)
-        String tenantId = (String) httpRequest.getAttribute("tenantId");
         
-        List<QuestionCardDTO> cards = questionBankService.getBankCards(bankId, tenantId);
+        List<QuestionCardDTO> cards = questionBankService.getBankCards(bankId);
         return Result.success(cards);
     }
 
@@ -224,12 +218,11 @@ public class QuestionBankController {
             return Result.error("主题不能为空");
         }
         
-        // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
+        // 从请求中获取用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
-        Long tenantId = Long.parseLong((String) httpRequest.getAttribute("tenantId"));
         
         try {
-            List<QuestionCardDTO> cards = questionBankService.uploadCustomBank(file, topic, userId, tenantId);
+            List<QuestionCardDTO> cards = questionBankService.uploadCustomBank(file, topic, userId);
             return Result.success(cards);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -243,10 +236,6 @@ public class QuestionBankController {
     public Result<PageResponse<QuestionBankDTO>> searchBanks(
             @RequestBody BankSearchRequest request,
             HttpServletRequest httpRequest) {
-        // 从请求属性中获取租户ID（由JWT拦截器设置）
-        String tenantId = (String) httpRequest.getAttribute("tenantId");
-        request.setTenantId(tenantId);
-        
         PageResponse<QuestionBankDTO> response = questionBankService.searchBanks(request);
         return Result.success(response);
     }
@@ -271,9 +260,8 @@ public class QuestionBankController {
         try {
             // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
             Long userId = (Long) httpRequest.getAttribute("userId");
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
             
-            questionBankService.updateBank(bankId, bankDTO, userId, tenantId);
+            questionBankService.updateBank(bankId, bankDTO, userId);
             return Result.success(null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -290,9 +278,8 @@ public class QuestionBankController {
         try {
             // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
             Long userId = (Long) httpRequest.getAttribute("userId");
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
             
-            questionBankService.deleteBank(bankId, userId, tenantId);
+            questionBankService.deleteBank(bankId, userId);
             return Result.success(null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -309,9 +296,8 @@ public class QuestionBankController {
         try {
             // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
             Long userId = (Long) httpRequest.getAttribute("userId");
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
             
-            questionBankService.deleteCard(cardId, userId, tenantId);
+            questionBankService.deleteCard(cardId, userId);
             return Result.success(null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -328,9 +314,8 @@ public class QuestionBankController {
         try {
             // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
             Long userId = (Long) httpRequest.getAttribute("userId");
-            Long tenantId = Long.parseLong((String) httpRequest.getAttribute("tenantId"));
             
-            bankFavoriteService.addFavorite(userId, bankId, tenantId);
+            bankFavoriteService.addFavorite(userId, bankId);
             return Result.success(null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -347,9 +332,8 @@ public class QuestionBankController {
         try {
             // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
             Long userId = (Long) httpRequest.getAttribute("userId");
-            Long tenantId = Long.parseLong((String) httpRequest.getAttribute("tenantId"));
             
-            bankFavoriteService.removeFavorite(userId, bankId, tenantId);
+            bankFavoriteService.removeFavorite(userId, bankId);
             return Result.success(null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -365,9 +349,8 @@ public class QuestionBankController {
             HttpServletRequest httpRequest) {
         // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
-        Long tenantId = Long.parseLong((String) httpRequest.getAttribute("tenantId"));
         
-        boolean isFavorited = bankFavoriteService.isFavorited(userId, bankId, tenantId);
+        boolean isFavorited = bankFavoriteService.isFavorited(userId, bankId);
         return Result.success(isFavorited);
     }
     
@@ -378,9 +361,8 @@ public class QuestionBankController {
     public Result<List<Long>> getUserFavorites(HttpServletRequest httpRequest) {
         // 从请求中获取租户ID和用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
-        Long tenantId = Long.parseLong((String) httpRequest.getAttribute("tenantId"));
         
-        List<Long> bankIds = bankFavoriteService.getUserFavoriteBankIds(userId, tenantId);
+        List<Long> bankIds = bankFavoriteService.getUserFavoriteBankIds(userId);
         return Result.success(bankIds);
     }
     
@@ -392,12 +374,12 @@ public class QuestionBankController {
             @RequestBody AddCardsRequest request,
             HttpServletRequest httpRequest) {
         try {
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
+            Long userId = (Long) httpRequest.getAttribute("userId");
             
             List<QuestionCardDTO> cards = questionBankService.addCardsToBank(
                 request.getTargetBankId(), 
                 request.getCardIds(), 
-                tenantId
+                userId
             );
             return Result.success(cards);
         } catch (Exception e) {
@@ -413,7 +395,7 @@ public class QuestionBankController {
             @RequestBody Map<String, Object> request,
             HttpServletRequest httpRequest) {
         try {
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
+            Long userId = (Long) httpRequest.getAttribute("userId");
             Long targetBankId = Long.valueOf(request.get("targetBankId").toString());
             @SuppressWarnings("unchecked")
             List<Map<String, String>> cardContents = (List<Map<String, String>>) request.get("cardContents");
@@ -421,7 +403,7 @@ public class QuestionBankController {
             List<QuestionCardDTO> cards = questionBankService.addCardContentsToBank(
                 targetBankId, 
                 cardContents, 
-                tenantId
+                userId
             );
             return Result.success(cards);
         } catch (Exception e) {
@@ -438,8 +420,8 @@ public class QuestionBankController {
             HttpServletRequest request,
             HttpServletResponse response) {
         try {
-            String tenantId = (String) request.getAttribute("tenantId");
-            questionBankService.exportBankToExcel(bankId, tenantId, response);
+            Long userId = (Long) request.getAttribute("userId");
+            questionBankService.exportBankToExcel(bankId, userId, response);
         } catch (Exception e) {
             log.error("导出题库失败: {}", e.getMessage(), e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -470,10 +452,9 @@ public class QuestionBankController {
 
             // 获取用户信息
             Long userId = (Long) request.getAttribute("userId");
-            String tenantId = (String) request.getAttribute("tenantId");
 
             // 执行导入
-            QuestionBankDTO bankDTO = questionBankService.importBankFromExcel(file, bankName, description, difficulty, language, userId, tenantId);
+            QuestionBankDTO bankDTO = questionBankService.importBankFromExcel(file, bankName, description, difficulty, language, userId);
             return Result.success(bankDTO);
         } catch (Exception e) {
             log.error("导入题库失败: {}", e.getMessage(), e);
@@ -490,7 +471,6 @@ public class QuestionBankController {
             @RequestBody Map<String, String> request,
             HttpServletRequest httpRequest) {
         try {
-            String tenantId = (String) httpRequest.getAttribute("tenantId");
             Long userId = (Long) httpRequest.getAttribute("userId");
             
             String question = request.get("question");
@@ -505,7 +485,7 @@ public class QuestionBankController {
                 return Result.error("答案不能为空");
             }
             
-            QuestionCardDTO card = questionBankService.addCard(bankId, question, answer, questionImage, answerImage, userId, tenantId);
+            QuestionCardDTO card = questionBankService.addCard(bankId, question, answer, questionImage, answerImage, userId);
             return Result.success(card);
         } catch (Exception e) {
             log.error("新增卡片失败: {}", e.getMessage(), e);

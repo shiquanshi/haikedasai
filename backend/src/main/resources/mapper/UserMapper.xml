@@ -14,7 +14,6 @@
         <result column="avatar" property="avatar"/>
         <result column="role" property="role"/>
         <result column="status" property="status"/>
-        <result column="tenant_id" property="tenantId"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
         <result column="last_login_at" property="lastLoginAt"/>
@@ -24,10 +23,10 @@
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
             username, password, email, nickname, phone, avatar, 
-            role, status, tenant_id, created_at, updated_at
+            role, status, created_at, updated_at
         ) VALUES (
             #{username}, #{password}, #{email}, #{nickname}, #{phone}, #{avatar},
-            #{role}, COALESCE(#{status}, 1), #{tenantId}, NOW(), NOW()
+            #{role}, COALESCE(#{status}, 1), NOW(), NOW()
         )
     </insert>
 
@@ -73,20 +72,12 @@
         SELECT * FROM users WHERE phone = #{phone}
     </select>
 
-    <!-- 查询租户下的所有用户 -->
-    <select id="selectByTenantId" parameterType="long" resultMap="BaseResultMap">
-        SELECT * FROM users 
-        WHERE tenant_id = #{tenantId}
-        ORDER BY created_at DESC
-    </select>
+
 
     <!-- 分页查询用户 -->
     <select id="selectPage" resultMap="BaseResultMap">
         SELECT * FROM users
         <where>
-            <if test="tenantId != null">
-                AND tenant_id = #{tenantId}
-            </if>
             <if test="keyword != null and keyword != ''">
                 AND (username LIKE CONCAT('%', #{keyword}, '%')
                 OR nickname LIKE CONCAT('%', #{keyword}, '%')
@@ -105,9 +96,6 @@
     <select id="countUsers" resultType="int">
         SELECT COUNT(*) FROM users
         <where>
-            <if test="tenantId != null">
-                AND tenant_id = #{tenantId}
-            </if>
             <if test="keyword != null and keyword != ''">
                 AND (username LIKE CONCAT('%', #{keyword}, '%')
                 OR nickname LIKE CONCAT('%', #{keyword}, '%')

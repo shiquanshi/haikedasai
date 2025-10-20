@@ -54,34 +54,14 @@ public class UserService {
         user.setPhone(request.getPhone());
         user.setRole("user");
         user.setStatus(1);
-        
-        // 5. 分配租户ID（如果没有邀请码，创建新租户；如果有邀请码，加入对应租户）
-        if (request.getInviteCode() != null && !request.getInviteCode().isEmpty()) {
-            // TODO: 实现邀请码逻辑，这里暂时使用邀请码作为租户ID
-            try {
-                user.setTenantId(Long.parseLong(request.getInviteCode()));
-            } catch (NumberFormatException e) {
-                throw new RuntimeException("无效的邀请码");
-            }
-        } else {
-            // 新用户创建新租户，使用用户ID作为租户ID（插入后会自动生成）
-            user.setTenantId(null); // 先设为null，插入后更新
-        }
-        
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         
-        // 6. 插入用户
+        // 5. 插入用户
         userMapper.insert(user);
         
-        // 7. 如果是新租户，更新租户ID为用户ID
-        if (user.getTenantId() == null) {
-            user.setTenantId(user.getId());
-            userMapper.updateById(user);
-        }
-        
-        // 8. 生成Token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getTenantId(), user.getRole());
+        // 6. 生成Token
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
         
         // 9. 返回认证响应
         return new AuthResponse(token, convertToDTO(user));
@@ -119,7 +99,7 @@ public class UserService {
         userMapper.updateLastLoginAt(user.getId(), LocalDateTime.now());
         
         // 5. 生成Token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getTenantId(), user.getRole());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
         
         // 6. 返回认证响应
         return new AuthResponse(token, convertToDTO(user));
@@ -164,19 +144,19 @@ public class UserService {
     }
     
     /**
-     * 分页查询租户用户
+     * 分页查询用户
      */
-    public PageResponse<UserDTO> getUsersByTenant(Long tenantId, String keyword, Integer status, PageRequest pageRequest) {
+    public PageResponse<UserDTO> getUsers(String keyword, Integer status, PageRequest pageRequest) {
         int offset = (pageRequest.getPage() - 1) * pageRequest.getPageSize();
         
-        List<User> users = userMapper.selectPage(tenantId, keyword, status, offset, pageRequest.getPageSize());
-        int total = userMapper.countUsers(tenantId, keyword, status);
+        List<User> users = userMapper.selectPage(keyword, status, offset, pageRequest.getPageSize());
+        int total = userMapper.countUsers(keyword, status);
         
         List<UserDTO> userDTOs = users.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
         
-        return new PageResponse<>(userDTOs, (long) total, pageRequest.getPage(), pageRequest.getPageSize());
+        return new PageResponse<>(userDTOs, (long) total, pageRequest.getPage(), pageRequest.getSize());
     }
     
     /**
@@ -220,7 +200,6 @@ public class UserService {
         dto.setAvatar(user.getAvatar());
         dto.setRole(user.getRole());
         dto.setStatus(user.getStatus());
-        dto.setTenantId(user.getTenantId());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setLastLoginAt(user.getLastLoginAt());
         return dto;

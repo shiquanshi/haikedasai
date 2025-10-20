@@ -41,9 +41,6 @@
         FROM question_cards qc
         INNER JOIN question_banks qb ON qc.bank_id = qb.id
         WHERE qc.bank_id = #{bankId}
-        <if test="tenantId != null">
-            AND qb.tenant_id = #{tenantId}
-        </if>
     </select>
 
     <select id="selectAll" resultMap="BaseResultMap">

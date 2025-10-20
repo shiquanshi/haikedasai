@@ -42,7 +42,7 @@ public class QuestionBankService {
      * 保存流式生成的卡片到数据库
      */
     @Transactional
-    public List<QuestionCardDTO> saveStreamGeneratedCards(String cardsJson, String topic, String difficulty, String language, Long userId, String tenantId) {
+    public List<QuestionCardDTO> saveStreamGeneratedCards(String cardsJson, String topic, String difficulty, String language, Long userId) {
         try {
             log.info("收到的卡片JSON: {}", cardsJson);
             // 创建题库
@@ -54,7 +54,6 @@ public class QuestionBankService {
             bank.setDifficulty(difficulty);
             bank.setLanguage(language);
             bank.setUserId(String.valueOf(userId));
-            bank.setTenantId(String.valueOf(tenantId != null ? Long.parseLong(tenantId) : null));
             bank.setCreatedAt(java.time.LocalDateTime.now());
             questionBankMapper.insert(bank);
             
@@ -89,7 +88,7 @@ public class QuestionBankService {
             if (!cards.isEmpty()) {
                 batchInsertCards(cards);
                 // 更新题库卡片数量统计
-                updateBankStatistics(bank.getId(), tenantId);
+                updateBankStatistics(bank.getId());
             }
             
             // 转换为DTO返回
@@ -107,7 +106,7 @@ public class QuestionBankService {
      * AI生成题库
      */
     @Transactional
-    public List<QuestionCardDTO> generateAIBank(String topic, Integer cardCount, String difficulty, String language, Long userId, String tenantId) {
+    public List<QuestionCardDTO> generateAIBank(String topic, Integer cardCount, String difficulty, String language, Long userId) {
         // 先检查缓存
         String cacheKey = questionBankCache.generateKey(topic, cardCount, difficulty, language);
         List<QuestionCardDTO> cachedCards = questionBankCache.get(cacheKey);
@@ -123,7 +122,6 @@ public class QuestionBankService {
         bank.setTopic(topic);
         bank.setType("ai");
         bank.setUserId(String.valueOf(userId));
-        bank.setTenantId(String.valueOf(tenantId != null ? Long.parseLong(tenantId) : null));
         bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
@@ -138,7 +136,7 @@ public class QuestionBankService {
         if (!cards.isEmpty()) {
             batchInsertCards(cards);
             // 更新题库卡片数量统计
-            updateBankStatistics(bank.getId(), tenantId);
+            updateBankStatistics(bank.getId());
         }
 
         List<QuestionCardDTO> cardDTOs = cards.stream()
@@ -156,7 +154,6 @@ public class QuestionBankService {
      * 获取系统推荐题库
      */
     public List<QuestionBankDTO> getSystemBanks(String topic) {
-        // 系统题库tenantId为null,所有租户共享
         List<QuestionBank> banks = questionBankMapper.selectByTopicAndType(topic, "system");
         return banks.stream()
                 .map(this::convertToBankDTO)
@@ -166,14 +163,13 @@ public class QuestionBankService {
     /**
      * 获取用户自定义题库
      */
-    public List<QuestionBankDTO> getUserCustomBanks(Long userId, String tenantId) {
+    public List<QuestionBankDTO> getUserCustomBanks(Long userId) {
         List<QuestionBank> banks = questionBankMapper.searchBanks(
             null, // topic
             "custom", // type
             null, // difficulty
             null, // tags
             userId,
-            tenantId,
             null, // minCards
             null, // maxCards
             0, // offset
@@ -189,8 +185,8 @@ public class QuestionBankService {
     /**
      * 获取指定题库的卡片
      */
-    public List<QuestionCardDTO> getBankCards(Long bankId, String tenantId) {
-        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, tenantId);
+    public List<QuestionCardDTO> getBankCards(Long bankId) {
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, null);
         return cards.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -200,7 +196,7 @@ public class QuestionBankService {
      * 创建自定义题库
      */
     @Transactional
-    public QuestionBankDTO createCustomBank(String name, String description, String topic, String difficulty, String language, Long userId, String tenantId) {
+    public QuestionBankDTO createCustomBank(String name, String description, String topic, String difficulty, String language, Long userId) {
         QuestionBank bank = new QuestionBank();
         bank.setName(name);
         bank.setDescription(description != null ? description : "");
@@ -209,7 +205,6 @@ public class QuestionBankService {
         bank.setDifficulty(difficulty != null ? difficulty : "medium"); // 设置默认难度
         bank.setLanguage(language != null ? language : "中文"); // 设置默认语言
         bank.setUserId(String.valueOf(userId));
-        bank.setTenantId(String.valueOf(tenantId != null ? Long.parseLong(tenantId) : null));
         bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
         
@@ -220,7 +215,7 @@ public class QuestionBankService {
      * 上传自定义文档生成题库
      */
     @Transactional
-    public List<QuestionCardDTO> uploadCustomBank(MultipartFile file, String topic, Long userId, Long tenantId) {
+    public List<QuestionCardDTO> uploadCustomBank(MultipartFile file, String topic, Long userId) {
         try {
             // 解析文档内容
             String content = documentParserService.parseDocument(file);
@@ -234,7 +229,6 @@ public class QuestionBankService {
             bank.setDifficulty("medium"); // 设置默认难度
             bank.setLanguage("中文"); // 设置默认语言
             bank.setUserId(String.valueOf(userId));
-            bank.setTenantId(String.valueOf(tenantId));
             bank.setCreatedAt(java.time.LocalDateTime.now());
             questionBankMapper.insert(bank);
 
@@ -455,7 +449,6 @@ public class QuestionBankService {
             request.getDifficulty(),
             request.getTags(),
             request.getUserId(),
-            request.getTenantId(),
             request.getMinCards(),
             request.getMaxCards(),
             request.getOffset(),
@@ -471,7 +464,6 @@ public class QuestionBankService {
             request.getDifficulty(),
             request.getTags(),
             request.getUserId(),
-            request.getTenantId(),
             request.getMinCards(),
             request.getMaxCards()
         );
@@ -496,7 +488,7 @@ public class QuestionBankService {
     /**
      * 更新题库统计信息
      */
-    public void updateBankStatistics(Long bankId, String tenantId) {
+    public void updateBankStatistics(Long bankId) {
         int cardCount = questionCardMapper.countByBankId(bankId);
         questionBankMapper.updateStatistics(bankId, cardCount);
     }
@@ -505,7 +497,7 @@ public class QuestionBankService {
      * 批量添加卡片到指定题库
      */
     @Transactional
-    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds, String tenantId) {
+    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds) {
         // 验证目标题库是否存在
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
@@ -525,7 +517,6 @@ public class QuestionBankService {
                 newCard.setQuestionImage(originalCard.getQuestionImage());
                 newCard.setAnswerImage(originalCard.getAnswerImage());
                 newCard.setBankId(targetBankId);
-                newCard.setTenantId(tenantId);
                 newCard.setCreatedAt(now);
                 newCard.setUpdatedAt(now);
                 newCards.add(newCard);
@@ -540,7 +531,7 @@ public class QuestionBankService {
         questionCardMapper.batchInsert(newCards);
         
         // 更新题库统计信息
-        updateBankStatistics(targetBankId, tenantId);
+        updateBankStatistics(targetBankId);
         
         return newCards.stream()
                 .map(this::convertToDTO)
@@ -551,7 +542,7 @@ public class QuestionBankService {
      * 批量添加卡片内容到指定题库（用于AI生成的临时卡片）
      */
     @Transactional
-    public List<QuestionCardDTO> addCardContentsToBank(Long targetBankId, List<Map<String, String>> cardContents, String tenantId) {
+    public List<QuestionCardDTO> addCardContentsToBank(Long targetBankId, List<Map<String, String>> cardContents) {
         // 验证目标题库是否存在
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
@@ -581,7 +572,7 @@ public class QuestionBankService {
         questionCardMapper.batchInsert(newCards);
         
         // 更新题库统计信息
-        updateBankStatistics(targetBankId, tenantId);
+        updateBankStatistics(targetBankId);
         
         return newCards.stream()
                 .map(this::convertToDTO)
@@ -641,7 +632,7 @@ public class QuestionBankService {
      * 从Excel导入题库卡片
      */
     @Transactional
-    public QuestionBankDTO importBankFromExcel(MultipartFile file, String bankName, String description, String difficulty, String language, Long userId, String tenantId) throws IOException {
+    public QuestionBankDTO importBankFromExcel(MultipartFile file, String bankName, String description, String difficulty, String language, Long userId) throws IOException {
         log.info("开始导入Excel文件: {}", file.getOriginalFilename());
 
         // 创建新题库
@@ -653,7 +644,6 @@ public class QuestionBankService {
         bank.setDifficulty(difficulty != null && !difficulty.trim().isEmpty() ? difficulty : "medium"); // 设置难度
         bank.setLanguage(language != null && !language.trim().isEmpty() ? language : "中文"); // 设置语言
         bank.setUserId(String.valueOf(userId));
-        bank.setTenantId(String.valueOf(tenantId != null ? Long.parseLong(tenantId) : null));
         bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
         log.info("创建题库成功: {}", bank.getName());
@@ -769,20 +759,17 @@ public class QuestionBankService {
     /**
      * 导出题库卡片为Excel
      */
-    public void exportBankToExcel(Long bankId, String tenantId, HttpServletResponse response) throws IOException {
+    public void exportBankToExcel(Long bankId, HttpServletResponse response) throws IOException {
         // 获取题库信息
         QuestionBank bank = questionBankMapper.selectById(bankId);
         if (bank == null) {
             throw new RuntimeException("题库不存在");
         }
 
-        // 验证权限
-        if (bank.getTenantId() != null && !bank.getTenantId().toString().equals(tenantId)) {
-            throw new RuntimeException("无权限导出此题库");
-        }
+
 
         // 获取卡片列表
-        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, tenantId);
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, null);
 
         // 创建Excel工作簿
         Workbook workbook = new XSSFWorkbook();
@@ -873,7 +860,7 @@ public class QuestionBankService {
      * 更新题库信息
      */
     @Transactional
-    public void updateBank(Long bankId, QuestionBankDTO bankDTO, Long userId, String tenantId) {
+    public void updateBank(Long bankId, QuestionBankDTO bankDTO, Long userId) {
         // 查询题库
         QuestionBank bank = questionBankMapper.findById(bankId);
         if (bank == null) {
@@ -912,7 +899,7 @@ public class QuestionBankService {
      * 删除题库
      */
     @Transactional
-    public void deleteBank(Long bankId, Long userId, String tenantId) {
+    public void deleteBank(Long bankId, Long userId) {
         // 查询题库
         QuestionBank bank = questionBankMapper.findById(bankId);
         if (bank == null) {
@@ -947,7 +934,7 @@ public class QuestionBankService {
      * 删除单个题库卡片
      */
     @Transactional
-    public void deleteCard(Long cardId, Long userId, String tenantId) {
+    public void deleteCard(Long cardId, Long userId) {
         // 查询卡片
         QuestionCard card = questionCardMapper.selectById(cardId);
         if (card == null) {
@@ -990,7 +977,7 @@ public class QuestionBankService {
     @Transactional
     public QuestionCardDTO addCard(Long bankId, String question, String answer,
                                     String questionImage, String answerImage,
-                                    Long userId, String tenantId) {
+                                    Long userId) {
         // 查询题库
         QuestionBank bank = questionBankMapper.findById(bankId);
         if (bank == null) {
@@ -1026,7 +1013,6 @@ public class QuestionBankService {
         card.setAnswer(answer);
         card.setQuestionImage(questionImage);
         card.setAnswerImage(answerImage);
-        card.setTenantId(tenantId);
         card.setCreatedAt(java.time.LocalDateTime.now());
         card.setUpdatedAt(java.time.LocalDateTime.now());
         

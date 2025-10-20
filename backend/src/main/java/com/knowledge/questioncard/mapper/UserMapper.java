@@ -46,15 +46,9 @@ public interface UserMapper {
     User selectByPhone(String phone);
     
     /**
-     * 查询租户下的所有用户
-     */
-    List<User> selectByTenantId(Long tenantId);
-    
-    /**
      * 分页查询用户
      */
-    List<User> selectPage(@Param("tenantId") Long tenantId,
-                          @Param("keyword") String keyword,
+    List<User> selectPage(@Param("keyword") String keyword,
                           @Param("status") Integer status,
                           @Param("offset") Integer offset,
                           @Param("limit") Integer limit);
@@ -62,8 +56,7 @@ public interface UserMapper {
     /**
      * 统计用户数量
      */
-    int countUsers(@Param("tenantId") Long tenantId,
-                   @Param("keyword") String keyword,
+    int countUsers(@Param("keyword") String keyword,
                    @Param("status") Integer status);
     
     /**

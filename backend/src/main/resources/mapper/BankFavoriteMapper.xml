@@ -8,29 +8,28 @@
         <id column="id" property="id" />
         <result column="user_id" property="userId" />
         <result column="bank_id" property="bankId" />
-        <result column="tenant_id" property="tenantId" />
         <result column="created_at" property="createdAt" />
     </resultMap>
 
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.BankFavorite" 
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO bank_favorites (user_id, bank_id, tenant_id, created_at)
-        VALUES (#{userId}, #{bankId}, #{tenantId}, #{createdAt})
+        INSERT INTO bank_favorites (user_id, bank_id, created_at)
+        VALUES (#{userId}, #{bankId}, #{createdAt})
     </insert>
 
     <delete id="deleteByUserAndBank">
         DELETE FROM bank_favorites 
-        WHERE user_id = #{userId} AND bank_id = #{bankId} AND tenant_id = #{tenantId}
+        WHERE user_id = #{userId} AND bank_id = #{bankId}
     </delete>
 
     <select id="selectByUserAndBank" resultMap="BaseResultMap">
         SELECT * FROM bank_favorites 
-        WHERE user_id = #{userId} AND bank_id = #{bankId} AND tenant_id = #{tenantId}
+        WHERE user_id = #{userId} AND bank_id = #{bankId}
     </select>
 
     <select id="selectBankIdsByUser" resultType="long">
         SELECT bank_id FROM bank_favorites 
-        WHERE user_id = #{userId} AND tenant_id = #{tenantId}
+        WHERE user_id = #{userId}
         ORDER BY created_at DESC
     </select>
 

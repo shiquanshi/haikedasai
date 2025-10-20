@@ -29,7 +29,6 @@ public interface QuestionBankMapper {
         @Param("difficulty") String difficulty,
         @Param("tags") String tags,
         @Param("userId") Long userId,
-        @Param("tenantId") String tenantId,
         @Param("minCards") Integer minCards,
         @Param("maxCards") Integer maxCards,
         @Param("offset") Integer offset,
@@ -45,7 +44,6 @@ public interface QuestionBankMapper {
         @Param("difficulty") String difficulty,
         @Param("tags") String tags,
         @Param("userId") Long userId,
-        @Param("tenantId") String tenantId,
         @Param("minCards") Integer minCards,
         @Param("maxCards") Integer maxCards
     );

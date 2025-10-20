@@ -26,7 +26,7 @@ public class StudyRecordService {
      * 创建或更新学习记录
      */
     @Transactional
-    public StudyRecordDTO createOrUpdateRecord(Long userId, Long bankId, Long tenantId, Integer totalCards) {
+    public StudyRecordDTO createOrUpdateRecord(Long userId, Long bankId, Integer totalCards) {
         StudyRecord existing = studyRecordMapper.selectByUserAndBank(userId, bankId);
         
         if (existing != null) {
@@ -40,7 +40,6 @@ public class StudyRecordService {
             StudyRecord record = new StudyRecord();
             record.setUserId(userId);
             record.setBankId(bankId);
-            record.setTenantId(tenantId);
             record.setTotalCards(totalCards);
             record.setCompletedCards(0);
             record.setCorrectCount(0);

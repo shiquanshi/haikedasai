@@ -22,7 +22,7 @@ public class JwtUtil {
     /**
      * 生成JWT Token
      */
-    public String generateToken(Long userId, String username, Long tenantId, String role) {
+    public String generateToken(Long userId, String username, String role) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtConfig.getExpiration());
         
@@ -31,7 +31,6 @@ public class JwtUtil {
         return Jwts.builder()
                 .claim("userId", userId)
                 .claim("username", username)
-                .claim("tenantId", tenantId)
                 .claim("role", role)
                 .subject(username)
                 .issuedAt(now)
@@ -87,27 +86,7 @@ public class JwtUtil {
         return claims != null ? claims.getSubject() : null;
     }
     
-    /**
-     * 从Token中获取租户ID
-     */
-    public Long getTenantIdFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        if (claims != null) {
-            Object tenantId = claims.get("tenantId");
-            if (tenantId instanceof Integer) {
-                return ((Integer) tenantId).longValue();
-            } else if (tenantId instanceof Long) {
-                return (Long) tenantId;
-            } else if (tenantId instanceof String) {
-                try {
-                    return Long.parseLong((String) tenantId);
-                } catch (NumberFormatException e) {
-                    return null;
-                }
-            }
-        }
-        return null;
-    }
+
     
     /**
      * 从Token中获取角色

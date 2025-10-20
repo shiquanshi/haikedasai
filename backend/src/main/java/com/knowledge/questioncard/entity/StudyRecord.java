@@ -9,7 +9,6 @@ public class StudyRecord {
     private Long id;
     private Long userId;
     private Long bankId;
-    private Long tenantId;
     private Integer totalCards;
     private Integer completedCards;
     private Integer correctCount;

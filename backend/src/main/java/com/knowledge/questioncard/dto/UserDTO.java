@@ -13,7 +13,6 @@ public class UserDTO {
     private String avatar;
     private String role;
     private Integer status;
-    private Long tenantId;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
 }

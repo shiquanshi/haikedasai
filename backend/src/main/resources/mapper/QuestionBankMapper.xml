@@ -17,16 +17,15 @@
         <result column="tags" property="tags" />
         <result column="difficulty" property="difficulty" />
         <result column="user_id" property="userId" />
-        <result column="tenant_id" property="tenantId" />
         <result column="updated_at" property="updatedAt" />
     </resultMap>
 
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.QuestionBank" 
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO question_banks (name, description, topic, type, card_count, view_count, favorite_count, created_at, 
-            tags, difficulty, language, user_id, tenant_id, updated_at)
+            tags, difficulty, language, user_id, updated_at)
         VALUES (#{name}, #{description}, #{topic}, #{type}, COALESCE(#{cardCount}, 0), COALESCE(#{viewCount}, 0), COALESCE(#{favoriteCount}, 0), #{createdAt}, 
-            #{tags}, #{difficulty}, #{language}, #{userId}, #{tenantId}, #{updatedAt})
+            #{tags}, #{difficulty}, #{language}, #{userId}, #{updatedAt})
     </insert>
 
     <delete id="deleteById">
@@ -84,9 +83,6 @@
             <if test="userId != null">
                 AND user_id = #{userId}
             </if>
-            <if test="tenantId != null">
-                AND tenant_id = #{tenantId}
-            </if>
             <if test="minCards != null">
                 AND card_count &gt;= #{minCards}
             </if>
@@ -120,9 +116,6 @@
             </if>
             <if test="userId != null">
                 AND user_id = #{userId}
-            </if>
-            <if test="tenantId != null">
-                AND tenant_id = #{tenantId}
             </if>
             <if test="minCards != null">
                 AND card_count &gt;= #{minCards}

@@ -11,7 +11,6 @@ public class QuestionCard {
     private String questionImage;
     private String answerImage;
     private Long bankId;
-    private String tenantId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

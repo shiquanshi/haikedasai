@@ -19,6 +19,5 @@ public class QuestionBank {
     private String language;
     private String generatedContent;
     private String userId;
-    private String tenantId;
     private LocalDateTime updatedAt;
 }

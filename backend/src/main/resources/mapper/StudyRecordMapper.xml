@@ -8,7 +8,6 @@
         <id column="id" property="id" />
         <result column="user_id" property="userId" />
         <result column="bank_id" property="bankId" />
-        <result column="tenant_id" property="tenantId" />
         <result column="total_cards" property="totalCards" />
         <result column="completed_cards" property="completedCards" />
         <result column="correct_count" property="correctCount" />
@@ -22,11 +21,11 @@
 
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.StudyRecord" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO study_records (
-            user_id, bank_id, tenant_id, total_cards, completed_cards, 
+            user_id, bank_id, total_cards, completed_cards, 
             correct_count, wrong_count, mastery_level, study_duration, 
             last_study_at, created_at, updated_at
         ) VALUES (
-            #{userId}, #{bankId}, #{tenantId}, #{totalCards}, #{completedCards},
+            #{userId}, #{bankId}, #{totalCards}, #{completedCards},
             #{correctCount}, #{wrongCount}, #{masteryLevel}, #{studyDuration},
             #{lastStudyAt}, #{createdAt}, #{updatedAt}
         )
