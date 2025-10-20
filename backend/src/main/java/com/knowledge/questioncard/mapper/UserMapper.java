@@ -4,7 +4,7 @@ import com.knowledge.questioncard.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -62,7 +62,7 @@ public interface UserMapper {
     /**
      * 更新最后登录时间
      */
-    int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") LocalDateTime lastLoginAt);
+    int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") Date lastLoginAt);
     
     /**
      * 更新用户状态

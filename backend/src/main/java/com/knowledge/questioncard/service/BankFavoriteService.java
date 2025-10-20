@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -31,7 +32,7 @@ public class BankFavoriteService {
         BankFavorite favorite = new BankFavorite();
         favorite.setUserId(userId);
         favorite.setBankId(bankId);
-        favorite.setCreatedAt(java.time.LocalDateTime.now());
+        favorite.setCreatedAt(new Date());
         bankFavoriteMapper.insert(favorite);
         
         // 更新题库收藏数

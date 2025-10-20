@@ -4,10 +4,10 @@ import com.knowledge.questioncard.dto.QuestionCardDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.time.LocalDateTime;
 
 /**
  * 题库生成结果缓存
@@ -99,23 +99,25 @@ public class QuestionBankCache {
      */
     private static class CacheEntry {
         private final List<QuestionCardDTO> cards;
-        private final LocalDateTime createTime;
+        private final Date createTime;
         
         public CacheEntry(List<QuestionCardDTO> cards) {
             this.cards = cards;
-            this.createTime = LocalDateTime.now();
+            this.createTime = new Date();
         }
         
         public List<QuestionCardDTO> getCards() {
             return cards;
         }
         
-        public LocalDateTime getCreateTime() {
+        public Date getCreateTime() {
             return createTime;
         }
         
         public boolean isExpired() {
-            return LocalDateTime.now().isAfter(createTime.plusMinutes(CACHE_EXPIRY_MINUTES));
+            long now = System.currentTimeMillis();
+            long expiryTime = createTime.getTime() + (CACHE_EXPIRY_MINUTES * 60 * 1000L);
+            return now > expiryTime;
         }
     }
 }
