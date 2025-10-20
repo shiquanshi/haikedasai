@@ -186,7 +186,7 @@ public class QuestionBankService {
      * 获取指定题库的卡片
      */
     public List<QuestionCardDTO> getBankCards(Long bankId) {
-        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, null);
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId);
         return cards.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -497,7 +497,7 @@ public class QuestionBankService {
      * 批量添加卡片到指定题库
      */
     @Transactional
-    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds) {
+    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds, Long userId) {
         // 验证目标题库是否存在
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
@@ -542,7 +542,7 @@ public class QuestionBankService {
      * 批量添加卡片内容到指定题库（用于AI生成的临时卡片）
      */
     @Transactional
-    public List<QuestionCardDTO> addCardContentsToBank(Long targetBankId, List<Map<String, String>> cardContents) {
+    public List<QuestionCardDTO> addCardContentsToBank(Long targetBankId, List<Map<String, String>> cardContents, Long userId) {
         // 验证目标题库是否存在
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
@@ -759,7 +759,7 @@ public class QuestionBankService {
     /**
      * 导出题库卡片为Excel
      */
-    public void exportBankToExcel(Long bankId, HttpServletResponse response) throws IOException {
+    public void exportBankToExcel(Long bankId, Long userId, HttpServletResponse response) throws IOException {
         // 获取题库信息
         QuestionBank bank = questionBankMapper.selectById(bankId);
         if (bank == null) {
@@ -769,7 +769,7 @@ public class QuestionBankService {
 
 
         // 获取卡片列表
-        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId, null);
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId);
 
         // 创建Excel工作簿
         Workbook workbook = new XSSFWorkbook();

@@ -23,7 +23,7 @@ public class BankFavoriteService {
     @Transactional
     public void addFavorite(Long userId, Long bankId) {
         // 检查是否已收藏
-        BankFavorite existing = bankFavoriteMapper.selectByUserAndBank(userId, bankId, null);
+        BankFavorite existing = bankFavoriteMapper.selectByUserAndBank(userId, bankId);
         if (existing != null) {
             throw new RuntimeException("已经收藏过该题库");
         }
@@ -44,7 +44,7 @@ public class BankFavoriteService {
      */
     @Transactional
     public void removeFavorite(Long userId, Long bankId) {
-        int deleted = bankFavoriteMapper.deleteByUserAndBank(userId, bankId, null);
+        int deleted = bankFavoriteMapper.deleteByUserAndBank(userId, bankId);
         if (deleted == 0) {
             throw new RuntimeException("未收藏该题库");
         }
@@ -58,14 +58,14 @@ public class BankFavoriteService {
      * 获取用户收藏的题库ID列表
      */
     public List<Long> getUserFavoriteBankIds(Long userId) {
-        return bankFavoriteMapper.selectBankIdsByUser(userId, null);
+        return bankFavoriteMapper.selectBankIdsByUser(userId);
     }
     
     /**
      * 检查是否已收藏
      */
     public boolean isFavorited(Long userId, Long bankId) {
-        return bankFavoriteMapper.selectByUserAndBank(userId, bankId, null) != null;
+        return bankFavoriteMapper.selectByUserAndBank(userId, bankId) != null;
     }
     
     /**

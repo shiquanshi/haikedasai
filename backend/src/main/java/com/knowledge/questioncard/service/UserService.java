@@ -156,7 +156,7 @@ public class UserService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
         
-        return new PageResponse<>(userDTOs, (long) total, pageRequest.getPage(), pageRequest.getSize());
+        return new PageResponse<>(userDTOs, (long) total, pageRequest.getPage(), pageRequest.getPageSize());
     }
     
     /**

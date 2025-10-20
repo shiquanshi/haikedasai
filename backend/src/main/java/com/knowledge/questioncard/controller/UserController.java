@@ -44,7 +44,7 @@ public class UserController {
      */
     @GetMapping("/info")
     public UserDTO getCurrentUserInfo(HttpServletRequest request) {
-        String userId = getUserIdFromRequest(request);
+        Long userId = getUserIdFromRequest(request);
         return userService.getUserInfo(userId);
     }
     
@@ -53,7 +53,7 @@ public class UserController {
      */
     @PutMapping("/info")
     public UserDTO updateCurrentUserInfo(HttpServletRequest request, @RequestBody UserDTO userDTO) {
-        String userId = getUserIdFromRequest(request);
+        Long userId = getUserIdFromRequest(request);
         return userService.updateUserInfo(userId, userDTO);
     }
     
@@ -62,7 +62,7 @@ public class UserController {
      */
     @PostMapping("/change-password")
     public Map<String, String> changePassword(HttpServletRequest request, @RequestBody Map<String, String> passwordMap) {
-        String userId = getUserIdFromRequest(request);
+        Long userId = getUserIdFromRequest(request);
         String oldPassword = passwordMap.get("oldPassword");
         String newPassword = passwordMap.get("newPassword");
         
@@ -114,7 +114,7 @@ public class UserController {
     /**
      * 从请求中获取用户ID
      */
-    private String getUserIdFromRequest(HttpServletRequest request) {
+    private Long getUserIdFromRequest(HttpServletRequest request) {
         String token = extractToken(request);
         if (token == null || !jwtUtil.validateToken(token)) {
             throw new RuntimeException("无效的token");
