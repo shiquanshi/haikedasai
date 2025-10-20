@@ -24,12 +24,16 @@ public class DocumentParserService {
 
         String extension = getFileExtension(fileName);
         
-        return switch (extension.toLowerCase()) {
-            case "txt" -> parseTxt(file);
-            case "pdf" -> parsePdf(file);
-            case "doc", "docx" -> parseWord(file);
-            default -> throw new IllegalArgumentException("不支持的文件格式: " + extension);
-        };
+        String ext = extension.toLowerCase();
+        if ("txt".equals(ext)) {
+            return parseTxt(file);
+        } else if ("pdf".equals(ext)) {
+            return parsePdf(file);
+        } else if ("doc".equals(ext) || "docx".equals(ext)) {
+            return parseWord(file);
+        } else {
+            throw new IllegalArgumentException("不支持的文件格式: " + extension);
+        }
     }
 
     private String parseTxt(MultipartFile file) throws IOException {

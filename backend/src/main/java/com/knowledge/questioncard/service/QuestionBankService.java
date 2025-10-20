@@ -504,6 +504,16 @@ public class QuestionBankService {
             throw new RuntimeException("目标题库不存在");
         }
         
+        // 检查权限：system类型题库允许所有用户添加卡片，custom类型题库只能创建者添加
+        if ("custom".equals(targetBank.getType())) {
+            String userIdStr = String.valueOf(userId);
+            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userIdStr)) {
+                throw new RuntimeException("无权限向此题库添加卡片");
+            }
+        } else if ("ai".equals(targetBank.getType())) {
+            throw new RuntimeException("AI生成的题库不允许手动添加卡片");
+        }
+        
         // 获取要复制的卡片
         List<QuestionCard> newCards = new ArrayList<>();
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -547,6 +557,16 @@ public class QuestionBankService {
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
             throw new RuntimeException("目标题库不存在");
+        }
+        
+        // 检查权限：system类型题库允许所有用户添加卡片，custom类型题库只能创建者添加
+        if ("custom".equals(targetBank.getType())) {
+            String userIdStr = String.valueOf(userId);
+            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userIdStr)) {
+                throw new RuntimeException("无权限向此题库添加卡片");
+            }
+        } else if ("ai".equals(targetBank.getType())) {
+            throw new RuntimeException("AI生成的题库不允许手动添加卡片");
         }
         
         // 创建新卡片
@@ -988,15 +1008,21 @@ public class QuestionBankService {
         log.info("添加卡片权限检查 - 题库ID: {}, 题库userId: {}, 当前userId: {}, 题库类型: {}", 
                  bankId, bank.getUserId(), userId, bank.getType());
         
-        // 检查权限：只要是用户自己创建的题库就可以添加卡片
-        // 将userId转换为String进行比较（QuestionBank的userId字段是String类型）
-        String userIdStr = String.valueOf(userId);
-        if (bank.getUserId() == null || !bank.getUserId().equals(userIdStr)) {
-            log.error("权限检查失败 - 题库userId: {} ({}), 当前userId: {} ({})",
-                     bank.getUserId(), bank.getUserId() == null ? "null" : bank.getUserId().getClass().getName(),
-                     userId, userId == null ? "null" : userId.getClass().getName());
-            throw new RuntimeException("无权限向此题库添加卡片");
+        // 检查权限：system类型题库允许所有用户添加卡片，custom类型题库只能创建者添加
+        if ("custom".equals(bank.getType())) {
+            // 自定义题库：只有创建者可以添加卡片
+            String userIdStr = String.valueOf(userId);
+            if (bank.getUserId() == null || !bank.getUserId().equals(userIdStr)) {
+                log.error("权限检查失败 - 题库userId: {} ({}), 当前userId: {} ({})",
+                         bank.getUserId(), bank.getUserId() == null ? "null" : bank.getUserId().getClass().getName(),
+                         userId, userId == null ? "null" : userId.getClass().getName());
+                throw new RuntimeException("无权限向此题库添加卡片");
+            }
+        } else if ("ai".equals(bank.getType())) {
+            // AI生成的题库不允许添加卡片
+            throw new RuntimeException("AI生成的题库不允许手动添加卡片");
         }
+        // system类型题库允许所有用户添加卡片，无需检查权限
         
         // 处理图片上传到MinIO
         if (questionImage != null && questionImage.startsWith("data:image")) {
