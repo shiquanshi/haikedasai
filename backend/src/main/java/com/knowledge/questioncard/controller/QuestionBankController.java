@@ -46,11 +46,15 @@ public class QuestionBankController {
         Integer cardCount = request.get("cardCount") != null ? (Integer) request.get("cardCount") : 5;
         String difficulty = request.get("difficulty") != null ? (String) request.get("difficulty") : "中等";
         String language = request.get("language") != null ? (String) request.get("language") : "zh";
+        String scenario = request.get("scenario") != null ? (String) request.get("scenario") : null;
         
         // 从请求中获取用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
         
-        List<QuestionCardDTO> cards = questionBankService.generateAIBank(topic, cardCount, difficulty, language, userId);
+        log.info("🔥 收到AI生成题库请求: topic={}, scenario={}, cardCount={}, difficulty={}, language={}", 
+                topic, scenario, cardCount, difficulty, language);
+                
+        List<QuestionCardDTO> cards = questionBankService.generateAIBank(topic, cardCount, difficulty, language, userId, scenario);
         return Result.success(cards);
     }
 
@@ -64,10 +68,11 @@ public class QuestionBankController {
             @RequestParam(defaultValue = "中等") String difficulty,
             @RequestParam(defaultValue = "zh") String language,
             @RequestParam(defaultValue = "false") Boolean withImages,
+            @RequestParam(required = false) String scenario,
             HttpServletRequest request) {
         
-        log.info("🔥 收到流式生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}", 
-                topic, cardCount, difficulty, language, withImages);
+        log.info("🔥 收到流式生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}, scenario={}", 
+                topic, cardCount, difficulty, language, withImages, scenario);
         
         // 获取用户信息
         Long userId = (Long) request.getAttribute("userId");
@@ -79,7 +84,7 @@ public class QuestionBankController {
         CompletableFuture.runAsync(() -> {
             try {
                 // 流式生成卡片内容
-                String cardsJson = volcEngineService.generateCardsStream(topic, cardCount, difficulty, language, withImages, emitter);
+                String cardsJson = volcEngineService.generateCardsStream(topic, cardCount, difficulty, language, withImages, scenario, emitter);
                 
                 // 如果生成成功，保存到数据库
                 if (cardsJson != null && !cardsJson.trim().isEmpty()) {
@@ -125,14 +130,15 @@ public class QuestionBankController {
             @RequestParam(defaultValue = "5") Integer cardCount,
             @RequestParam(defaultValue = "中等") String difficulty,
             @RequestParam(defaultValue = "en") String language,
-            @RequestParam(defaultValue = "false") Boolean withImages) {
+            @RequestParam(defaultValue = "false") Boolean withImages,
+            @RequestParam(required = false) String scenario) {
         
-        log.info("🔥 收到批量生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}", 
-                topic, cardCount, difficulty, language, withImages);
+        log.info("🔥 收到批量生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}, scenario={}", 
+                topic, cardCount, difficulty, language, withImages, scenario);
         
         try {
             // 调用非流式方法,直接返回完整JSON
-            String cardsJson = volcEngineService.generateCards(topic, cardCount, difficulty, language);
+            String cardsJson = volcEngineService.generateCards(topic, cardCount, difficulty, language, scenario);
             
             // 如果需要生成图片描述
             if (withImages) {

@@ -2,7 +2,7 @@ import request from './request'
 
 export const questionBankApi = {
   // AI生成题库
-  generateAIBank(params: { topic: string; cardCount: number; difficulty: string; language: string }) {
+  generateAIBank(params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string }) {
     return request({
       url: '/api/question-bank/generate',
       method: 'post',
@@ -13,7 +13,7 @@ export const questionBankApi = {
 
   // AI流式生成题库
   generateAIBankStream(
-    params: { topic: string; cardCount: number; difficulty: string; language: string; withImages?: boolean },
+    params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string; withImages?: boolean },
     onMessage: (content: string) => void,
     onError?: (error: string) => void,
     onComplete?: () => void
@@ -22,6 +22,7 @@ export const questionBankApi = {
     // 使用相对路径,自动适配当前域名和协议
     const url = `/api/question-bank/generate-stream?` +
       `topic=${encodeURIComponent(params.topic)}&` +
+      `scenario=${encodeURIComponent(params.scenario || '')}&` +
       `cardCount=${params.cardCount}&` +
       `difficulty=${encodeURIComponent(params.difficulty)}&` +
       `language=${params.language}&` +
@@ -94,11 +95,12 @@ export const questionBankApi = {
   },
 
   // AI批量生成题库(非流式,适用于外语内容)
-  generateAIBankBatch(params: { topic: string; cardCount: number; difficulty: string; language: string; withImages?: boolean }) {
+  generateAIBankBatch(params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string; withImages?: boolean }) {
     const token = localStorage.getItem('token')?.trim()
     // 使用相对路径,自动适配当前域名和协议
     const url = `/api/question-bank/generate-batch?` +
       `topic=${encodeURIComponent(params.topic)}&` +
+      `scenario=${encodeURIComponent(params.scenario || '')}&` +
       `cardCount=${params.cardCount}&` +
       `difficulty=${encodeURIComponent(params.difficulty)}&` +
       `language=${params.language}&` +
@@ -111,6 +113,7 @@ export const questionBankApi = {
       method: 'get',
       params: {
         topic: params.topic,
+        scenario: params.scenario,
         cardCount: params.cardCount,
         difficulty: params.difficulty,
         language: params.language,

@@ -66,21 +66,22 @@ public class VolcEngineService {
     }
     
     /**
-     * 生成问答卡片内容
+     * 批量生成问答卡片内容
      * 
      * @param topic 主题
      * @param cardCount 卡片数量
      * @param difficulty 难度
      * @param language 语言
+     * @param scenario 应用场景
      * @return 生成的卡片内容JSON字符串
      */
-    public String generateCards(String topic, Integer cardCount, String difficulty, String language) {
+    public String generateCards(String topic, Integer cardCount, String difficulty, String language, String scenario) {
         try {
             // 获取或创建ArkService实例(单例模式)
             ArkService service = getOrCreateArkService();
             
             // 构建提示词
-            String prompt = buildPrompt(topic, cardCount, difficulty, language);
+            String prompt = buildPrompt(topic, cardCount, difficulty, language, scenario);
             
             // 构建消息列表
             List<ChatMessage> messages = new ArrayList<>();
@@ -144,11 +145,12 @@ public class VolcEngineService {
      * @param difficulty 难度
      * @param language 语言
      * @param withImages 是否生成图片描述
+     * @param scenario 应用场景
      * @param emitter SSE发射器
      * @return 累积的完整JSON内容
      */
     public String generateCardsStream(String topic, Integer cardCount, String difficulty, 
-                                   String language, Boolean withImages, SseEmitter emitter) {
+                                   String language, Boolean withImages, String scenario, SseEmitter emitter) {
         long startTime = System.currentTimeMillis();
         log.info("⏱️ [计时开始] 卡片生成任务启动 - 主题:{}, 数量:{}, 难度:{}", topic, cardCount, difficulty);
         
@@ -160,7 +162,7 @@ public class VolcEngineService {
             
             // 构建提示词
             long promptStartTime = System.currentTimeMillis();
-            String prompt = buildPrompt(topic, cardCount, difficulty, language);
+            String prompt = buildPrompt(topic, cardCount, difficulty, language, scenario);
             log.info("⏱️ [计时] 提示词构建耗时: {}ms", System.currentTimeMillis() - promptStartTime);
             
             // 构建消息列表
@@ -458,7 +460,7 @@ public class VolcEngineService {
     /**
      * 构建提示词
      */
-    private String buildPrompt(String topic, Integer cardCount, String difficulty, String language) {
+    private String buildPrompt(String topic, Integer cardCount, String difficulty, String language, String scenario) {
         // 处理各种可能的语言代码和名称
         String languageName;
         boolean isEnglish = false;
@@ -477,39 +479,58 @@ public class VolcEngineService {
         
         // 根据语言选择不同的提示词模板
         if (isEnglish) {
-            return buildEnglishPrompt(topic, cardCount, difficulty);
+            return buildEnglishPrompt(topic, cardCount, difficulty, scenario);
         } else {
-            return buildChinesePrompt(topic, cardCount, difficulty);
+            return buildChinesePrompt(topic, cardCount, difficulty, scenario);
         }
     }
     
     /**
      * 构建英文提示词(精简版)
      */
-    private String buildEnglishPrompt(String topic, Integer cardCount, String difficulty) {
-        return String.format(
+    private String buildEnglishPrompt(String topic, Integer cardCount, String difficulty, String scenario) {
+        StringBuilder promptBuilder = new StringBuilder(String.format(
             "Generate %d creative flashcards about '%s' (difficulty: %s).\n" +
             "\n" +
             "Requirements:\n" +
             "1. Each card must have a tricky, thought-provoking question\n" +
             "2. Answer should be accurate but explained in a fun, memorable way\n" +
             "3. Use emojis and creative metaphors to make it engaging\n" +
-            "4. All content must be in English with proper spacing between words\n" +
+            "4. All content must be in English with proper spacing between words\n",
+            cardCount, topic, difficulty
+        ));
+        
+        // 如果提供了场景信息，添加到提示词中
+        if (scenario != null && !scenario.trim().isEmpty()) {
+            promptBuilder.append(String.format("5. Tailor questions and answers to the application scenario: '%s'\n", scenario.trim()));
+        }
+        
+        promptBuilder.append(
             "\n" +
             "Output Format (JSON only):\n" +
             "[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
             "\n" +
-            "CRITICAL: Every English word MUST be separated by spaces. No word concatenation allowed!",
-            cardCount, topic, difficulty
+            "CRITICAL: Every English word MUST be separated by spaces. No word concatenation allowed!"
         );
+        
+        return promptBuilder.toString();
     }
     
     /**
      * 构建中文提示词(超精简版 - 强调趣味性)
      */
-    private String buildChinesePrompt(String topic, Integer cardCount, String difficulty) {
-        return String.format(
-            "🎯 生成%d张'%s'主题学习卡片(难度:%s)\n" +
+    private String buildChinesePrompt(String topic, Integer cardCount, String difficulty, String scenario) {
+        StringBuilder promptBuilder = new StringBuilder(String.format(
+            "🎯 生成%d张'%s'主题学习卡片(难度:%s)\n",
+            cardCount, topic, difficulty
+        ));
+        
+        // 如果提供了场景信息，添加到提示词中
+        if (scenario != null && !scenario.trim().isEmpty()) {
+            promptBuilder.append(String.format("🎭 应用场景:'%s'\n", scenario.trim()));
+        }
+        
+        promptBuilder.append(
             "\n" +
             "💥 出题风格:用最刁钻、最骚的角度提问!让人看到就想:卧槽还能这么问?!\n" +
             "🎉 答案风格:用表情包🤪、网络梗、沙雕比喻讲明白!让人秒懂还笑出声!\n" +
@@ -517,9 +538,10 @@ public class VolcEngineService {
             "\n" +
             "📦 只返回JSON:[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
             "\n" +
-            "开整!🚀",
-            cardCount, topic, difficulty
+            "开整!🚀"
         );
+        
+        return promptBuilder.toString();
     }
     
     /**

@@ -38,6 +38,16 @@
           :prefix-icon="Search"
         />
         
+        <!-- 场景输入 -->
+        <el-input
+          v-model="scenario"
+          placeholder="学习场景（可选）"
+          size="large"
+          clearable
+          class="form-item"
+          :prefix-icon="VideoPlay"
+        />
+        
         <!-- 其他选项 -->
         <div class="form-options">
           <!-- 闪卡数量 -->
@@ -820,6 +830,7 @@ interface QuestionBank {
 }
 
 const topic = ref('')
+const scenario = ref('') // 新增：场景输入
 const cardCount = ref('10')
 const difficulty = ref('medium')
 const language = ref('中文')  // 默认中文，与el-select的选项值保持一致
@@ -933,6 +944,7 @@ const generateCards = async () => {
       console.log('[生成模式] 检测到外语内容，使用批量接口')
       const response = await questionBankApi.generateAIBankBatch({
         topic: topic.value,
+        scenario: scenario.value, // 新增：传递场景参数
         cardCount: parseInt(cardCount.value),
         difficulty: difficulty.value,
         language: language.value,
@@ -982,6 +994,7 @@ const generateCards = async () => {
     streamEventSource = questionBankApi.generateAIBankStream(
       {
         topic: topic.value,
+        scenario: scenario.value, // 新增：传递场景参数
         cardCount: parseInt(cardCount.value),
         difficulty: difficulty.value,
         language: language.value,
@@ -1258,7 +1271,7 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     const response = await questionBankApi.searchBanks({
       page: page,
       pageSize: historyPageSize.value,
-      sortBy: 'create_time', // Changed from 'createTime' to 'create_time' to match database column name
+      sortBy: 'created_at', // 修改为正确的数据库字段名
       sortOrder: 'desc',
       userId: userStore.userInfo.id
     })

@@ -106,7 +106,7 @@ public class QuestionBankService {
      * AI生成题库
      */
     @Transactional
-    public List<QuestionCardDTO> generateAIBank(String topic, Integer cardCount, String difficulty, String language, Long userId) {
+    public List<QuestionCardDTO> generateAIBank(String topic, Integer cardCount, String difficulty, String language, Long userId, String scenario) {
         // 先检查缓存
         String cacheKey = questionBankCache.generateKey(topic, cardCount, difficulty, language);
         List<QuestionCardDTO> cachedCards = questionBankCache.get(cacheKey);
@@ -119,6 +119,9 @@ public class QuestionBankService {
         QuestionBank bank = new QuestionBank();
         bank.setName("AI生成 - " + topic);
         bank.setDescription("基于" + topic + "主题AI智能生成的题库 (难度:" + difficulty + ", 语言:" + language + ")");
+        if (scenario != null && !scenario.isEmpty()) {
+            bank.setDescription(bank.getDescription() + " (场景:" + scenario + ")");
+        }
         bank.setTopic(topic);
         bank.setType("ai");
         bank.setUserId(String.valueOf(userId));
@@ -126,7 +129,7 @@ public class QuestionBankService {
         questionBankMapper.insert(bank);
 
         // 使用火山引擎AI生成问答卡片
-        List<QuestionCard> cards = generateCardsFromAI(topic, bank.getId(), cardCount, difficulty, language);
+        List<QuestionCard> cards = generateCardsFromAI(topic, bank.getId(), cardCount, difficulty, language, scenario);
         
         // 批量插入优化 - 一次性设置所有卡片的创建时间
         java.util.Date now = new java.util.Date();
@@ -350,10 +353,10 @@ public class QuestionBankService {
     /**
      * 使用火山引擎AI生成问答卡片
      */
-    private List<QuestionCard> generateCardsFromAI(String topic, Long bankId, Integer cardCount, String difficulty, String language) {
+    private List<QuestionCard> generateCardsFromAI(String topic, Long bankId, Integer cardCount, String difficulty, String language, String scenario) {
         try {
             // 调用火山引擎AI生成内容
-            String aiResponse = volcEngineService.generateCards(topic, cardCount, difficulty, language);
+            String aiResponse = volcEngineService.generateCards(topic, cardCount, difficulty, language, scenario);
             
             // 解析JSON响应
             List<QuestionCard> cards = parseAIResponse(aiResponse, bankId);
