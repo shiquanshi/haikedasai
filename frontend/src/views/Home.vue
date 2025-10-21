@@ -1662,18 +1662,11 @@ const handleFileChange = (file: any) => {
 // 加载用户题库列表
 const loadUserBanks = async () => {
   try {
-    const response = await questionBankApi.searchBanks({
-      userId: userStore.userId,
-      page: 1,
-      pageSize: 1000, // 加载所有用户题库
-      sortBy: 'created_at', // 使用正确的数据库字段名
-      sortOrder: 'desc'
-    })
-    if (response.code === 200 && response.data?.banks) {
-      userBanks.value = response.data.banks
-    }
+    const response = await questionBankApi.getUserCustomBanks(1, 1000)
+    userBanks.value = response.data.data || []
   } catch (error) {
     console.error('加载用户题库失败:', error)
+    ElMessage.error('加载用户题库失败')
   }
 }
 
@@ -1747,17 +1740,6 @@ const handleImport = async () => {
     ElMessage.error(error.message || '导入失败，请重试')
   } finally {
     isImporting.value = false
-  }
-}
-
-// 加载用户题库列表（用于导入对话框）
-const loadUserBanks = async () => {
-  try {
-    const response = await questionBankApi.getUserCustomBanks(1, 100)
-    userBanks.value = response.data.data || []
-  } catch (error) {
-    console.error('加载用户题库失败:', error)
-    ElMessage.error('加载用户题库失败')
   }
 }
 
