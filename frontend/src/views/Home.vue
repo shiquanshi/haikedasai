@@ -1323,6 +1323,12 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
   }
 }
 
+// 处理历史记录分页变化
+const handleHistoryPageChange = async (page: number) => {
+  historyPage.value = page
+  await loadHistoryRecords(page, false)
+}
+
 // 加载指定题库的卡片
 const loadBankCards = async (bankId: number) => {
   try {
