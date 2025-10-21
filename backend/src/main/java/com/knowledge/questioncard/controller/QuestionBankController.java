@@ -179,22 +179,28 @@ public class QuestionBankController {
     }
 
     /**
-     * 获取系统推荐题库
+     * 获取系统推荐题库（支持分页）
      */
     @GetMapping("/system")
-    public Result<List<QuestionBankDTO>> getSystemBanks(@RequestParam String topic) {
-        List<QuestionBankDTO> banks = questionBankService.getSystemBanks(topic);
-        return Result.success(banks);
+    public Result<PageResponse<QuestionBankDTO>> getSystemBanks(
+            @RequestParam String topic,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        PageResponse<QuestionBankDTO> response = questionBankService.getSystemBanks(topic, page, pageSize);
+        return Result.success(response);
     }
 
     /**
-     * 获取用户自定义题库
+     * 获取用户自定义题库（支持分页）
      */
     @GetMapping("/custom")
-    public Result<List<QuestionBankDTO>> getUserCustomBanks(HttpServletRequest httpRequest) {
+    public Result<PageResponse<QuestionBankDTO>> getUserCustomBanks(
+            HttpServletRequest httpRequest,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
         Long userId = (Long) httpRequest.getAttribute("userId");
-        List<QuestionBankDTO> banks = questionBankService.getUserCustomBanks(userId);
-        return Result.success(banks);
+        PageResponse<QuestionBankDTO> response = questionBankService.getUserCustomBanks(userId, page, pageSize);
+        return Result.success(response);
     }
 
     /**

@@ -186,6 +186,19 @@
               <div v-if="!isLoadingBanks && systemBanks.length === 0" class="no-data">
                 暂无推荐题库
               </div>
+              
+              <!-- 系统题库分页器 -->
+              <el-pagination
+                v-if="systemBanks.length > 0"
+                v-model:current-page="systemPage"
+                v-model:page-size="systemPageSize"
+                :page-sizes="[5, 10, 20, 50]"
+                :total="systemTotal"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="loadSystemBanks"
+                @current-change="loadSystemBanks"
+                style="margin-top: 20px; justify-content: center"
+              />
             </el-loading>
 
             <el-divider content-position="left">我的题库</el-divider>
@@ -238,9 +251,22 @@
               </el-card>
               
               <div v-if="!isLoadingCustomBanks && customBanks.length === 0" class="no-data">
-              暂无自定义题库
-            </div>
-          </el-loading>
+                暂无自定义题库
+              </div>
+              
+              <!-- 自定义题库分页器 -->
+              <el-pagination
+                v-if="customBanks.length > 0"
+                v-model:current-page="customPage"
+                v-model:page-size="customPageSize"
+                :page-sizes="[5, 10, 20, 50]"
+                :total="customTotal"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="loadCustomBanks"
+                @current-change="loadCustomBanks"
+                style="margin-top: 20px; justify-content: center"
+              />
+            </el-loading>
 
           <!-- 历史生成记录 -->
           <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
@@ -883,6 +909,16 @@ const isLoadingCustomBanks = ref(false)  // 自定义题库加载状态
 const bankSearchText = ref('')
 const currentBankId = ref<number | null>(null) // 当前正在查看的题库ID
 
+// 系统推荐题库分页
+const systemPage = ref(1)
+const systemPageSize = ref(10)
+const systemTotal = ref(0)
+
+// 用户自定义题库分页
+const customPage = ref(1)
+const customPageSize = ref(10)
+const customTotal = ref(0)
+
 // 流式生成相关
 const isGenerating = ref(false)
 const streamContent = ref('')
@@ -1220,13 +1256,14 @@ const generateCards = async () => {
   }
 }
 
-// 加载推荐题库
+// 加载推荐题库（支持分页）
 const loadSystemBanks = async () => {
   try {
     isLoadingBanks.value = true
     // 使用bankSearchText作为搜索关键词
-    const response = await questionBankApi.getSystemBanks(bankSearchText.value || '')
-    systemBanks.value = response.data
+    const response = await questionBankApi.getSystemBanks(bankSearchText.value || '', systemPage.value, systemPageSize.value)
+    systemBanks.value = response.data.data || []
+    systemTotal.value = response.data.total || 0
   } catch (error) {
     ElMessage.error('加载题库失败')
   } finally {
@@ -1234,12 +1271,13 @@ const loadSystemBanks = async () => {
   }
 }
 
-// 加载用户自定义题库
+// 加载用户自定义题库（支持分页）
 const loadCustomBanks = async () => {
   try {
     isLoadingCustomBanks.value = true
-    const response = await questionBankApi.getUserCustomBanks()
-    customBanks.value = response.data
+    const response = await questionBankApi.getUserCustomBanks(customPage.value, customPageSize.value)
+    customBanks.value = response.data.data || []
+    customTotal.value = response.data.total || 0
   } catch (error) {
     ElMessage.error('加载自定义题库失败')
   } finally {
@@ -1501,7 +1539,9 @@ const loadUserBanks = async () => {
     const response = await questionBankApi.searchBanks({
       userId: userStore.userId,
       page: 1,
-      pageSize: 1000 // 加载所有用户题库
+      pageSize: 1000, // 加载所有用户题库
+      sortBy: 'created_at', // 使用正确的数据库字段名
+      sortOrder: 'desc'
     })
     if (response.code === 200 && response.data?.banks) {
       userBanks.value = response.data.banks

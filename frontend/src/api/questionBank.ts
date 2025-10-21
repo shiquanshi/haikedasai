@@ -132,20 +132,21 @@ export const questionBankApi = {
     })
   },
 
-  // 获取系统推荐题库列表
-  getSystemBanks(topic: string) {
+  // 获取系统推荐题库列表（支持分页）
+  getSystemBanks(topic: string, page: number = 1, pageSize: number = 10) {
     return request({
       url: '/api/question-bank/system',
       method: 'get',
-      params: { topic }
+      params: { topic, page, pageSize }
     })
   },
 
-  // 获取用户自定义题库列表
-  getUserCustomBanks() {
+  // 获取用户自定义题库列表（支持分页）
+  getUserCustomBanks(page: number = 1, pageSize: number = 10) {
     return request({
       url: '/api/question-bank/custom',
-      method: 'get'
+      method: 'get',
+      params: { page, pageSize }
     })
   },
 

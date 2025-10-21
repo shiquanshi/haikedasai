@@ -2,6 +2,7 @@ package com.knowledge.questioncard.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.knowledge.questioncard.dto.PageResponse;
 import com.knowledge.questioncard.dto.QuestionBankDTO;
 import com.knowledge.questioncard.dto.QuestionCardDTO;
 import com.knowledge.questioncard.entity.QuestionBank;
@@ -159,19 +160,45 @@ public class QuestionBankService {
     }
 
     /**
-     * 获取系统推荐题库
+     * 获取系统推荐题库（支持分页）
      */
-    public List<QuestionBankDTO> getSystemBanks(String topic) {
-        List<QuestionBank> banks = questionBankMapper.selectByTopicAndType(topic, "system");
-        return banks.stream()
+    public PageResponse<QuestionBankDTO> getSystemBanks(String topic, Integer page, Integer pageSize) {
+        int offset = (page - 1) * pageSize;
+        
+        // 查询题库列表
+        List<QuestionBank> banks = questionBankMapper.searchBanks(
+            topic, // topic
+            "system", // type
+            null, // difficulty
+            null, // tags
+            null, // userId
+            null, // minCards
+            null, // maxCards
+            offset,
+            pageSize,
+            "created_at",
+            "DESC"
+        );
+        
+        // 查询总数
+        Long total = questionBankMapper.countBanks(topic, "system", null, null, null, null, null);
+        
+        List<QuestionBankDTO> bankDTOs = banks.stream()
                 .map(this::convertToBankDTO)
                 .collect(Collectors.toList());
+        
+        PageResponse<QuestionBankDTO> response = new PageResponse<>(bankDTOs, total, page, pageSize);
+        
+        return response;
     }
 
     /**
-     * 获取用户自定义题库
+     * 获取用户自定义题库（支持分页）
      */
-    public List<QuestionBankDTO> getUserCustomBanks(Long userId) {
+    public PageResponse<QuestionBankDTO> getUserCustomBanks(Long userId, Integer page, Integer pageSize) {
+        int offset = (page - 1) * pageSize;
+        
+        // 查询题库列表
         List<QuestionBank> banks = questionBankMapper.searchBanks(
             null, // topic
             "custom", // type
@@ -180,14 +207,22 @@ public class QuestionBankService {
             userId,
             null, // minCards
             null, // maxCards
-            0, // offset
-            100, // limit - 最多返回100个
-            "created_at", // sortBy
-            "DESC" // sortOrder - 最新创建的在前
+            offset,
+            pageSize,
+            "created_at",
+            "DESC"
         );
-        return banks.stream()
+        
+        // 查询总数
+        Long total = questionBankMapper.countBanks(null, "custom", null, null, userId, null, null);
+        
+        List<QuestionBankDTO> bankDTOs = banks.stream()
                 .map(this::convertToBankDTO)
                 .collect(Collectors.toList());
+        
+        PageResponse<QuestionBankDTO> response = new PageResponse<>(bankDTOs, total, page, pageSize);
+        
+        return response;
     }
 
     /**
