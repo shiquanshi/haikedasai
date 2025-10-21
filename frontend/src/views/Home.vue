@@ -1277,8 +1277,9 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     })
     
     // 适配实际的API返回格式
-    // 后端返回的是PageResponse对象，包含data、total等字段
-    const records = response.data || []
+    // 后端返回的是 {code, message, data: {data: [...], total, page, pageSize, totalPages}}
+    const pageResponse = response.data || {}
+    const records = pageResponse.data || []
     
     if (loadMore) {
       historyRecords.value = [...historyRecords.value, ...records]
@@ -1287,7 +1288,7 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     }
     
     // 判断是否还有更多记录
-    hasMoreHistory.value = response.totalPages && response.page < response.totalPages
+    hasMoreHistory.value = pageResponse.totalPages && pageResponse.page < pageResponse.totalPages
   } catch (error) {
     console.error('加载历史记录失败:', error)
     ElMessage.error('加载历史记录失败')
