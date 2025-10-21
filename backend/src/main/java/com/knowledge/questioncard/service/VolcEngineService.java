@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 火山引擎AI服务
@@ -146,12 +149,19 @@ public class VolcEngineService {
      */
     public String generateCardsStream(String topic, Integer cardCount, String difficulty, 
                                    String language, Boolean withImages, SseEmitter emitter) {
+        long startTime = System.currentTimeMillis();
+        log.info("⏱️ [计时开始] 卡片生成任务启动 - 主题:{}, 数量:{}, 难度:{}", topic, cardCount, difficulty);
+        
         try {
             // 获取或创建ArkService实例
+            long serviceStartTime = System.currentTimeMillis();
             ArkService service = getOrCreateArkService();
+            log.info("⏱️ [计时] ArkService初始化耗时: {}ms", System.currentTimeMillis() - serviceStartTime);
             
             // 构建提示词
+            long promptStartTime = System.currentTimeMillis();
             String prompt = buildPrompt(topic, cardCount, difficulty, language);
+            log.info("⏱️ [计时] 提示词构建耗时: {}ms", System.currentTimeMillis() - promptStartTime);
             
             // 构建消息列表
             List<ChatMessage> messages = new ArrayList<>();
@@ -171,6 +181,9 @@ public class VolcEngineService {
                     .build();
             
             // 发送流式请求 - 使用真正的异步流式处理
+            long streamStartTime = System.currentTimeMillis();
+            log.info("⏱️ [计时开始] 大模型流式调用开始");
+            
             // 使用StringBuilder累积所有增量片段
             final StringBuilder accumulatedContent = new StringBuilder();
             // 记录上一个token,用于智能添加空格
@@ -179,6 +192,8 @@ public class VolcEngineService {
             // 使用CountDownLatch等待流式完成
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+            final AtomicLong firstTokenTime = new AtomicLong(0);
+            final AtomicInteger tokenCount = new AtomicInteger(0);
             
             service.streamChatCompletion(request)
                     .subscribe(
@@ -189,6 +204,12 @@ public class VolcEngineService {
                                     String incrementalContent = response.getChoices().get(0).getMessage().getContent().toString();
                                     
                                     if (incrementalContent != null && !incrementalContent.isEmpty()) {
+                                        // 记录首token时间
+                                        if (firstTokenTime.get() == 0) {
+                                            firstTokenTime.set(System.currentTimeMillis());
+                                            log.info("⏱️ [计时] 首个token返回耗时: {}ms", firstTokenTime.get() - streamStartTime);
+                                        }
+                                        tokenCount.incrementAndGet();
                                         // 直接使用AI返回的内容(AI已按提示词要求添加空格)
                                         
                                         // 更新lastToken为当前内容的最后一个字符
@@ -228,7 +249,11 @@ public class VolcEngineService {
                             latch.countDown();
                         },
                         () -> {
-                            log.info("流式响应完成");
+                            long streamEndTime = System.currentTimeMillis();
+                            log.info("⏱️ [计时] 大模型流式调用完成 - 总耗时:{}ms, token数:{}, 平均速度:{} tokens/s",
+                                streamEndTime - streamStartTime,
+                                tokenCount.get(),
+                                tokenCount.get() * 1000.0 / (streamEndTime - streamStartTime));
                             latch.countDown();
                         }
                     );
@@ -258,7 +283,8 @@ public class VolcEngineService {
             // 如果需要生成图片描述
             if (withImages != null && withImages) {
                 try {
-                    log.info("✨ 开始为流式生成的卡片添加图片描述");
+                    long imageStartTime = System.currentTimeMillis();
+                    log.info("⏱️ [计时开始] 图片生成任务启动");
                     emitter.send(SseEmitter.event().name("status").data("正在生成图片..."));
                     
                     String cardsJson = accumulatedContent.toString();
@@ -278,6 +304,8 @@ public class VolcEngineService {
                         
                         // 🚀 优化：使用CompletableFuture并行生成图片
                         List<CompletableFuture<Map<String, Object>>> futures = new ArrayList<>();
+                        long parallelStartTime = System.currentTimeMillis();
+                        log.info("⏱️ [计时] 开始并行处理{}张卡片的图片", totalCards);
                         
                         for (JsonNode cardNode : cardsArray) {
                             final int cardIndex = ++currentCard;
@@ -380,6 +408,8 @@ public class VolcEngineService {
                         
                         // 等待所有卡片处理完成
                         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                        long parallelEndTime = System.currentTimeMillis();
+                        log.info("⏱️ [计时] 所有卡片图片并行生成完成 - 耗时:{}ms", parallelEndTime - parallelStartTime);
                         
                         // 收集结果
                         for (CompletableFuture<Map<String, Object>> future : futures) {
@@ -394,7 +424,9 @@ public class VolcEngineService {
                         emitter.send(SseEmitter.event().name("images").data(updatedJson));
                         
                         // 🔑 关键修改：返回包含图片URL的完整JSON，而不是原始JSON
-                        log.info("🎉 图片生成完成，返回包含图片URL的完整JSON");
+                        long imageEndTime = System.currentTimeMillis();
+                        log.info("⏱️ [计时] 图片生成任务完成 - 总耗时:{}ms", imageEndTime - imageStartTime);
+                        log.info("⏱️ [计时总结] 整个卡片生成流程完成 - 总耗时:{}ms", imageEndTime - startTime);
                         return updatedJson;
                     }
                 } catch (Exception e) {
@@ -429,64 +461,64 @@ public class VolcEngineService {
     private String buildPrompt(String topic, Integer cardCount, String difficulty, String language) {
         // 处理各种可能的语言代码和名称
         String languageName;
+        boolean isEnglish = false;
+        
         if (language == null || language.isEmpty()) {
             languageName = "中文"; // 默认中文
         } else {
             String lang = language.toLowerCase().trim();
-            if (lang.equals("zh") || lang.equals("中文") || lang.equals("chinese")) {
-                languageName = "中文";
-            } else if (lang.equals("en") || lang.equals("英文") || lang.equals("english")) {
-                languageName = "英文";
+            if (lang.equals("en") || lang.equals("英文") || lang.equals("english")) {
+                languageName = "English";
+                isEnglish = true;
             } else {
-                languageName = "中文"; // 其他情况默认中文
+                languageName = "中文";
             }
         }
         
+        // 根据语言选择不同的提示词模板
+        if (isEnglish) {
+            return buildEnglishPrompt(topic, cardCount, difficulty);
+        } else {
+            return buildChinesePrompt(topic, cardCount, difficulty);
+        }
+    }
+    
+    /**
+     * 构建英文提示词(精简版)
+     */
+    private String buildEnglishPrompt(String topic, Integer cardCount, String difficulty) {
         return String.format(
-            "🎭 开启搞怪模式!请生成%d张关于'%s'主题的超级无敌搞笑学习卡片!\n" +
+            "Generate %d creative flashcards about '%s' (difficulty: %s).\n" +
             "\n" +
-            "📋 出题要求(第一步 - 折磨灵魂时刻):\n" +
-            "1. 难度:%s (但要用最刁钻的角度提问!)\n" +
-            "2. 语言:%s (问题和答案都必须用%s!)\n" +
-            "3. 问题风格指南:\n" +
-            "   - 可以用反常识的角度问\n" +
-            "   - 可以设置脑筋急转弯式的陷阱\n" +
-            "   - 可以用夸张搞笑的比喻\n" +
-            "   - 让人看到题目就想:卧槽这也能这么问?!\n" +
+            "Requirements:\n" +
+            "1. Each card must have a tricky, thought-provoking question\n" +
+            "2. Answer should be accurate but explained in a fun, memorable way\n" +
+            "3. Use emojis and creative metaphors to make it engaging\n" +
+            "4. All content must be in English with proper spacing between words\n" +
             "\n" +
-            "💡 解题要求(第二步 - 拯救智商时刻):\n" +
-            "1. 答案必须用%s书写,要准确but要用最骚的方式讲明白\n" +
-            "2. 多用表情符号、网络流行梗、沙雕比喻\n" +
-            "3. 可以脑补段子、编顺口溜、讲小故事\n" +
-            "4. 让人看完答案会心一笑:原来如此,这么记确实忘不了!\n" +
+            "Output Format (JSON only):\n" +
+            "[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
             "\n" +
-            "⚠️ 注意:虽然搞怪,但知识点必须正确!我们是认真搞笑的教育工作者!\n" +
+            "CRITICAL: Every English word MUST be separated by spaces. No word concatenation allowed!",
+            cardCount, topic, difficulty
+        );
+    }
+    
+    /**
+     * 构建中文提示词(超精简版 - 强调趣味性)
+     */
+    private String buildChinesePrompt(String topic, Integer cardCount, String difficulty) {
+        return String.format(
+            "🎯 生成%d张'%s'主题学习卡片(难度:%s)\n" +
             "\n" +
-            "📦 输出格式(只返回JSON,不要废话):\n" +
-            "[{\"question\":\"问题(搞怪版)\",\"answer\":\"答案(段子版)\"}]\n" +
+            "💥 出题风格:用最刁钻、最骚的角度提问!让人看到就想:卧槽还能这么问?!\n" +
+            "🎉 答案风格:用表情包🤪、网络梗、沙雕比喻讲明白!让人秒懂还笑出声!\n" +
+            "✅ 底线:知识必须正确,但表达必须骚气!\n" +
             "\n" +
-            "🚨 重要格式要求(必须严格遵守!):\n" +
+            "📦 只返回JSON:[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
             "\n" +
-            "📝 英文单词空格规则(极其重要!):\n" +
-            "- 如果生成的内容是英文,每个英文单词之间必须有空格\n" +
-            "- 绝对不能出现单词粘连的情况(例如: 错误写法 Yourfriendbrags, 正确写法 Your friend brags)\n" +
-            "- 中文内容正常书写,不需要额外空格\n" +
-            "- 混合语言时,英文部分每个单词之间要有空格\n" +
-            "\n" +
-            "示例对比:\n" +
-            "✅ 正确: \"Your friend brags about his new car\"\n" +
-            "❌ 错误: \"Yourfriendbragsabouthisnewcar\"\n" +
-            "✅ 正确: \"What is the capital of France?\"\n" +
-            "❌ 错误: \"WhatisthecapitalofFrance?\"\n" +
-            "\n" +
-            "⚠️ 注意: 英文单词之间的空格是必需的,这不是可选项!\n" +
-            "\n" +
-            "📦 JSON格式要求:\n" +
-            "- JSON格式必须规范,字符串中的引号要转义\n" +
-            "- 保持文本可读性\n" +
-            "\n" +
-            "现在,释放你的洪荒之力吧!🚀",
-            cardCount, topic, difficulty, languageName, languageName, languageName
+            "开整!🚀",
+            cardCount, topic, difficulty
         );
     }
     
@@ -497,6 +529,9 @@ public class VolcEngineService {
      * @return 生成的图片描述文本
      */
     public String generateImageDescription(String text) {
+        long startTime = System.currentTimeMillis();
+        log.info("⏱️ [图片描述API] 开始生成图片描述，文本长度: {}", text.length());
+        
         try {
             // 构建请求头
             HttpHeaders headers = new HttpHeaders();
@@ -541,11 +576,13 @@ public class VolcEngineService {
                 .path("content")
                 .asText();
             
-            log.info("图片描述生成成功: {}", imageDescription);
+            long endTime = System.currentTimeMillis();
+            log.info("⏱️ [图片描述API] 生成成功 - 耗时:{}ms, 描述长度:{}", endTime - startTime, imageDescription.length());
             return imageDescription;
             
         } catch (Exception e) {
-            log.error("生成图片描述失败", e);
+            long endTime = System.currentTimeMillis();
+            log.error("⏱️ [图片描述API] 生成失败 - 耗时:{}ms", endTime - startTime, e);
             return null;
         }
     }
@@ -559,8 +596,12 @@ public class VolcEngineService {
      * @return 图片URL或生成结果
      */
     public String generateImage(String prompt, Integer n, String size) {
+        long startTime = System.currentTimeMillis();
+        log.info("⏱️ [图片生成API] 开始生成图片，提示词长度: {}", prompt.length());
+        
         try {
             // 构建请求头
+            long apiStartTime = System.currentTimeMillis();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + volcEngineConfig.getKey());
@@ -589,15 +630,20 @@ public class VolcEngineService {
                 .path("url")
                 .asText();
             
-            log.info("火山引擎图片生成成功，URL: {}", volcImageUrl);
+            long apiEndTime = System.currentTimeMillis();
+            log.info("⏱️ [图片生成API] 火山引擎API调用完成 - 耗时:{}ms", apiEndTime - apiStartTime);
             
             // 将火山引擎的图片下载并上传到MinIO
             try {
+                long minioStartTime = System.currentTimeMillis();
                 String minioUrl = minioService.uploadFromUrl(volcImageUrl);
-                log.info("图片已转存到MinIO: {}", minioUrl);
+                long minioEndTime = System.currentTimeMillis();
+                log.info("⏱️ [图片生成API] MinIO转存完成 - 耗时:{}ms, 总耗时:{}ms", 
+                    minioEndTime - minioStartTime, minioEndTime - startTime);
                 return minioUrl;
             } catch (Exception e) {
-                log.error("转存图片到MinIO失败，返回原始URL: {}", volcImageUrl, e);
+                long endTime = System.currentTimeMillis();
+                log.error("⏱️ [图片生成API] MinIO转存失败 - 耗时:{}ms", endTime - startTime, e);
                 // 如果转存失败，返回原始URL作为降级方案
                 return volcImageUrl;
             }
