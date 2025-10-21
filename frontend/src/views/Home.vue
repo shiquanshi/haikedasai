@@ -1360,11 +1360,8 @@ const exportBank = async (bankId: number, bankName: string) => {
       return
     }
     
-    // 创建下载链接
-    const url = `http://localhost:8080/api/question-bank/${bankId}/export`
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${bankName}.xlsx`
+    // 使用相对路径,自动适配当前域名和协议
+    const url = `/api/question-bank/${bankId}/export`
     
     // 使用fetch下载文件
     const response = await fetch(url, {
@@ -1375,13 +1372,17 @@ const exportBank = async (bankId: number, bankName: string) => {
     })
     
     if (!response.ok) {
-      throw new Error('导出失败')
+      const errorText = await response.text()
+      console.error('导出失败:', response.status, errorText)
+      throw new Error(`导出失败: ${response.status}`)
     }
     
     // 创建blob并触发下载
     const blob = await response.blob()
     const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
     link.href = downloadUrl
+    link.download = `${bankName}.xlsx`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
