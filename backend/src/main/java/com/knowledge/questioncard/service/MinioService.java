@@ -85,6 +85,28 @@ public class MinioService {
     }
 
     /**
+     * 上传文件流
+     */
+    public String uploadFile(InputStream inputStream, String fileName, String contentType) {
+        try {
+            ensureBucketExists();
+            
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(fileName)
+                    .stream(inputStream, -1, 10485760) // 最大10MB
+                    .contentType(contentType)
+                    .build());
+            
+            // 返回访问URL
+            return getFileUrl(fileName);
+        } catch (Exception e) {
+            log.error("上传文件流失败", e);
+            throw new RuntimeException("上传文件流失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 上传Base64图片
      */
     public String uploadBase64Image(String base64Data) {
@@ -191,6 +213,44 @@ public class MinioService {
         } catch (Exception e) {
             log.error("删除文件失败", e);
             throw new RuntimeException("删除文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 下载文件流
+     * @param fileName 文件名
+     * @return 文件输入流
+     */
+    public InputStream downloadFile(String fileName) {
+        try {
+            return minioClient.getObject(GetObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(fileName)
+                    .build());
+        } catch (Exception e) {
+            log.error("下载文件失败: {}", fileName, e);
+            throw new RuntimeException("下载文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从完整URL中提取文件名并下载
+     * @param fileUrl 文件URL（格式：/minio/bucket/filename）
+     * @return 文件输入流
+     */
+    public InputStream downloadFileFromUrl(String fileUrl) {
+        try {
+            // 从URL中提取文件名
+            // 格式：/minio/bucket/filename
+            String[] parts = fileUrl.split("/");
+            if (parts.length < 4) {
+                throw new IllegalArgumentException("无效的文件URL: " + fileUrl);
+            }
+            String fileName = parts[parts.length - 1];
+            return downloadFile(fileName);
+        } catch (Exception e) {
+            log.error("从URL下载文件失败: {}", fileUrl, e);
+            throw new RuntimeException("从URL下载文件失败: " + e.getMessage());
         }
     }
 }

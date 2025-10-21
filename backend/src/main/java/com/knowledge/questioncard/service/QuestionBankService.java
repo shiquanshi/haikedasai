@@ -15,16 +15,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.util.IOUtils;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -679,8 +679,11 @@ public class QuestionBankService {
         log.info("创建题库成功: {}", bank.getName());
 
         // 读取Excel文件
-        Workbook workbook = new XSSFWorkbook(file.getInputStream());
-        Sheet sheet = workbook.getSheetAt(0);
+        XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
+        XSSFSheet sheet = workbook.getSheetAt(0);
+        
+        // 获取Excel中的图片
+        Map<String, XSSFPictureData> pictureMap = extractPicturesFromSheet(sheet);
 
         List<QuestionCard> cards = new ArrayList<>();
         java.util.Date now = new java.util.Date();
@@ -720,21 +723,62 @@ public class QuestionBankService {
             card.setQuestion(question);
             card.setAnswer(answer);
 
-            // 读取可选的图片URL
+            // 处理问题图片（支持URL和嵌入图片）
             Cell questionImageCell = row.getCell(2);
+            String questionImageUrl = null;
             if (questionImageCell != null) {
-                String questionImage = getCellValueAsString(questionImageCell);
-                if (!questionImage.trim().isEmpty()) {
-                    card.setQuestionImage(questionImage);
+                String cellValue = getCellValueAsString(questionImageCell);
+                if (!cellValue.trim().isEmpty()) {
+                    // 如果是URL，直接使用
+                    if (cellValue.startsWith("http://") || cellValue.startsWith("https://")) {
+                        questionImageUrl = cellValue;
+                    } else {
+                        // 否则尝试从Excel中提取嵌入的图片
+                        String picKey = i + "_2"; // 行号_列号
+                        if (pictureMap.containsKey(picKey)) {
+                            questionImageUrl = uploadPictureToMinio(pictureMap.get(picKey), "question");
+                        }
+                    }
                 }
             }
-
-            Cell answerImageCell = row.getCell(3);
-            if (answerImageCell != null) {
-                String answerImage = getCellValueAsString(answerImageCell);
-                if (!answerImage.trim().isEmpty()) {
-                    card.setAnswerImage(answerImage);
+            // 如果没有URL，尝试直接从该单元格位置提取图片
+            if (questionImageUrl == null) {
+                String picKey = i + "_2";
+                if (pictureMap.containsKey(picKey)) {
+                    questionImageUrl = uploadPictureToMinio(pictureMap.get(picKey), "question");
                 }
+            }
+            if (questionImageUrl != null) {
+                card.setQuestionImage(questionImageUrl);
+            }
+
+            // 处理答案图片（支持URL和嵌入图片）
+            Cell answerImageCell = row.getCell(3);
+            String answerImageUrl = null;
+            if (answerImageCell != null) {
+                String cellValue = getCellValueAsString(answerImageCell);
+                if (!cellValue.trim().isEmpty()) {
+                    // 如果是URL，直接使用
+                    if (cellValue.startsWith("http://") || cellValue.startsWith("https://")) {
+                        answerImageUrl = cellValue;
+                    } else {
+                        // 否则尝试从Excel中提取嵌入的图片
+                        String picKey = i + "_3"; // 行号_列号
+                        if (pictureMap.containsKey(picKey)) {
+                            answerImageUrl = uploadPictureToMinio(pictureMap.get(picKey), "answer");
+                        }
+                    }
+                }
+            }
+            // 如果没有URL，尝试直接从该单元格位置提取图片
+            if (answerImageUrl == null) {
+                String picKey = i + "_3";
+                if (pictureMap.containsKey(picKey)) {
+                    answerImageUrl = uploadPictureToMinio(pictureMap.get(picKey), "answer");
+                }
+            }
+            if (answerImageUrl != null) {
+                card.setAnswerImage(answerImageUrl);
             }
 
             card.setCreatedAt(now);
@@ -787,7 +831,58 @@ public class QuestionBankService {
     }
 
     /**
-     * 导出题库卡片为Excel
+     * 从Excel Sheet中提取所有图片
+     * @param sheet Excel工作表
+     * @return 图片映射（key: 行号_列号, value: 图片数据）
+     */
+    private Map<String, XSSFPictureData> extractPicturesFromSheet(XSSFSheet sheet) {
+        Map<String, XSSFPictureData> pictureMap = new HashMap<>();
+        XSSFDrawing drawing = sheet.getDrawingPatriarch();
+        if (drawing == null) {
+            return pictureMap;
+        }
+
+        for (XSSFShape shape : drawing.getShapes()) {
+            if (shape instanceof XSSFPicture) {
+                XSSFPicture picture = (XSSFPicture) shape;
+                XSSFClientAnchor anchor = (XSSFClientAnchor) picture.getAnchor();
+                int row = anchor.getRow1();
+                int col = anchor.getCol1();
+                String key = row + "_" + col;
+                pictureMap.put(key, picture.getPictureData());
+                log.debug("提取图片: 位置={}, 格式={}", key, picture.getPictureData().suggestFileExtension());
+            }
+        }
+        return pictureMap;
+    }
+
+    /**
+     * 上传图片到MinIO
+     * @param pictureData Excel图片数据
+     * @param prefix 文件名前缀
+     * @return 图片URL
+     */
+    private String uploadPictureToMinio(XSSFPictureData pictureData, String prefix) {
+        try {
+            byte[] data = pictureData.getData();
+            String ext = pictureData.suggestFileExtension();
+            String fileName = prefix + "_" + java.util.UUID.randomUUID().toString() + "." + ext;
+            
+            // 将byte[]转换为InputStream
+            InputStream inputStream = new java.io.ByteArrayInputStream(data);
+            
+            // 上传到MinIO
+            String url = minioService.uploadFile(inputStream, fileName, "image/" + ext);
+            log.info("图片上传成功: fileName={}, url={}", fileName, url);
+            return url;
+        } catch (Exception e) {
+            log.error("上传图片到MinIO失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 导出题库卡片为Excel（包含嵌入图片）
      */
     public void exportBankToExcel(Long bankId, Long userId, HttpServletResponse response) throws IOException {
         // 获取题库信息
@@ -802,8 +897,9 @@ public class QuestionBankService {
         List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId);
 
         // 创建Excel工作簿
-        Workbook workbook = new XSSFWorkbook();
+        XSSFWorkbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("题库卡片");
+        XSSFDrawing drawing = (XSSFDrawing) sheet.createDrawingPatriarch();
 
         // 创建标题样式
         CellStyle headerStyle = workbook.createCellStyle();
@@ -830,7 +926,7 @@ public class QuestionBankService {
 
         // 创建表头
         Row headerRow = sheet.createRow(0);
-        String[] headers = {"序号", "问题", "答案", "问题图片URL", "答案图片URL"};
+        String[] headers = {"序号", "问题", "答案", "问题图片", "答案图片"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
@@ -840,10 +936,11 @@ public class QuestionBankService {
         // 填充数据
         int rowNum = 1;
         for (QuestionCard card : cards) {
-            Row row = sheet.createRow(rowNum++);
+            Row row = sheet.createRow(rowNum);
+            row.setHeight((short) (100 * 20)); // 设置行高为100像素
 
             Cell cell0 = row.createCell(0);
-            cell0.setCellValue(rowNum - 1);
+            cell0.setCellValue(rowNum);
             cell0.setCellStyle(contentStyle);
 
             Cell cell1 = row.createCell(1);
@@ -854,21 +951,45 @@ public class QuestionBankService {
             cell2.setCellValue(card.getAnswer());
             cell2.setCellStyle(contentStyle);
 
+            // 处理问题图片
             Cell cell3 = row.createCell(3);
-            cell3.setCellValue(card.getQuestionImage() != null ? card.getQuestionImage() : "");
+            if (card.getQuestionImage() != null && !card.getQuestionImage().isEmpty()) {
+                try {
+                    insertImage(workbook, sheet, drawing, card.getQuestionImage(), rowNum, 3);
+                    cell3.setCellValue("[图片已嵌入]");
+                } catch (Exception e) {
+                    log.warn("插入问题图片失败: {}", card.getQuestionImage(), e);
+                    cell3.setCellValue(card.getQuestionImage());
+                }
+            } else {
+                cell3.setCellValue("");
+            }
             cell3.setCellStyle(contentStyle);
 
+            // 处理答案图片
             Cell cell4 = row.createCell(4);
-            cell4.setCellValue(card.getAnswerImage() != null ? card.getAnswerImage() : "");
+            if (card.getAnswerImage() != null && !card.getAnswerImage().isEmpty()) {
+                try {
+                    insertImage(workbook, sheet, drawing, card.getAnswerImage(), rowNum, 4);
+                    cell4.setCellValue("[图片已嵌入]");
+                } catch (Exception e) {
+                    log.warn("插入答案图片失败: {}", card.getAnswerImage(), e);
+                    cell4.setCellValue(card.getAnswerImage());
+                }
+            } else {
+                cell4.setCellValue("");
+            }
             cell4.setCellStyle(contentStyle);
+            
+            rowNum++;
         }
 
         // 自动调整列宽
         sheet.setColumnWidth(0, 2000);  // 序号列
         sheet.setColumnWidth(1, 10000); // 问题列
         sheet.setColumnWidth(2, 10000); // 答案列
-        sheet.setColumnWidth(3, 8000);  // 问题图片URL列
-        sheet.setColumnWidth(4, 8000);  // 答案图片URL列
+        sheet.setColumnWidth(3, 8000);  // 问题图片列
+        sheet.setColumnWidth(4, 8000);  // 答案图片列
 
         // 设置响应头
         String fileName = URLEncoder.encode(bank.getName(), StandardCharsets.UTF_8).replace("+", "%20");
@@ -884,6 +1005,50 @@ public class QuestionBankService {
         }
 
         log.info("题库 {} 导出成功,共 {} 张卡片", bank.getName(), cards.size());
+    }
+
+    /**
+     * 向Excel单元格插入图片
+     * @param workbook Excel工作簿
+     * @param sheet 工作表
+     * @param drawing 绘图对象
+     * @param imageUrl 图片URL
+     * @param rowIndex 行索引（从0开始）
+     * @param colIndex 列索引（从0开始）
+     */
+    private void insertImage(XSSFWorkbook workbook, Sheet sheet, XSSFDrawing drawing, 
+                            String imageUrl, int rowIndex, int colIndex) throws IOException {
+        try {
+            // 从MinIO下载图片
+            InputStream imageStream = minioService.downloadFileFromUrl(imageUrl);
+            byte[] imageBytes = IOUtils.toByteArray(imageStream);
+            imageStream.close();
+
+            // 确定图片类型
+            int pictureType = XSSFWorkbook.PICTURE_TYPE_PNG;
+            if (imageUrl.toLowerCase().endsWith(".jpg") || imageUrl.toLowerCase().endsWith(".jpeg")) {
+                pictureType = XSSFWorkbook.PICTURE_TYPE_JPEG;
+            } else if (imageUrl.toLowerCase().endsWith(".gif")) {
+                pictureType = XSSFWorkbook.PICTURE_TYPE_GIF;
+            }
+
+            // 添加图片到工作簿
+            int pictureIdx = workbook.addPicture(imageBytes, pictureType);
+
+            // 创建锚点（定位图片位置）
+            XSSFClientAnchor anchor = new XSSFClientAnchor(
+                0, 0, 0, 0,  // 起始偏移
+                colIndex, rowIndex,  // 起始单元格
+                colIndex + 1, rowIndex + 1  // 结束单元格
+            );
+            anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE);
+
+            // 插入图片
+            drawing.createPicture(anchor, pictureIdx);
+        } catch (Exception e) {
+            log.error("插入图片失败: imageUrl={}, row={}, col={}", imageUrl, rowIndex, colIndex, e);
+            throw new IOException("插入图片失败: " + e.getMessage(), e);
+        }
     }
     
     /**
