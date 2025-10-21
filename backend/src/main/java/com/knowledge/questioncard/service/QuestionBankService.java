@@ -42,13 +42,17 @@ public class QuestionBankService {
      * 保存流式生成的卡片到数据库
      */
     @Transactional
-    public List<QuestionCardDTO> saveStreamGeneratedCards(String cardsJson, String topic, String difficulty, String language, Long userId) {
+    public List<QuestionCardDTO> saveStreamGeneratedCards(String cardsJson, String topic, String difficulty, String language, Long userId, String scenario) {
         try {
             log.info("收到的卡片JSON: {}", cardsJson);
             // 创建题库
             QuestionBank bank = new QuestionBank();
-            bank.setName("AI生成 - " + topic);
-            bank.setDescription("基于" + topic + "主题AI智能生成的题库 (难度:" + difficulty + ", 语言:" + language + ")");
+            // 使用"AI生成 - 日期 - topic"格式作为题库名称
+            String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+            bank.setName("AI生成 - " + timestamp + " - " + topic);
+            // 描述中包含所有生成信息
+            bank.setDescription("主题: " + topic + ", 难度: " + difficulty + ", 语言: " + language + 
+                (!scenario.isEmpty() ? ", 场景: " + scenario : ""));
             bank.setTopic(topic);
             bank.setType("ai");
             bank.setDifficulty(difficulty);
@@ -117,11 +121,12 @@ public class QuestionBankService {
         
         // 创建题库
         QuestionBank bank = new QuestionBank();
-        bank.setName("AI生成 - " + topic);
-        bank.setDescription("基于" + topic + "主题AI智能生成的题库 (难度:" + difficulty + ", 语言:" + language + ")");
-        if (scenario != null && !scenario.isEmpty()) {
-            bank.setDescription(bank.getDescription() + " (场景:" + scenario + ")");
-        }
+        // 使用"AI生成 - 日期 - topic"格式作为题库名称
+        String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+        bank.setName("AI生成 - " + timestamp + " - " + topic);
+        // 描述中包含所有生成信息
+        bank.setDescription("主题: " + topic + ", 难度: " + difficulty + ", 语言: " + language + 
+            (!scenario.isEmpty() ? ", 场景: " + scenario : ""));
         bank.setTopic(topic);
         bank.setType("ai");
         bank.setUserId(String.valueOf(userId));

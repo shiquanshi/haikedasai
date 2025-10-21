@@ -46,7 +46,7 @@ public class QuestionBankController {
         Integer cardCount = request.get("cardCount") != null ? (Integer) request.get("cardCount") : 5;
         String difficulty = request.get("difficulty") != null ? (String) request.get("difficulty") : "中等";
         String language = request.get("language") != null ? (String) request.get("language") : "zh";
-        String scenario = request.get("scenario") != null ? (String) request.get("scenario") : null;
+        String scenario = request.get("scenario") != null ? (String) request.get("scenario") : "";
         
         // 从请求中获取用户ID(由JWT拦截器设置)
         Long userId = (Long) httpRequest.getAttribute("userId");
@@ -68,7 +68,7 @@ public class QuestionBankController {
             @RequestParam(defaultValue = "中等") String difficulty,
             @RequestParam(defaultValue = "zh") String language,
             @RequestParam(defaultValue = "false") Boolean withImages,
-            @RequestParam(required = false) String scenario,
+            @RequestParam(defaultValue = "") String scenario,
             HttpServletRequest request) {
         
         log.info("🔥 收到流式生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}, scenario={}", 
@@ -89,7 +89,7 @@ public class QuestionBankController {
                 // 如果生成成功，保存到数据库
                 if (cardsJson != null && !cardsJson.trim().isEmpty()) {
                     List<QuestionCardDTO> savedCards = questionBankService.saveStreamGeneratedCards(
-                        cardsJson, topic, difficulty, language, userId);
+                        cardsJson, topic, difficulty, language, userId, scenario);
                     
                     // 发送保存成功的卡片数据（包含真实ID）
                     ObjectMapper objectMapper = new ObjectMapper();
@@ -131,7 +131,7 @@ public class QuestionBankController {
             @RequestParam(defaultValue = "中等") String difficulty,
             @RequestParam(defaultValue = "en") String language,
             @RequestParam(defaultValue = "false") Boolean withImages,
-            @RequestParam(required = false) String scenario) {
+            @RequestParam(defaultValue = "") String scenario) {
         
         log.info("🔥 收到批量生成请求: topic={}, cardCount={}, difficulty={}, language={}, withImages={}, scenario={}", 
                 topic, cardCount, difficulty, language, withImages, scenario);

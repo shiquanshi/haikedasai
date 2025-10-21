@@ -1299,6 +1299,13 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
 // 加载指定题库的卡片
 const loadBankCards = async (bankId: number) => {
   try {
+    // 添加严格的类型检查，确保bankId是有效的数字
+    if (!bankId || typeof bankId !== 'number' || isNaN(bankId) || bankId <= 0) {
+      console.error('无效的题库ID:', bankId)
+      ElMessage.error('无效的题库ID')
+      return
+    }
+    
     isLoadingBanks.value = true
     currentBankId.value = bankId // 保存当前题库ID
     const response = await questionBankApi.getBankCards(bankId)
@@ -1306,6 +1313,7 @@ const loadBankCards = async (bankId: number) => {
     showCards.value = true
     ElMessage.success('题库加载成功！')
   } catch (error) {
+    console.error('加载题库卡片失败:', error)
     ElMessage.error('加载题库卡片失败')
   } finally {
     isLoadingBanks.value = false
