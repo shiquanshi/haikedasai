@@ -1337,13 +1337,10 @@ const addSelectedCardsToBank = async () => {
     selectedCardIds.value = []
     isSelectionMode.value = false
     selectedTargetBankId.value = null
-    // 刷新题库列表
+    // 刷新题库列表（更新卡片数量等信息）
     await loadSystemBanks()
     await loadCustomBanks()
-    // 如果当前正在查看目标题库，则刷新卡片列表
-    if (currentBankId.value === targetId) {
-      await loadBankCards(targetId)
-    }
+    // 注意：不再自动跳转到目标题库，保持在当前生成卡片界面
   } catch (error) {
     ElMessage.error('添加卡片失败，请重试')
   }
@@ -1701,13 +1698,15 @@ const handleSubmitNewCard = async () => {
     // 关闭对话框
     showAddCardDialog.value = false
     
-    // 添加新卡片到列表
-    cards.value.push(newCard)
+    ElMessage.success('卡片添加成功！')
     
-    // 跳转到新卡片
-    currentCardIndex.value = cards.value.length - 1
+    // 刷新当前题库的卡片列表（从服务器重新加载）
+    if (currentBankId.value) {
+      await loadBankCards(currentBankId.value)
+      // 保持在当前卡片，不自动跳转到新添加的卡片
+    }
     
-    // 刷新题库列表
+    // 刷新题库列表（更新卡片数量）
     await loadSystemBanks()
     await loadCustomBanks()
   } catch (error: any) {
