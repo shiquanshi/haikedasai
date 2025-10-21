@@ -2011,12 +2011,6 @@ watch(bankSearchText, () => {
   }, 300)
 })
 
-// 处理历史记录分页变化
-const handleHistoryPageChange = async (page: number) => {
-  historyPage.value = page
-  await loadHistoryRecords(page, false)
-}
-
 // 页面加载时获取题库列表
 onMounted(() => {
   loadSystemBanks()
