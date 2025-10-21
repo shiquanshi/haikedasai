@@ -1018,11 +1018,26 @@ public class QuestionBankService {
      */
     private void insertImage(XSSFWorkbook workbook, Sheet sheet, XSSFDrawing drawing, 
                             String imageUrl, int rowIndex, int colIndex) throws IOException {
+        InputStream imageStream = null;
         try {
+            log.info("开始插入图片: url={}, row={}, col={}", imageUrl, rowIndex, colIndex);
+            
             // 从MinIO下载图片
-            InputStream imageStream = minioService.downloadFileFromUrl(imageUrl);
+            imageStream = minioService.downloadFileFromUrl(imageUrl);
+            if (imageStream == null) {
+                log.error("图片流为空: {}", imageUrl);
+                throw new IOException("无法下载图片: " + imageUrl);
+            }
+            
             byte[] imageBytes = IOUtils.toByteArray(imageStream);
-            imageStream.close();
+            
+            // 验证图片数据
+            if (imageBytes == null || imageBytes.length == 0) {
+                log.error("图片数据为空: {}", imageUrl);
+                throw new IOException("图片数据为空: " + imageUrl);
+            }
+            
+            log.info("图片下载成功: url={}, size={}bytes", imageUrl, imageBytes.length);
 
             // 确定图片类型
             int pictureType = XSSFWorkbook.PICTURE_TYPE_PNG;
@@ -1045,9 +1060,21 @@ public class QuestionBankService {
 
             // 插入图片
             drawing.createPicture(anchor, pictureIdx);
+            log.info("图片插入成功: url={}", imageUrl);
+            
         } catch (Exception e) {
             log.error("插入图片失败: imageUrl={}, row={}, col={}", imageUrl, rowIndex, colIndex, e);
             throw new IOException("插入图片失败: " + e.getMessage(), e);
+        } finally {
+            // 确保流被关闭
+            if (imageStream != null) {
+                try {
+                    imageStream.close();
+                    log.debug("图片流已关闭: {}", imageUrl);
+                } catch (IOException e) {
+                    log.error("关闭图片流失败: {}", imageUrl, e);
+                }
+            }
         }
     }
     
