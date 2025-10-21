@@ -440,6 +440,7 @@ public class QuestionBankController {
     @PostMapping("/import")
     public Result<QuestionBankDTO> importBankFromExcel(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "targetBankId", required = false) Long targetBankId,
             @RequestParam(value = "bankName", required = false) String bankName,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "difficulty", required = false) String difficulty,
@@ -460,7 +461,7 @@ public class QuestionBankController {
             Long userId = (Long) request.getAttribute("userId");
 
             // 执行导入
-            QuestionBankDTO bankDTO = questionBankService.importBankFromExcel(file, bankName, description, difficulty, language, userId);
+            QuestionBankDTO bankDTO = questionBankService.importBankFromExcel(file, targetBankId, bankName, description, difficulty, language, userId);
             return Result.success(bankDTO);
         } catch (Exception e) {
             log.error("导入题库失败: {}", e.getMessage(), e);

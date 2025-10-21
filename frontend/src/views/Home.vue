@@ -266,16 +266,17 @@
               </div>
             </el-card>
             
-            <!-- 加载更多按钮 -->
-            <div v-if="userStore.isLoggedIn && historyRecords.length > 0 && hasMoreHistory" class="load-more-container">
-              <el-button 
-                type="default" 
-                @click="handleLoadMoreHistory"
-                :loading="isLoadingHistory"
-                size="large"
-              >
-                加载更多
-              </el-button>
+            <!-- 分页组件 -->
+            <div v-if="userStore.isLoggedIn && historyRecords.length > 0" class="pagination-container">
+              <el-pagination
+                background
+                layout="prev, pager, next, total"
+                :total="historyTotal"
+                :page-size="historyPageSize"
+                :current-page="historyPage"
+                @current-change="handleHistoryPageChange"
+                :disabled="isLoadingHistory"
+              />
             </div>
             
             <div v-if="userStore.isLoggedIn && !isLoadingHistory && historyRecords.length === 0" class="no-data">
@@ -298,7 +299,7 @@
               <el-button 
                 type="success" 
                 size="large"
-                @click="showImportDialog = true"
+                @click="handleShowImportDialog"
                 class="import-bank-button"
                 :icon="Upload"
                 round
@@ -637,30 +638,62 @@
       width="600px"
     >
       <el-form :model="importForm" label-width="100px" class="import-form">
-        <el-form-item label="题库名称">
-          <el-input v-model="importForm.bankName" placeholder="可选,不填则使用文件名" />
+        <el-form-item label="导入方式" required>
+          <el-radio-group v-model="importForm.importMode">
+            <el-radio label="new">创建新题库</el-radio>
+            <el-radio label="existing">导入到已有题库</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="题库描述">
-          <el-input v-model="importForm.description" type="textarea" :rows="3" placeholder="可选,请输入题库描述" />
-        </el-form-item>
-        <el-form-item label="难度">
-          <el-select v-model="importForm.difficulty" placeholder="选择难度" style="width: 100%">
-            <el-option label="简单" value="easy" />
-            <el-option label="中等" value="medium" />
-            <el-option label="困难" value="hard" />
+        
+        <!-- 选择已有题库 -->
+        <el-form-item v-if="importForm.importMode === 'existing'" label="选择题库" required>
+          <el-select 
+            v-model="importForm.targetBankId" 
+            placeholder="请选择要导入的题库" 
+            filterable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="bank in userBanks"
+              :key="bank.id"
+              :label="bank.name"
+              :value="bank.id"
+            >
+              <span>{{ bank.name }}</span>
+              <span style="float: right; color: var(--el-text-color-secondary); font-size: 13px">
+                {{ bank.cardCount }} 张卡片
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="语言">
-          <el-select v-model="importForm.language" placeholder="选择语言" style="width: 100%">
-            <el-option label="中文" value="中文" />
-            <el-option label="英文" value="英文" />
-            <el-option label="日语" value="日语" />
-            <el-option label="韩语" value="韩语" />
-            <el-option label="法语" value="法语" />
-            <el-option label="德语" value="德语" />
-            <el-option label="西班牙语" value="西班牙语" />
-          </el-select>
-        </el-form-item>
+        
+        <!-- 新建题库信息 -->
+        <template v-if="importForm.importMode === 'new'">
+          <el-form-item label="题库名称">
+            <el-input v-model="importForm.bankName" placeholder="可选,不填则使用文件名" />
+          </el-form-item>
+          <el-form-item label="题库描述">
+            <el-input v-model="importForm.description" type="textarea" :rows="3" placeholder="可选,请输入题库描述" />
+          </el-form-item>
+          <el-form-item label="难度">
+            <el-select v-model="importForm.difficulty" placeholder="选择难度" style="width: 100%">
+              <el-option label="简单" value="easy" />
+              <el-option label="中等" value="medium" />
+              <el-option label="困难" value="hard" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="语言">
+            <el-select v-model="importForm.language" placeholder="选择语言" style="width: 100%">
+              <el-option label="中文" value="中文" />
+              <el-option label="英文" value="英文" />
+              <el-option label="日语" value="日语" />
+              <el-option label="韩语" value="韩语" />
+              <el-option label="法语" value="法语" />
+              <el-option label="德语" value="德语" />
+              <el-option label="西班牙语" value="西班牙语" />
+            </el-select>
+          </el-form-item>
+        </template>
         <el-form-item label="选择文件" required>
           <el-upload
             ref="uploadRef"
@@ -874,6 +907,8 @@ const createBankForm = ref({
 // 导入题库相关
 const showImportDialog = ref(false)
 const importForm = ref({
+  importMode: 'new' as 'new' | 'existing', // 导入方式：new-创建新题库，existing-导入到已有题库
+  targetBankId: null as number | null, // 目标题库ID（导入到已有题库时使用）
   bankName: '',
   description: '',
   difficulty: 'medium',
@@ -882,6 +917,7 @@ const importForm = ref({
 const fileList = ref([])
 const uploadRef = ref()
 const isImporting = ref(false)
+const userBanks = ref<QuestionBank[]>([]) // 用户的所有题库列表
 
 // 编辑题库相关
 const showEditBankDialog = ref(false)
@@ -907,7 +943,7 @@ const historyRecords = ref<QuestionBank[]>([])
 const isLoadingHistory = ref(false)
 const historyPage = ref(1)
 const historyPageSize = ref(10)
-const hasMoreHistory = ref(true)
+const historyTotal = ref(0)
 
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
@@ -1239,8 +1275,8 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
       historyRecords.value = records
     }
     
-    // 判断是否还有更多记录
-    hasMoreHistory.value = pageResponse.totalPages && pageResponse.page < pageResponse.totalPages
+    // 更新总记录数
+    historyTotal.value = pageResponse.total || 0
   } catch (error) {
     console.error('加载历史记录失败:', error)
     ElMessage.error('加载历史记录失败')
@@ -1459,10 +1495,32 @@ const handleFileChange = (file: any) => {
   fileList.value = [file]
 }
 
+// 加载用户题库列表
+const loadUserBanks = async () => {
+  try {
+    const response = await questionBankApi.searchBanks({
+      userId: userStore.userId,
+      page: 1,
+      pageSize: 1000 // 加载所有用户题库
+    })
+    if (response.code === 200 && response.data?.banks) {
+      userBanks.value = response.data.banks
+    }
+  } catch (error) {
+    console.error('加载用户题库失败:', error)
+  }
+}
+
 // 导入题库
 const handleImport = async () => {
   if (fileList.value.length === 0) {
     ElMessage.warning('请选择要导入的Excel文件')
+    return
+  }
+
+  // 如果是导入到已有题库，检查是否选择了题库
+  if (importForm.value.importMode === 'existing' && !importForm.value.targetBankId) {
+    ElMessage.warning('请选择要导入的题库')
     return
   }
 
@@ -1476,18 +1534,25 @@ const handleImport = async () => {
     isImporting.value = true
     const formData = new FormData()
     formData.append('file', file)
-    if (importForm.value.bankName) {
-      formData.append('bankName', importForm.value.bankName)
+    
+    if (importForm.value.importMode === 'existing') {
+      // 导入到已有题库
+      formData.append('targetBankId', importForm.value.targetBankId!.toString())
+    } else {
+      // 创建新题库
+      if (importForm.value.bankName) {
+        formData.append('bankName', importForm.value.bankName)
+      }
+      if (importForm.value.description) {
+        formData.append('description', importForm.value.description)
+      }
+      formData.append('difficulty', importForm.value.difficulty)
+      formData.append('language', importForm.value.language)
     }
-    if (importForm.value.description) {
-      formData.append('description', importForm.value.description)
-    }
-    formData.append('difficulty', importForm.value.difficulty)
-    formData.append('language', importForm.value.language)
 
     const response = await questionBankApi.importBankFromExcel(formData)
     
-    if (response.success) {
+    if (response.code === 200) {
       ElMessage({
         message: '导入成功！',
         type: 'success',
@@ -1497,6 +1562,8 @@ const handleImport = async () => {
       showImportDialog.value = false
       // 重置表单
       importForm.value = {
+        importMode: 'new',
+        targetBankId: null,
         bankName: '',
         description: '',
         difficulty: 'medium',
@@ -1515,6 +1582,13 @@ const handleImport = async () => {
   } finally {
     isImporting.value = false
   }
+}
+
+// 显示导入对话框
+const handleShowImportDialog = async () => {
+  // 加载用户题库列表
+  await loadUserBanks()
+  showImportDialog.value = true
 }
 
 // 显示编辑题库对话框
@@ -1576,7 +1650,7 @@ const handleDeleteBank = async (bankId: number) => {
 
     const response = await questionBankApi.deleteBank(bankId)
     
-    if (response.success) {
+    if (response.code === 200) {
       ElMessage.success('删除成功！')
       // 刷新题库列表
       await loadCustomBanks()
@@ -1857,11 +1931,10 @@ watch(bankSearchText, () => {
   }, 300)
 })
 
-// 加载更多历史记录
-const handleLoadMoreHistory = async () => {
-  if (isLoadingHistory.value || !hasMoreHistory.value) return
-  historyPage.value++
-  await loadHistoryRecords(historyPage.value, true)
+// 处理历史记录分页变化
+const handleHistoryPageChange = async (page: number) => {
+  historyPage.value = page
+  await loadHistoryRecords(page, false)
 }
 
 // 页面加载时获取题库列表
@@ -3023,5 +3096,38 @@ onMounted(() => {
   font-size: 16px;
   color: #606266;
   font-weight: 500;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  padding: 20px 0;
+}
+
+.pagination-container .el-pagination {
+  padding: 0;
+}
+
+.pagination-container .el-pagination button,
+.pagination-container .el-pagination .el-pager li {
+  background-color: white;
+  border-radius: 8px;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+
+.pagination-container .el-pagination button:hover,
+.pagination-container .el-pagination .el-pager li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-container .el-pagination .el-pager li.is-active {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  font-weight: 600;
 }
 </style>

@@ -662,21 +662,35 @@ public class QuestionBankService {
      * 从Excel导入题库卡片
      */
     @Transactional
-    public QuestionBankDTO importBankFromExcel(MultipartFile file, String bankName, String description, String difficulty, String language, Long userId) throws IOException {
+    public QuestionBankDTO importBankFromExcel(MultipartFile file, Long targetBankId, String bankName, String description, String difficulty, String language, Long userId) throws IOException {
         log.info("开始导入Excel文件: {}", file.getOriginalFilename());
 
-        // 创建新题库
-        QuestionBank bank = new QuestionBank();
-        bank.setName(bankName != null && !bankName.trim().isEmpty() ? bankName : "导入题库 - " + new java.util.Date());
-        bank.setDescription(description != null && !description.trim().isEmpty() ? description : "从Excel文件导入的题库");
-        bank.setTopic("通用"); // 设置默认主题
-        bank.setType("custom");
-        bank.setDifficulty(difficulty != null && !difficulty.trim().isEmpty() ? difficulty : "medium"); // 设置难度
-        bank.setLanguage(language != null && !language.trim().isEmpty() ? language : "中文"); // 设置语言
-        bank.setUserId(String.valueOf(userId));
-        bank.setCreatedAt(new java.util.Date());
-        questionBankMapper.insert(bank);
-        log.info("创建题库成功: {}", bank.getName());
+        QuestionBank bank;
+        if (targetBankId != null) {
+            // 导入到已有题库
+            bank = questionBankMapper.selectById(targetBankId);
+            if (bank == null) {
+                throw new RuntimeException("目标题库不存在");
+            }
+            // 验证题库所有者
+            if (!String.valueOf(userId).equals(bank.getUserId())) {
+                throw new RuntimeException("无权限导入到该题库");
+            }
+            log.info("导入到已有题库: {}", bank.getName());
+        } else {
+            // 创建新题库
+            bank = new QuestionBank();
+            bank.setName(bankName != null && !bankName.trim().isEmpty() ? bankName : "导入题库 - " + new java.util.Date());
+            bank.setDescription(description != null && !description.trim().isEmpty() ? description : "从Excel文件导入的题库");
+            bank.setTopic("通用"); // 设置默认主题
+            bank.setType("custom");
+            bank.setDifficulty(difficulty != null && !difficulty.trim().isEmpty() ? difficulty : "medium"); // 设置难度
+            bank.setLanguage(language != null && !language.trim().isEmpty() ? language : "中文"); // 设置语言
+            bank.setUserId(String.valueOf(userId));
+            bank.setCreatedAt(new java.util.Date());
+            questionBankMapper.insert(bank);
+            log.info("创建题库成功: {}", bank.getName());
+        }
 
         // 读取Excel文件
         XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
