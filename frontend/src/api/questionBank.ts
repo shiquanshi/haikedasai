@@ -325,5 +325,13 @@ export const questionBankApi = {
       url: `/api/question-bank/shared/${shareCode}`,
       method: 'get'
     })
+  },
+
+  // 获取用户的分享记录
+  getSharedRecords() {
+    return request({
+      url: '/api/question-bank/shared-records',
+      method: 'get'
+    })
   }
 }

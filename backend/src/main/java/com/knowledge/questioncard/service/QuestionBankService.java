@@ -1391,6 +1391,33 @@ public class QuestionBankService {
     }
     
     /**
+     * 查询用户的分享记录（已生成分享码的题库）
+     */
+    public List<QuestionBankDTO> getSharedBanks(Long userId) {
+        List<QuestionBank> banks = questionBankMapper.selectSharedBanksByUser(String.valueOf(userId));
+        
+        return banks.stream().map(bank -> {
+            QuestionBankDTO dto = new QuestionBankDTO();
+            dto.setId(bank.getId());
+            dto.setName(bank.getName());
+            dto.setDescription(bank.getDescription());
+            dto.setTopic(bank.getTopic());
+            dto.setType(bank.getType());
+            dto.setCreatedAt(bank.getCreatedAt());
+            dto.setUpdatedAt(bank.getUpdatedAt());
+            dto.setCardCount(bank.getCardCount());
+            dto.setViewCount(bank.getViewCount());
+            dto.setFavoriteCount(bank.getFavoriteCount());
+            dto.setTags(bank.getTags());
+            dto.setDifficulty(bank.getDifficulty());
+            dto.setLanguage(bank.getLanguage());
+            dto.setUserId(bank.getUserId() != null ? Long.parseLong(bank.getUserId()) : null);
+            dto.setShareCode(bank.getShareCode());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+    
+    /**
      * 生成随机码
      */
     private String generateRandomCode(int length) {

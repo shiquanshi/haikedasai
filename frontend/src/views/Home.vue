@@ -276,6 +276,46 @@
               />
             </el-loading>
 
+            <!-- 我的分享 -->
+            <el-divider v-if="userStore.isLoggedIn" content-position="left">我的分享</el-divider>
+            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingSharedBanks" element-loading-text="加载中...">
+              <el-card
+                v-for="bank in sharedBanks"
+                :key="bank.id"
+                class="bank-card"
+                @click="loadBankCards(bank.id)"
+              >
+                <template #header>
+                  <div class="card-header">
+                    <span>{{ bank.name }}</span>
+                    <div class="card-header-actions">
+                      <el-tag size="small">{{ bank.cardCount }}张卡片</el-tag>
+                      <el-tag size="small" type="success">分享码: {{ bank.shareCode }}</el-tag>
+                      <el-button
+                        type="success"
+                        size="small"
+                        :icon="Star"
+                        @click.stop="copyShareCodeDirect(bank.shareCode)"
+                        circle
+                        title="复制分享码"
+                      />
+                    </div>
+                  </div>
+                </template>
+                <div class="bank-description">
+                  {{ bank.description }}
+                </div>
+                <div class="bank-meta">
+                  <span class="bank-difficulty">{{ bank.difficulty }}</span>
+                  <span class="bank-language">{{ bank.language }}</span>
+                </div>
+              </el-card>
+              
+              <div v-if="userStore.isLoggedIn && !isLoadingSharedBanks && sharedBanks.length === 0" class="no-data">
+                暂无分享记录
+              </div>
+            </el-loading>
+
           <!-- 历史生成记录 -->
           <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
           <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
@@ -1055,6 +1095,10 @@ const historyPage = ref(1)
 const historyPageSize = ref(10)
 const historyTotal = ref(0)
 
+// 分享记录相关
+const sharedBanks = ref<QuestionBank[]>([])
+const isLoadingShared = ref(false)
+
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
 
@@ -1427,6 +1471,20 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
 const handleHistoryPageChange = async (page: number) => {
   historyPage.value = page
   await loadHistoryRecords(page, false)
+}
+
+// 加载分享记录
+const loadSharedBanks = async () => {
+  try {
+    isLoadingShared.value = true
+    const response = await questionBankApi.getSharedRecords()
+    sharedBanks.value = response.data || []
+  } catch (error) {
+    console.error('加载分享记录失败:', error)
+    ElMessage.error('加载分享记录失败')
+  } finally {
+    isLoadingShared.value = false
+  }
 }
 
 // 加载指定题库的卡片
@@ -2151,11 +2209,12 @@ onMounted(() => {
   loadSystemBanks()
   loadCustomBanks()
   
-  // 如果用户已登录，加载历史生成记录
+  // 如果用户已登录，加载历史生成记录和分享记录
   if (userStore.isLoggedIn) {
     // 尝试获取用户信息
     userStore.fetchUserInfo().then(() => {
       loadHistoryRecords()
+      loadSharedBanks()
     })
   }
 })

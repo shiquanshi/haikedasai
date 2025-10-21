@@ -536,4 +536,19 @@ public class QuestionBankController {
             return Result.error("获取失败: " + e.getMessage());
         }
     }
+    
+    /**
+     * 获取用户的分享记录
+     */
+    @GetMapping("/shared-records")
+    public Result<List<QuestionBankDTO>> getSharedRecords(HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            List<QuestionBankDTO> sharedBanks = questionBankService.getSharedBanks(userId);
+            return Result.success(sharedBanks);
+        } catch (Exception e) {
+            log.error("获取分享记录失败: {}", e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
 }

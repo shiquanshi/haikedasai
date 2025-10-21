@@ -171,5 +171,13 @@
             updated_at = NOW()
         WHERE id = #{id}
     </update>
+    
+    <select id="selectSharedBanksByUser" resultMap="BaseResultMap">
+        SELECT * FROM question_banks 
+        WHERE user_id = #{userId} 
+        AND share_code IS NOT NULL 
+        AND share_code != ''
+        ORDER BY updated_at DESC
+    </select>
 
 </mapper>

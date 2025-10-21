@@ -16,6 +16,7 @@ public class QuestionBankDTO {
     private String difficulty; // 难度：easy, medium, hard
     private String language; // 语言
     private Date createdAt; // 创建时间
+    private Date updatedAt; // 更新时间
     private Integer viewCount; // 浏览次数
     private Integer favoriteCount; // 收藏次数
     private Long userId; // 创建者ID
