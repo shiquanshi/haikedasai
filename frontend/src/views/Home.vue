@@ -228,9 +228,50 @@
               </el-card>
               
               <div v-if="!isLoadingCustomBanks && customBanks.length === 0" class="no-data">
-                暂无自定义题库,点击下方按钮创建
+              暂无自定义题库
+            </div>
+          </el-loading>
+
+          <!-- 历史生成记录 -->
+          <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
+          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
+            <el-card
+              v-for="record in historyRecords"
+              :key="record.id"
+              class="bank-card"
+              @click="loadBankCards(record.id)"
+            >
+              <template #header>
+                <div class="card-header">
+                  <span>{{ record.name }}</span>
+                  <div class="card-header-actions">
+                    <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
+                    <el-tag size="small" type="info">{{ record.createTime }}</el-tag>
+                  </div>
+                </div>
+              </template>
+              <div class="bank-meta">
+                <span class="bank-difficulty">{{ record.difficulty }}</span>
+                <span class="bank-language">{{ record.language }}</span>
               </div>
-            </el-loading>
+            </el-card>
+            
+            <!-- 加载更多按钮 -->
+            <div v-if="userStore.isLoggedIn && historyRecords.length > 0 && hasMoreHistory" class="load-more-container">
+              <el-button 
+                type="default" 
+                @click="handleLoadMoreHistory"
+                :loading="isLoadingHistory"
+                size="large"
+              >
+                加载更多
+              </el-button>
+            </div>
+            
+            <div v-if="userStore.isLoggedIn && !isLoadingHistory && historyRecords.length === 0" class="no-data">
+              暂无历史生成记录
+            </div>
+          </el-loading>
             
             <!-- 创建题库按钮 -->
             <div class="create-bank-button-container">
@@ -849,6 +890,14 @@ const addCardForm = ref({
   questionImage: '',
   answerImage: ''
 })
+
+// 历史生成记录相关
+const historyRecords = ref<QuestionBank[]>([])
+const isLoadingHistory = ref(false)
+const historyPage = ref(1)
+const historyPageSize = ref(10)
+const hasMoreHistory = ref(true)
+})
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
 
@@ -1155,6 +1204,10 @@ const generateCards = async () => {
         isGenerating.value = false
         if (cards.value.length > 0) {
           ElMessage.success(`闪卡生成成功！共生成${cards.value.length}张卡片`)
+          // 刷新历史生成记录列表
+          if (userStore.isLoggedIn && userStore.userInfo) {
+            loadHistoryRecords()
+          }
         } else {
           ElMessage.warning('未能解析生成的卡片，请重试')
         }
@@ -1190,6 +1243,38 @@ const loadCustomBanks = async () => {
     ElMessage.error('加载自定义题库失败')
   } finally {
     isLoadingCustomBanks.value = false
+  }
+}
+
+// 加载历史生成记录
+const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) => {
+  try {
+    // 如果用户未登录或没有用户信息，则不加载历史记录
+    if (!userStore.isLoggedIn || !userStore.userInfo) {
+      return
+    }
+    
+    isLoadingHistory.value = true
+    const response = await questionBankApi.searchBanks({
+      page: page,
+      pageSize: historyPageSize.value,
+      sortBy: 'createTime',
+      sortOrder: 'desc',
+      userId: userStore.userInfo.id
+    })
+    
+    if (loadMore) {
+      historyRecords.value = [...historyRecords.value, ...response.data.records]
+    } else {
+      historyRecords.value = response.data.records
+    }
+    
+    // 判断是否还有更多记录
+    hasMoreHistory.value = historyRecords.value.length < response.data.total
+  } catch (error) {
+    ElMessage.error('加载历史记录失败')
+  } finally {
+    isLoadingHistory.value = false
   }
 }
 
@@ -1790,10 +1875,25 @@ watch(bankSearchText, () => {
   }, 300)
 })
 
+// 加载更多历史记录
+const handleLoadMoreHistory = async () => {
+  if (isLoadingHistory.value || !hasMoreHistory.value) return
+  historyPage.value++
+  await loadHistoryRecords(historyPage.value, true)
+}
+
 // 页面加载时获取题库列表
 onMounted(() => {
   loadSystemBanks()
   loadCustomBanks()
+  
+  // 如果用户已登录，加载历史生成记录
+  if (userStore.isLoggedIn) {
+    // 尝试获取用户信息
+    userStore.fetchUserInfo().then(() => {
+      loadHistoryRecords()
+    })
+  }
 })
 </script>
 
@@ -2700,6 +2800,30 @@ onMounted(() => {
 .card-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   border-color: #4facfe;
+}
+
+/* 加载更多按钮样式 */
+.load-more-container {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.load-more-container .el-button {
+  min-width: 200px;
+  height: 48px;
+  font-size: 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.load-more-container .el-button:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
 }
 
 /* 题库选择对话框样式 */
