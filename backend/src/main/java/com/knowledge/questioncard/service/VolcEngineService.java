@@ -5,9 +5,9 @@ import com.volcengine.ark.runtime.model.completion.chat.ChatCompletionRequest;
 import com.volcengine.ark.runtime.model.completion.chat.ChatMessage;
 import com.volcengine.ark.runtime.model.completion.chat.ChatMessageRole;
 import com.volcengine.ark.runtime.service.ArkService;
-import io.reactivex.Flowable;
+import com.knowledge.questioncard.util.StreamTokenizer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired;                                              
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.HttpEntity;
@@ -188,8 +188,8 @@ public class VolcEngineService {
             
             // 使用StringBuilder累积所有增量片段
             final StringBuilder accumulatedContent = new StringBuilder();
-            // 记录上一个token,用于智能添加空格
-            final StringBuilder lastToken = new StringBuilder();
+            // 创建流式分词器，用于处理英文单词边界
+            final StreamTokenizer tokenizer = new StreamTokenizer();
             
             // 使用CountDownLatch等待流式完成
             final CountDownLatch latch = new CountDownLatch(1);
@@ -212,25 +212,26 @@ public class VolcEngineService {
                                             log.info("⏱️ [计时] 首个token返回耗时: {}ms", firstTokenTime.get() - streamStartTime);
                                         }
                                         tokenCount.incrementAndGet();
-                                        // 直接使用AI返回的内容(AI已按提示词要求添加空格)
                                         
-                                        // 更新lastToken为当前内容的最后一个字符
-                                        lastToken.setLength(0);
-                                        if (incrementalContent.length() > 0) {
-                                            lastToken.append(incrementalContent.charAt(incrementalContent.length() - 1));
-                                        }
+                                        // 使用StreamTokenizer处理增量内容，确保英文单词完整性
+                                        String safeContent = tokenizer.processIncrement(incrementalContent);
                                         
-                                        // 累积到StringBuilder中
+                                        // 累积原始内容到StringBuilder中
                                         accumulatedContent.append(incrementalContent);
                                         
-                                        log.info("[SSE流式发送] 本次增量={}, 累积总长={}",
-                                                incrementalContent,
-                                                accumulatedContent.length());
+                                        // 只发送经过处理的安全内容
+                                        if (!safeContent.isEmpty()) {
+                                            log.info("[SSE流式发送] 原始增量长度={}, 安全发送长度={}, 缓冲区大小={}, 累积总长={}",
+                                                    incrementalContent.length(),
+                                                    safeContent.length(),
+                                                    tokenizer.getBufferSize(),
+                                                    accumulatedContent.length());
 
-                                        // 立即发送AI返回的内容 - 真正的实时流式
-                                        emitter.send(SseEmitter.event()
-                                                .name("message")
-                                                .data(incrementalContent));
+                                            // 发送处理后的安全内容
+                                            emitter.send(SseEmitter.event()
+                                                    .name("message")
+                                                    .data(safeContent));
+                                        }
                                     }
                                 }
                             } catch (Exception e) {
@@ -251,12 +252,26 @@ public class VolcEngineService {
                             latch.countDown();
                         },
                         () -> {
-                            long streamEndTime = System.currentTimeMillis();
-                            log.info("⏱️ [计时] 大模型流式调用完成 - 总耗时:{}ms, token数:{}, 平均速度:{} tokens/s",
-                                streamEndTime - streamStartTime,
-                                tokenCount.get(),
-                                tokenCount.get() * 1000.0 / (streamEndTime - streamStartTime));
-                            latch.countDown();
+                            try {
+                                // 流式完成时，发送缓冲区中的剩余内容
+                                String remaining = tokenizer.flush();
+                                if (!remaining.isEmpty()) {
+                                    log.info("[SSE流式发送] 发送缓冲区剩余内容，长度={}", remaining.length());
+                                    emitter.send(SseEmitter.event()
+                                            .name("message")
+                                            .data(remaining));
+                                }
+                                
+                                long streamEndTime = System.currentTimeMillis();
+                                log.info("⏱️ [计时] 大模型流式调用完成 - 总耗时:{}ms, token数:{}, 平均速度:{} tokens/s",
+                                    streamEndTime - streamStartTime,
+                                    tokenCount.get(),
+                                    tokenCount.get() * 1000.0 / (streamEndTime - streamStartTime));
+                            } catch (IOException e) {
+                                log.error("发送剩余内容失败", e);
+                            } finally {
+                                latch.countDown();
+                            }
                         }
                     );
             
