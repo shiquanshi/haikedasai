@@ -897,7 +897,7 @@ const isLoadingHistory = ref(false)
 const historyPage = ref(1)
 const historyPageSize = ref(10)
 const hasMoreHistory = ref(true)
-})
+
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
 
