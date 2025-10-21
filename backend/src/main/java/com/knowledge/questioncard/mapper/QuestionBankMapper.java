@@ -62,4 +62,10 @@ public interface QuestionBankMapper {
     
     // 删除题库
     int delete(@Param("id") Long id);
+    
+    // 通过分享码查询题库
+    QuestionBank selectByShareCode(@Param("shareCode") String shareCode);
+    
+    // 更新题库分享码
+    int updateShareCode(@Param("id") Long id, @Param("shareCode") String shareCode);
 }

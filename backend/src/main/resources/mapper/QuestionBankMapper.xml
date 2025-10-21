@@ -18,6 +18,7 @@
         <result column="difficulty" property="difficulty" />
         <result column="user_id" property="userId" />
         <result column="updated_at" property="updatedAt" />
+        <result column="share_code" property="shareCode" />
     </resultMap>
 
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.QuestionBank" 
@@ -159,5 +160,16 @@
     <delete id="delete">
         DELETE FROM question_banks WHERE id = #{id}
     </delete>
+    
+    <select id="selectByShareCode" resultMap="BaseResultMap">
+        SELECT * FROM question_banks WHERE share_code = #{shareCode}
+    </select>
+    
+    <update id="updateShareCode">
+        UPDATE question_banks
+        SET share_code = #{shareCode},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
 
 </mapper>

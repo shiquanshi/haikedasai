@@ -20,4 +20,5 @@ public class QuestionBank {
     private String generatedContent;
     private String userId;
     private Date updatedAt;
+    private String shareCode; // 分享码
 }

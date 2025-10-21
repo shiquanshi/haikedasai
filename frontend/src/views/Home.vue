@@ -164,6 +164,14 @@
                         title="导出Excel"
                       />
                       <el-button
+                        type="success"
+                        size="small"
+                        :icon="Star"
+                        @click.stop="handleShareBank(bank.id)"
+                        circle
+                        title="分享题库"
+                      />
+                      <el-button
                         type="danger"
                         size="small"
                         :icon="Delete"
@@ -329,9 +337,19 @@
                 class="import-bank-button"
                 :icon="Upload"
                 round
+              >
+                导入Excel题库
+              </el-button>
+              <el-button 
+                type="warning" 
+                size="large"
+                @click="showAccessDialog = true"
+                class="access-bank-button"
+                :icon="Search"
+                round
                 style="margin-left: 10px"
               >
-                从Excel导入
+                访问分享题库
               </el-button>
             </div>
           </div>
@@ -858,6 +876,58 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 分享题库对话框 -->
+    <el-dialog
+      v-model="showShareDialog"
+      title="分享题库"
+      width="500px"
+    >
+      <div v-if="shareCode" class="share-content">
+        <p style="margin-bottom: 15px">分享码已生成，请复制分享码给其他用户：</p>
+        <el-input
+          v-model="shareCode"
+          readonly
+          size="large"
+        >
+          <template #append>
+            <el-button @click="copyShareCode" type="primary">复制</el-button>
+          </template>
+        </el-input>
+        <p style="margin-top: 15px; color: #909399; font-size: 14px">
+          其他用户可以通过此分享码访问您的题库
+        </p>
+      </div>
+      <div v-else style="text-align: center; padding: 20px">
+        <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+        <p style="margin-top: 10px">正在生成分享码...</p>
+      </div>
+    </el-dialog>
+
+    <!-- 访问分享题库对话框 -->
+    <el-dialog
+      v-model="showAccessDialog"
+      title="访问分享题库"
+      width="500px"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="分享码">
+          <el-input
+            v-model="accessShareCode"
+            placeholder="请输入6位分享码"
+            maxlength="6"
+            size="large"
+            clearable
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showAccessDialog = false" size="large">取消</el-button>
+          <el-button type="primary" @click="handleAccessSharedBank" size="large">访问</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -987,6 +1057,12 @@ const historyTotal = ref(0)
 
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
+
+// 分享相关
+const showShareDialog = ref(false)
+const shareCode = ref('')
+const showAccessDialog = ref(false)
+const accessShareCode = ref('')
 
 const currentCard = computed(() => cards.value[currentCardIndex.value] || { question: '', answer: '' })
 const isCurrentCardSelected = computed(() => {
@@ -2020,6 +2096,62 @@ watch(bankSearchText, () => {
     loadCustomBanks()
   }, 300)
 })
+
+// 分享题库 - 生成分享码
+const handleShareBank = async (bankId: number) => {
+  try {
+    shareCode.value = ''
+    showShareDialog.value = true
+    const response = await questionBankApi.generateShareCode(bankId)
+    shareCode.value = response.data
+    ElMessage.success('分享码生成成功')
+  } catch (error) {
+    console.error('生成分享码失败:', error)
+    ElMessage.error('生成分享码失败，请稍后重试')
+    showShareDialog.value = false
+  }
+}
+
+// 复制分享码
+const copyShareCode = async () => {
+  try {
+    await navigator.clipboard.writeText(shareCode.value)
+    ElMessage.success('分享码已复制到剪贴板')
+  } catch (error) {
+    // 如果剪贴板API失败，使用传统方法
+    const textarea = document.createElement('textarea')
+    textarea.value = shareCode.value
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+    ElMessage.success('分享码已复制到剪贴板')
+  }
+}
+
+// 通过分享码访问题库
+const handleAccessSharedBank = async () => {
+  if (!accessShareCode.value || accessShareCode.value.trim().length !== 6) {
+    ElMessage.warning('请输入正确的6位分享码')
+    return
+  }
+  
+  try {
+    const response = await questionBankApi.getByShareCode(accessShareCode.value.trim())
+    const bank = response.data
+    
+    // 加载该题库的卡片并显示
+    await loadBankCards(bank.id)
+    
+    showAccessDialog.value = false
+    accessShareCode.value = ''
+    ElMessage.success('成功访问分享题库')
+  } catch (error: any) {
+    console.error('访问分享题库失败:', error)
+    const errorMsg = error.response?.data?.message || '访问失败，请检查分享码是否正确'
+    ElMessage.error(errorMsg)
+  }
+}
 
 // 页面加载时获取题库列表
 onMounted(() => {

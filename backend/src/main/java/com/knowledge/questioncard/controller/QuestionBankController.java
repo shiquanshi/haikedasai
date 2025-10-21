@@ -505,4 +505,35 @@ public class QuestionBankController {
             return Result.error("新增失败: " + e.getMessage());
         }
     }
+    
+    /**
+     * 生成题库分享码
+     */
+    @PostMapping("/{bankId}/share")
+    public Result<String> generateShareCode(
+            @PathVariable Long bankId,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String shareCode = questionBankService.generateShareCode(bankId, userId);
+            return Result.success(shareCode);
+        } catch (Exception e) {
+            log.error("生成分享码失败: {}", e.getMessage(), e);
+            return Result.error("生成分享码失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 通过分享码获取题库
+     */
+    @GetMapping("/shared/{shareCode}")
+    public Result<QuestionBankDTO> getByShareCode(@PathVariable String shareCode) {
+        try {
+            QuestionBankDTO bank = questionBankService.getByShareCode(shareCode);
+            return Result.success(bank);
+        } catch (Exception e) {
+            log.error("获取分享题库失败: {}", e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
 }

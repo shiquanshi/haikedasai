@@ -1312,4 +1312,94 @@ public class QuestionBankService {
         
         return convertToDTO(card);
     }
+    
+    /**
+     * 为题库生成分享码
+     */
+    @Transactional
+    public String generateShareCode(Long bankId, Long userId) {
+        // 查询题库
+        QuestionBank bank = questionBankMapper.selectById(bankId);
+        if (bank == null) {
+            throw new RuntimeException("题库不存在");
+        }
+        
+        // 检查权限（只有题库创建者或system类型题库可以生成分享码）
+        if (!"system".equals(bank.getType()) && !bank.getUserId().equals(userId)) {
+            throw new RuntimeException("无权限分享此题库");
+        }
+        
+        // 如果已有分享码，直接返回
+        if (bank.getShareCode() != null && !bank.getShareCode().isEmpty()) {
+            return bank.getShareCode();
+        }
+        
+        // 生成6位随机码（字母+数字）
+        String shareCode = generateRandomCode(6);
+        
+        // 确保分享码唯一
+        while (questionBankMapper.selectByShareCode(shareCode) != null) {
+            shareCode = generateRandomCode(6);
+        }
+        
+        // 更新题库分享码
+        questionBankMapper.updateShareCode(bankId, shareCode);
+        
+        // 清除缓存
+        questionBankCache.clear();
+        
+        log.info("为题库 {} 生成分享码: {}", bankId, shareCode);
+        return shareCode;
+    }
+    
+    /**
+     * 通过分享码获取题库
+     */
+    public QuestionBankDTO getByShareCode(String shareCode) {
+        // 查询题库
+        QuestionBank bank = questionBankMapper.selectByShareCode(shareCode);
+        if (bank == null) {
+            throw new RuntimeException("无效的分享码");
+        }
+        
+        // 增加浏览次数
+        questionBankMapper.incrementViewCount(bank.getId());
+        
+        // 转换为DTO
+        QuestionBankDTO dto = new QuestionBankDTO();
+        dto.setId(bank.getId());
+        dto.setName(bank.getName());
+        dto.setDescription(bank.getDescription());
+        dto.setTopic(bank.getTopic());
+        dto.setType(bank.getType());
+        dto.setCreatedAt(bank.getCreatedAt());
+        dto.setCardCount(bank.getCardCount());
+        dto.setViewCount(bank.getViewCount() + 1); // 返回新的浏览次数
+        dto.setFavoriteCount(bank.getFavoriteCount());
+        dto.setTags(bank.getTags());
+        dto.setDifficulty(bank.getDifficulty());
+        dto.setLanguage(bank.getLanguage());
+        dto.setUserId(bank.getUserId() != null ? Long.parseLong(bank.getUserId()) : null);
+        dto.setShareCode(bank.getShareCode());
+        
+        // 获取题库中的卡片
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bank.getId());
+        dto.setCards(cards.stream().map(this::convertToDTO).collect(Collectors.toList()));
+        
+        log.info("通过分享码 {} 获取题库: {}", shareCode, bank.getName());
+        return dto;
+    }
+    
+    /**
+     * 生成随机码
+     */
+    private String generateRandomCode(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            code.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return code.toString();
+    }
 }

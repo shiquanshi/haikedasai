@@ -309,5 +309,21 @@ export const questionBankApi = {
       method: 'post',
       data: params
     })
+  },
+
+  // 生成题库分享码
+  generateShareCode(bankId: number) {
+    return request({
+      url: `/api/question-bank/${bankId}/share`,
+      method: 'post'
+    })
+  },
+
+  // 通过分享码获取题库
+  getByShareCode(shareCode: string) {
+    return request({
+      url: `/api/question-bank/shared/${shareCode}`,
+      method: 'get'
+    })
   }
 }
