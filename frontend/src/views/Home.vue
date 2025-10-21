@@ -1258,7 +1258,7 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     const response = await questionBankApi.searchBanks({
       page: page,
       pageSize: historyPageSize.value,
-      sortBy: 'createTime',
+      sortBy: 'create_time', // Changed from 'createTime' to 'create_time' to match database column name
       sortOrder: 'desc',
       userId: userStore.userInfo.id
     })
