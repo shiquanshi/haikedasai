@@ -530,20 +530,20 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <div v-if="isLoadingBanks || isLoadingCustomBanks" class="bank-loading">
+        <div v-if="isLoadingDialogBanks" class="bank-loading">
           <el-icon class="is-loading"><Loading /></el-icon>
           <span>加载题库中...</span>
         </div>
-        <div v-else-if="systemBanks.length === 0 && customBanks.length === 0" class="bank-empty">
+        <div v-else-if="filteredDialogSystemBanks.length === 0 && filteredDialogCustomBanks.length === 0" class="bank-empty">
           <el-icon><Search /></el-icon>
           <span>{{ bankSearchText ? '未找到匹配的题库' : '暂无题库，请先创建' }}</span>
         </div>
         <div v-else class="bank-list">
           <!-- 系统推荐题库 -->
-          <div v-if="systemBanks.length > 0" class="bank-category">
+          <div v-if="filteredDialogSystemBanks.length > 0" class="bank-category">
             <div class="bank-category-title">系统推荐题库</div>
             <div
-              v-for="bank in systemBanks"
+              v-for="bank in filteredDialogSystemBanks"
               :key="'system-' + bank.id"
               class="bank-radio-item"
               :class="{ 'is-selected': selectedTargetBankId === bank.id }"
@@ -569,10 +569,10 @@
           </div>
           
           <!-- 我的自定义题库 -->
-          <div v-if="customBanks.length > 0" class="bank-category">
+          <div v-if="filteredDialogCustomBanks.length > 0" class="bank-category">
             <div class="bank-category-title">我的题库</div>
             <div
-              v-for="bank in customBanks"
+              v-for="bank in filteredDialogCustomBanks"
               :key="'custom-' + bank.id"
               class="bank-radio-item"
               :class="{ 'is-selected': selectedTargetBankId === bank.id }"
@@ -929,6 +929,10 @@ const isSelectionMode = ref(false)
 const selectedCardIds = ref<number[]>([])
 const showBankDialog = ref(false)
 const selectedTargetBankId = ref<number | null>(null)
+// 对话框中显示的题库列表（独立于页面主列表）
+const dialogSystemBanks = ref<QuestionBank[]>([])
+const dialogCustomBanks = ref<QuestionBank[]>([])
+const isLoadingDialogBanks = ref(false)
 
 // 创建题库相关
 const showCreateBankDialog = ref(false)
@@ -993,6 +997,25 @@ const currentBank = computed(() => {
   if (!currentBankId.value) return null
   // 从系统题库和自定义题库中查找当前题库
   return [...systemBanks.value, ...customBanks.value].find(bank => bank.id === currentBankId.value) || null
+})
+
+// 对话框中过滤后的题库列表
+const filteredDialogSystemBanks = computed(() => {
+  if (!bankSearchText.value.trim()) return dialogSystemBanks.value
+  const searchText = bankSearchText.value.toLowerCase()
+  return dialogSystemBanks.value.filter(bank => 
+    bank.name.toLowerCase().includes(searchText) || 
+    (bank.description && bank.description.toLowerCase().includes(searchText))
+  )
+})
+
+const filteredDialogCustomBanks = computed(() => {
+  if (!bankSearchText.value.trim()) return dialogCustomBanks.value
+  const searchText = bankSearchText.value.toLowerCase()
+  return dialogCustomBanks.value.filter(bank => 
+    bank.name.toLowerCase().includes(searchText) || 
+    (bank.description && bank.description.toLowerCase().includes(searchText))
+  )
 })
 
 // 生成AI题库
@@ -1454,9 +1477,20 @@ const showAddToBankDialog = async () => {
     ElMessage.warning('请先选择要添加的卡片')
     return
   }
-  // 打开对话框前加载所有题库
-  await loadSystemBanks()
-  await loadCustomBanks()
+  // 打开对话框前加载所有题库（不使用分页，一次性加载所有）
+  try {
+    isLoadingDialogBanks.value = true
+    // 加载所有系统题库
+    const systemResponse = await questionBankApi.getSystemBanks('', 1, 1000)
+    dialogSystemBanks.value = systemResponse.data.data || []
+    // 加载所有用户自定义题库
+    const customResponse = await questionBankApi.getUserCustomBanks(1, 1000)
+    dialogCustomBanks.value = customResponse.data.data || []
+  } catch (error) {
+    ElMessage.error('加载题库列表失败')
+  } finally {
+    isLoadingDialogBanks.value = false
+  }
   showBankDialog.value = true
 }
 
