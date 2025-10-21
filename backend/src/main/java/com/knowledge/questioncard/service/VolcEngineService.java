@@ -479,6 +479,7 @@ public class VolcEngineService {
         // 处理各种可能的语言代码和名称
         String languageName;
         boolean isEnglish = false;
+        boolean isForeignLanguage = false;
         
         if (language == null || language.isEmpty()) {
             languageName = "中文"; // 默认中文
@@ -487,6 +488,25 @@ public class VolcEngineService {
             if (lang.equals("en") || lang.equals("英文") || lang.equals("english")) {
                 languageName = "English";
                 isEnglish = true;
+                isForeignLanguage = true;
+            } else if (lang.equals("日语") || lang.equals("japanese") || lang.equals("ja")) {
+                languageName = "Japanese";
+                isForeignLanguage = true;
+            } else if (lang.equals("韩语") || lang.equals("korean") || lang.equals("ko")) {
+                languageName = "Korean";
+                isForeignLanguage = true;
+            } else if (lang.equals("法语") || lang.equals("french") || lang.equals("fr")) {
+                languageName = "French";
+                isForeignLanguage = true;
+            } else if (lang.equals("德语") || lang.equals("german") || lang.equals("de")) {
+                languageName = "German";
+                isForeignLanguage = true;
+            } else if (lang.equals("西班牙语") || lang.equals("spanish") || lang.equals("es")) {
+                languageName = "Spanish";
+                isForeignLanguage = true;
+            } else if (lang.equals("俄语") || lang.equals("russian") || lang.equals("ru")) {
+                languageName = "Russian";
+                isForeignLanguage = true;
             } else {
                 languageName = "中文";
             }
@@ -495,6 +515,8 @@ public class VolcEngineService {
         // 根据语言选择不同的提示词模板
         if (isEnglish) {
             return buildEnglishPrompt(topic, cardCount, difficulty, scenario);
+        } else if (isForeignLanguage) {
+            return buildForeignLanguagePrompt(topic, cardCount, difficulty, scenario, languageName);
         } else {
             return buildChinesePrompt(topic, cardCount, difficulty, scenario);
         }
@@ -554,6 +576,37 @@ public class VolcEngineService {
             "📦 只返回JSON:[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
             "\n" +
             "开整!🚀"
+        );
+        
+        return promptBuilder.toString();
+    }
+    
+    /**
+     * 构建外语提示词（日语、韩语、法语、德语、西班牙语、俄语）
+     */
+    private String buildForeignLanguagePrompt(String topic, Integer cardCount, String difficulty, String scenario, String languageName) {
+        StringBuilder promptBuilder = new StringBuilder(String.format(
+            "Generate %d creative flashcards about '%s' (difficulty: %s) in %s.\n" +
+            "\n" +
+            "Requirements:\n" +
+            "1. Each card must have a tricky, thought-provoking question in %s\n" +
+            "2. Answer should be accurate but explained in a fun, memorable way in %s\n" +
+            "3. Use emojis and creative expressions to make it engaging\n" +
+            "4. All content (question and answer) must be in %s\n",
+            cardCount, topic, difficulty, languageName, languageName, languageName, languageName
+        ));
+        
+        // 如果提供了场景信息，添加到提示词中
+        if (scenario != null && !scenario.trim().isEmpty()) {
+            promptBuilder.append(String.format("5. Tailor questions and answers to the application scenario: '%s'\n", scenario.trim()));
+        }
+        
+        promptBuilder.append(
+            "\n" +
+            "Output Format (JSON only):\n" +
+            "[{\"question\":\"...\",\"answer\":\"...\"}]\n" +
+            "\n" +
+            String.format("CRITICAL: All content must be in %s!", languageName)
         );
         
         return promptBuilder.toString();
