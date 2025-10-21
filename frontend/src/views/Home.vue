@@ -1750,6 +1750,17 @@ const handleImport = async () => {
   }
 }
 
+// 加载用户题库列表（用于导入对话框）
+const loadUserBanks = async () => {
+  try {
+    const response = await questionBankApi.getUserCustomBanks(1, 100)
+    userBanks.value = response.data.data || []
+  } catch (error) {
+    console.error('加载用户题库失败:', error)
+    ElMessage.error('加载用户题库失败')
+  }
+}
+
 // 显示导入对话框
 const handleShowImportDialog = async () => {
   // 加载用户题库列表
