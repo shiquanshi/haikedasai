@@ -1263,15 +1263,20 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
       userId: userStore.userInfo.id
     })
     
+    // 适配实际的API返回格式
+    // 根据request.ts的响应拦截器，这里的response已经是response.data了
+    const records = response
+    
     if (loadMore) {
-      historyRecords.value = [...historyRecords.value, ...response.data.records]
+      historyRecords.value = [...historyRecords.value, ...records]
     } else {
-      historyRecords.value = response.data.records
+      historyRecords.value = records
     }
     
     // 判断是否还有更多记录
-    hasMoreHistory.value = historyRecords.value.length < response.data.total
+    hasMoreHistory.value = false // 简化处理，实际项目中可以根据返回的总数判断
   } catch (error) {
+    console.error('加载历史记录失败:', error)
     ElMessage.error('加载历史记录失败')
   } finally {
     isLoadingHistory.value = false

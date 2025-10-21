@@ -65,13 +65,15 @@ export const useUserStore = defineStore('user', () => {
   // 获取当前用户信息
   const fetchUserInfo = async () => {
     try {
-      const response = await userApi.getCurrentUser()
-      if (response.success) {
-        userInfo.value = response.data
+      // 根据request.ts的响应拦截器，这里的response已经是用户信息对象本身
+      const userData = await userApi.getCurrentUser()
+      if (userData && userData.id) {
+        userInfo.value = userData
         return true
       }
       return false
     } catch (error) {
+      console.error('获取用户信息失败:', error)
       return false
     }
   }
