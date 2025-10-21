@@ -1322,7 +1322,8 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
       pageSize: historyPageSize.value,
       sortBy: 'created_at', // 修改为正确的数据库字段名
       sortOrder: 'desc',
-      userId: userStore.userInfo.id
+      userId: userStore.userInfo.id,
+      type: 'ai' // 只加载AI生成的题库，排除手动创建的题库
     })
     
     // 适配实际的API返回格式
@@ -1556,16 +1557,12 @@ const handleCreateBank = async () => {
     // 刷新对话框的题库列表
     try {
       const [systemResponse, customResponse] = await Promise.all([
-        questionBankApi.getSystemBanks({ page: 1, pageSize: 1000 }),
-        questionBankApi.getUserCustomBanks({ page: 1, pageSize: 1000 })
+        questionBankApi.getSystemBanks('', 1, 1000),
+        questionBankApi.getUserCustomBanks(1, 1000)
       ])
       
-      if (systemResponse.code === 200 && systemResponse.data?.banks) {
-        dialogSystemBanks.value = systemResponse.data.banks
-      }
-      if (customResponse.code === 200 && customResponse.data?.banks) {
-        dialogCustomBanks.value = customResponse.data.banks
-      }
+      dialogSystemBanks.value = systemResponse.data.data || []
+      dialogCustomBanks.value = customResponse.data.data || []
     } catch (error) {
       console.error('刷新题库列表失败:', error)
     }
