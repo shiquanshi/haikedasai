@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-container">
     <!-- 顶部波浪装饰 -->
     <div class="wave-decoration"></div>
@@ -936,57 +936,9 @@ const generateCards = async () => {
     showCards.value = true
     cards.value = [] // 清空现有卡片
     
-    // 判断是否为外语内容（非中文），使用批量接口，否则使用流式接口
+    // 统一使用流式接口（支持所有语言）
     const isNonChinese = language.value !== '中文'
-    
-    if (isNonChinese) {
-      // 外语内容：使用批量接口（非流式）
-      console.log('[生成模式] 检测到外语内容，使用批量接口')
-      const response = await questionBankApi.generateAIBankBatch({
-        topic: topic.value,
-        scenario: scenario.value, // 新增：传递场景参数
-        cardCount: parseInt(cardCount.value),
-        difficulty: difficulty.value,
-        language: language.value,
-        withImages: withImages.value
-      })
-      
-      console.log('[批量生成] 接收到响应:', response)
-      
-      if (response.code === 200 && response.data) {
-        console.log('[批量生成] 响应数据类型:', typeof response.data)
-        console.log('[批量生成] 响应数据内容:', response.data)
-        
-        try {
-          const generatedCards = JSON.parse(response.data)
-          console.log('[批量生成] 解析后的卡片数组:', generatedCards)
-          
-          if (!Array.isArray(generatedCards)) {
-            throw new Error('响应数据不是数组格式')
-          }
-          
-          cards.value = generatedCards.map((card: any, index: number) => ({
-            ...card,
-            id: Date.now() + index
-          }))
-          console.log(`[批量生成] 成功生成${cards.value.length}张卡片`)
-          ElMessage.success(`成功生成 ${cards.value.length} 张卡片`)
-        } catch (parseError) {
-          console.error('[批量生成] JSON解析失败:', parseError)
-          console.error('[批量生成] 原始数据:', response.data)
-          throw new Error('卡片数据解析失败')
-        }
-      } else {
-        console.error('[批量生成] 响应错误:', response)
-        throw new Error(response.message || '生成失败')
-      }
-      
-      isGenerating.value = false
-      return
-    }
-    
-    // 中文内容：使用流式接口
-    console.log('[生成模式] 检测到中文内容，使用流式接口')
+    console.log(`[生成模式] 使用流式接口生成${language.value}内容${isNonChinese ? '（将应用智能空格处理）' : ''}`)
     // 使用闭包变量记录上次已显示的卡片数量，避免每次回调重置
     let lastCardCount = 0
     
@@ -1151,8 +1103,8 @@ const generateCards = async () => {
               
               try {
                 const parsed = JSON.parse(block)
-                if (parsed.question) card.question = addSmartSpaces(parsed.question)
-                if (parsed.answer) card.answer = addSmartSpaces(parsed.answer)
+                if (parsed.question) card.question = isNonChinese ? addSmartSpaces(parsed.question) : parsed.question
+                if (parsed.answer) card.answer = isNonChinese ? addSmartSpaces(parsed.answer) : parsed.answer
                 if (parsed.difficulty) card.difficulty = parsed.difficulty
                 if (parsed.questionImage) card.questionImage = parsed.questionImage
                 if (parsed.answerImage) card.answerImage = parsed.answerImage
@@ -1162,14 +1114,14 @@ const generateCards = async () => {
                 // 使用正则提取
                 const questionMatch = block.match(/"question"\s*:\s*"((?:[^"\\]|\\.*)*)"/)  
                 if (questionMatch) {
-                  card.question = addSmartSpaces(questionMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'))
+                  const rawQuestion = questionMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                  card.question = isNonChinese ? addSmartSpaces(rawQuestion) : rawQuestion
                 }
-                
                 const answerMatch = block.match(/"answer"\s*:\s*"((?:[^"\\]|\\.*)*)"/)  
                 if (answerMatch) {
-                  card.answer = addSmartSpaces(answerMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'))
+                  const rawAnswer = answerMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                  card.answer = isNonChinese ? addSmartSpaces(rawAnswer) : rawAnswer
                 }
-                
                 const difficultyMatch = block.match(/"difficulty"\s*:\s*"([^"]*)"/)  
                 if (difficultyMatch) {
                   card.difficulty = difficultyMatch[1]
