@@ -1277,8 +1277,8 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     })
     
     // 适配实际的API返回格式
-    // 根据request.ts的响应拦截器，这里的response已经是response.data了
-    const records = response
+    // 后端返回的是PageResponse对象，包含data、total等字段
+    const records = response.data || []
     
     if (loadMore) {
       historyRecords.value = [...historyRecords.value, ...records]
@@ -1287,7 +1287,7 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     }
     
     // 判断是否还有更多记录
-    hasMoreHistory.value = false // 简化处理，实际项目中可以根据返回的总数判断
+    hasMoreHistory.value = response.totalPages && response.page < response.totalPages
   } catch (error) {
     console.error('加载历史记录失败:', error)
     ElMessage.error('加载历史记录失败')
@@ -1834,7 +1834,9 @@ const playQuestion = async () => {
 
   try {
     isPlayingQuestion.value = true
-    const response = await questionBankApi.textToSpeech(currentCard.value.answer)
+    // 根据卡片当前显示的面来决定播放问题还是答案
+    const textToPlay = isFlipped.value ? currentCard.value.answer : currentCard.value.question
+    const response = await questionBankApi.textToSpeech(textToPlay)
     
     if (response.success && response.audioData) {
       // 创建音频元素并播放

@@ -439,6 +439,8 @@ public class QuestionBankService {
         dto.setName(bank.getName());
         dto.setDescription(bank.getDescription());
         dto.setTopic(bank.getTopic());
+        dto.setType(bank.getType());
+        dto.setTags(bank.getTags());
         dto.setCardCount(bank.getCardCount());
         dto.setDifficulty(bank.getDifficulty());
         dto.setLanguage(bank.getLanguage());
