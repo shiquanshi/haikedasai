@@ -1553,9 +1553,22 @@ const handleCreateBank = async () => {
       language: '中文'
     }
     
-    // 刷新题库列表
-    await loadSystemBanks()
-    await loadCustomBanks()
+    // 刷新对话框的题库列表
+    try {
+      const [systemResponse, customResponse] = await Promise.all([
+        questionBankApi.getSystemBanks({ page: 1, pageSize: 1000 }),
+        questionBankApi.getUserCustomBanks({ page: 1, pageSize: 1000 })
+      ])
+      
+      if (systemResponse.code === 200 && systemResponse.data?.banks) {
+        dialogSystemBanks.value = systemResponse.data.banks
+      }
+      if (customResponse.code === 200 && customResponse.data?.banks) {
+        dialogCustomBanks.value = customResponse.data.banks
+      }
+    } catch (error) {
+      console.error('刷新题库列表失败:', error)
+    }
     
     // 自动选中新创建的题库
     if (response.data && response.data.id) {
