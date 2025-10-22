@@ -471,13 +471,13 @@
             <el-icon class="loading-icon" :size="60"><Loading /></el-icon>
             <div class="loading-text">{{ displayedLoadingText }}<span v-if="displayedLoadingText && displayedLoadingText.length < loadingText.length" class="typing-cursor">|</span></div>
             <!-- 思考过程展示 -->
-            <div v-if="displayedThinking" class="thinking-process">
+            <div class="thinking-process">
               <div class="thinking-header">
                 <el-icon class="thinking-icon"><ChatDotRound /></el-icon>
                 <span>AI思考过程</span>
               </div>
               <div class="thinking-content">
-                {{ displayedThinking }}
+                {{ displayedThinking || '正在思考中...' }}
                 <span v-if="isTyping" class="typing-cursor">|</span>
               </div>
             </div>
@@ -1172,24 +1172,33 @@ let typingTimer: any = null
 let hideTimer: any = null
 let loadingTextTimer: any = null
 
-// 打字机效果
+// 思考过程智能累积显示
 const startTypingEffect = (text: string) => {
   // 清除所有相关定时器
   if (typingTimer) clearInterval(typingTimer)
   if (hideTimer) clearTimeout(hideTimer)
   
-  // 更新思考过程文本
-  thinkingProcess.value = text
-  isTyping.value = true
+  // 智能累积显示逻辑：
+  // 1. 确保text不为空
+  // 2. 如果是新的思考过程（与旧文本完全不同），直接显示
+  // 3. 如果是增量更新（新文本是旧文本的扩展），则更新显示
+  if (text) {
+    // 检查是否是全新的思考过程开始
+    if (text.length > 0 && (!thinkingProcess.value || thinkingProcess.value.length === 0 || text.indexOf(thinkingProcess.value) !== 0)) {
+      // 如果是全新的思考过程，直接更新
+      thinkingProcess.value = text
+      displayedThinking.value = text
+    } else if (text !== thinkingProcess.value) {
+      // 如果是增量更新，更新显示
+      thinkingProcess.value = text
+      displayedThinking.value = text
+    }
+  }
   
-  // 直接显示完整文本，不做打字效果
-  displayedThinking.value = text
+  isTyping.value = false
   
-  // 立即完成显示
-  setTimeout(() => {
-    isTyping.value = false
-    typingTimer = null
-  }, 100)
+  // 确保变量状态正确
+  typingTimer = null
 }
 
 // 加载文本打字机效果
