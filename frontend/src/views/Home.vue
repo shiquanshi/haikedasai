@@ -1621,7 +1621,6 @@ const generateCards = async () => {
       },
       // onThinking: 接收思考过程
       (thinking: string) => {
-        thinkingProcess.value = thinking
         console.log('🧠 接收到思考过程:', thinking.substring(0, 100))
         // 启动打字机效果
         startTypingEffect(thinking)
