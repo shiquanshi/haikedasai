@@ -1174,26 +1174,34 @@ let loadingTextTimer: any = null
 
 // 打字机效果
 const startTypingEffect = (text: string) => {
-  // 清除之前的定时器
-  if (typingTimer) clearInterval(typingTimer)
+  // 清除隐藏定时器（但不清除打字定时器，让它继续运行）
   if (hideTimer) clearTimeout(hideTimer)
   
-  // 不清空已有内容，而是追加新内容
-  isTyping.value = true
+  // 如果新文本比当前显示的短，说明是新的生成过程，需要重置
+  if (text.length < displayedThinking.value.length) {
+    // 清除之前的打字定时器
+    if (typingTimer) clearInterval(typingTimer)
+    displayedThinking.value = ''
+  }
   
-  // 从已显示内容的长度开始，只添加新增的部分
-  let currentLength = displayedThinking.value.length
-  const speed = 30 // 每个字符显示间隔（毫秒）
-  
-  typingTimer = setInterval(() => {
-    if (currentLength < text.length) {
-      displayedThinking.value = text.substring(0, currentLength + 1)
-      currentLength++
-    } else {
-      clearInterval(typingTimer)
-      isTyping.value = false
-    }
-  }, speed)
+  // 如果已经有打字机在运行且新文本更长，不需要重启，它会自动继续
+  // 如果没有打字机在运行，或者内容被重置了，启动新的打字机
+  if (!typingTimer || displayedThinking.value === '') {
+    isTyping.value = true
+    let currentLength = displayedThinking.value.length
+    const speed = 30 // 每个字符显示间隔（毫秒）
+    
+    typingTimer = setInterval(() => {
+      if (currentLength < text.length) {
+        displayedThinking.value = text.substring(0, currentLength + 1)
+        currentLength++
+      } else {
+        clearInterval(typingTimer)
+        typingTimer = null
+        isTyping.value = false
+      }
+    }, speed)
+  }
 }
 
 // 加载文本打字机效果
