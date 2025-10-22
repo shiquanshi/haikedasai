@@ -1172,27 +1172,22 @@ let typingTimer: any = null
 let hideTimer: any = null
 let loadingTextTimer: any = null
 
-// 思考过程智能累积显示
-const startTypingEffect = (text: string) => {
+// 思考过程智能累积显示 - 修复文本拼接问题
+const startTypingEffect = (newText: string) => {
   // 清除所有相关定时器
   if (typingTimer) clearInterval(typingTimer)
   if (hideTimer) clearTimeout(hideTimer)
   
-  // 智能累积显示逻辑：
-  // 1. 确保text不为空
-  // 2. 如果是新的思考过程（与旧文本完全不同），直接显示
-  // 3. 如果是增量更新（新文本是旧文本的扩展），则更新显示
-  if (text) {
-    // 检查是否是全新的思考过程开始
-    if (text.length > 0 && (!thinkingProcess.value || thinkingProcess.value.length === 0 || text.indexOf(thinkingProcess.value) !== 0)) {
-      // 如果是全新的思考过程，直接更新
-      thinkingProcess.value = text
-      displayedThinking.value = text
-    } else if (text !== thinkingProcess.value) {
-      // 如果是增量更新，更新显示
-      thinkingProcess.value = text
-      displayedThinking.value = text
-    }
+  // 确保思考过程区域显示
+  thinkingProcess.value = 'show'
+  
+  // 核心修复：实现正确的文本拼接逻辑
+  if (newText && newText.trim()) {
+    // 将新接收的文本追加到已有显示内容后面，而不是替换
+    displayedThinking.value = displayedThinking.value + newText
+    
+    // 同时更新原始思考过程变量
+    thinkingProcess.value = displayedThinking.value
   }
   
   isTyping.value = false
@@ -3727,30 +3722,31 @@ onMounted(() => {
 
 /* 思考过程样式 */
 .thinking-process {
-  margin-top: 30px;
-  padding: 30px 35px;
+  margin-top: 25px;
+  padding: 25px 30px;
   background: linear-gradient(135deg, rgba(79, 172, 254, 0.12) 0%, rgba(0, 242, 254, 0.08) 100%);
   border-left: 5px solid #4facfe;
   border-radius: 16px;
-  max-width: 1200px; /* 与卡片宽度保持一致 */
-  width: 100%; /* 与卡片宽度保持一致 */
-  margin: 0 auto; /* 居中显示 */
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
   box-shadow: 0 6px 20px rgba(79, 172, 254, 0.15);
-  min-height: 200px; /* 增加最小高度 */
+  min-height: 180px;
+  box-sizing: border-box;
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 15px;
   color: #4facfe;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .thinking-header .el-icon {
-  font-size: 24px;
+  font-size: 22px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -3766,15 +3762,16 @@ onMounted(() => {
 }
 
 .thinking-content {
-  font-size: 16px;
-  line-height: 2;
+  font-size: 15px;
+  line-height: 1.8;
   color: #303133;
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   letter-spacing: 0.3px;
-  max-height: 500px; /* 增加最大高度限制 */
-  overflow-y: auto; /* 内容过多时可以滚动 */
+  max-height: 450px;
+  overflow-y: auto;
+  padding: 5px;
 }
 
 .typing-cursor {
