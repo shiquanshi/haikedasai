@@ -1174,34 +1174,22 @@ let loadingTextTimer: any = null
 
 // 打字机效果
 const startTypingEffect = (text: string) => {
-  // 清除隐藏定时器
+  // 清除所有相关定时器
+  if (typingTimer) clearInterval(typingTimer)
   if (hideTimer) clearTimeout(hideTimer)
   
-  // 更新thinkingProcess，让定时器能访问到最新文本
+  // 更新思考过程文本
   thinkingProcess.value = text
+  isTyping.value = true
   
-  // 如果没有打字机在运行，启动新的打字机
-  if (!typingTimer) {
-    isTyping.value = true
-    const speed = 30 // 每个字符显示间隔（毫秒）
-    
-    // 直接使用最新的文本，不再做部分重置逻辑
-    displayedThinking.value = text.substring(0, 1) // 先显示第一个字符
-    
-    typingTimer = setInterval(() => {
-      // 每次都从当前显示长度继续，并使用thinkingProcess.value获取最新文本
-      const currentLength = displayedThinking.value.length
-      const latestText = thinkingProcess.value
-      if (currentLength < latestText.length) {
-        displayedThinking.value = latestText.substring(0, currentLength + 1)
-      } else {
-        clearInterval(typingTimer)
-        typingTimer = null
-        isTyping.value = false
-      }
-    }, speed)
-  }
-  // 如果打字机已经在运行，它会在下次循环时使用最新的thinkingProcess.value
+  // 直接显示完整文本，不做打字效果
+  displayedThinking.value = text
+  
+  // 立即完成显示
+  setTimeout(() => {
+    isTyping.value = false
+    typingTimer = null
+  }, 100)
 }
 
 // 加载文本打字机效果
