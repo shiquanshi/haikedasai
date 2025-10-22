@@ -322,7 +322,7 @@
                     <span>{{ record.name }}</span>
                     <div class="card-header-actions">
                       <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
-                      <el-tag size="small" type="info">{{ formatDate(record.createdAt, 'YYYY-MM-DD HH:mm') }}</el-tag>
+                      <el-tag size="small" type="info">{{ formatDate(new Date(), 'YYYY-MM-DD HH:mm') }}</el-tag>
                       <el-button
                         type="primary"
                         size="small"
@@ -1372,7 +1372,7 @@ const generateCards = async () => {
       },
       // onMessage: 接收流式内容,在卡片内部逐字展示
       (content: string) => {
-        const timestamp = new Date().toISOString()
+        const timestamp = new Date()
         console.log(`[前端处理] 时间=${timestamp}, 接收内容长度=${content.length}, 累积总长度=${streamContent.value.length + content.length}`)
         
         // 检查是否是特殊事件数据

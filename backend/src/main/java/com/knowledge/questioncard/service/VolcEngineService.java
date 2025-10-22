@@ -23,15 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 火山引擎AI服务
@@ -194,6 +190,28 @@ public class VolcEngineService {
             final AtomicLong firstTokenTime = new AtomicLong(0);
             final AtomicInteger tokenCount = new AtomicInteger(0);
             
+            // 添加连接状态检查
+            final AtomicBoolean connectionActive = new AtomicBoolean(true);
+            
+            // 添加连接关闭监听器
+            emitter.onCompletion(() -> {
+                connectionActive.set(false);
+                latch.countDown();
+                log.info("SSE连接已关闭，取消处理任务");
+            });
+            
+            emitter.onTimeout(() -> {
+                connectionActive.set(false);
+                latch.countDown();
+                log.info("SSE连接已超时，取消处理任务");
+            });
+            
+            emitter.onError((ex) -> {
+                connectionActive.set(false);
+                latch.countDown();
+                log.error("SSE连接发生错误，取消处理任务", ex);
+            });
+            
             service.streamChatCompletion(request)
                     .subscribe(
                         response -> {
@@ -220,32 +238,51 @@ public class VolcEngineService {
                                                 incrementalContent.length(),
                                                 accumulatedContent.length());
 
-                                        // 直接发送增量内容
-                                        emitter.send(SseEmitter.event()
-                                                .name("message")
-                                                .data(incrementalContent));
-                                    }
+                                        // 检查连接是否仍然活跃
+                                if (!connectionActive.get()) {
+                                    log.warn("连接已断开，停止发送数据");
+                                    latch.countDown();
+                                    return;
+                                }
+                                
+                                // 直接发送增量内容
+                                emitter.send(SseEmitter.event()
+                                        .name("message")
+                                        .data(incrementalContent));
+                            }
                                     
                                     // 如果有思考过程，作为单独事件发送
                                     if (reasoningContent != null && !reasoningContent.isEmpty()) {
                                         log.debug("[SSE流式发送] 思考过程长度={}", reasoningContent.length());
-                                        emitter.send(SseEmitter.event()
-                                                .name("thinking")
-                                                .data(reasoningContent));
+                                        // 检查连接是否仍然活跃
+                                    if (!connectionActive.get()) {
+                                        log.warn("连接已断开，停止发送思考过程");
+                                        latch.countDown();
+                                        return;
                                     }
+                                    
+                                    emitter.send(SseEmitter.event()
+                                            .name("thinking")
+                                            .data(reasoningContent));
+                                }
                                 }
                             } catch (Exception e) {
-                                log.error("处理流式响应失败", e);
-                                errorRef.set(e);
-                                latch.countDown();
-                            }
+                            log.error("处理流式响应失败", e);
+                            errorRef.set(e);
+                            connectionActive.set(false);
+                            latch.countDown();
+                        }
                         },
                         error -> {
                             log.error("流式调用火山引擎API失败: {}", error.getMessage());
                             errorRef.set(error);
+                            connectionActive.set(false);
                             try {
-                                emitter.send(SseEmitter.event().name("error").data("生成失败: " + error.getMessage()));
-                                emitter.complete();
+                                // 检查连接是否仍然活跃
+                                if (connectionActive.get()) {
+                                    emitter.send(SseEmitter.event().name("error").data("生成失败: " + error.getMessage()));
+                                    emitter.complete();
+                                }
                             } catch (IOException e) {
                                 log.error("发送错误事件失败", e);
                             }
@@ -268,14 +305,22 @@ public class VolcEngineService {
             try {
                 if (!latch.await(5, TimeUnit.MINUTES)) {
                     log.error("流式响应超时");
-                    emitter.send(SseEmitter.event().name("error").data("生成超时"));
+                    try {
+                        emitter.send(SseEmitter.event().name("error").data("生成超时"));
+                    } catch (IOException e) {
+                        log.error("发送超时错误消息失败", e);
+                    }
                     emitter.complete();
                     return null;
                 }
             } catch (InterruptedException e) {
                 log.error("等待流式响应被中断", e);
                 Thread.currentThread().interrupt();
-                emitter.send(SseEmitter.event().name("error").data("生成被中断"));
+                try {
+                    emitter.send(SseEmitter.event().name("error").data("生成被中断"));
+                } catch (IOException ex) {
+                    log.error("发送中断错误消息失败", ex);
+                }
                 emitter.complete();
                 return null;
             }
@@ -385,14 +430,30 @@ public class VolcEngineService {
                                         }
                                     }, sseTaskExecutor);
                                     
-                                    // 等待两个图片都生成完成
-                                    String questionImage = questionImageFuture.join();
-                                    String answerImage = answerImageFuture.join();
+                                    // 等待两个图片都生成完成，但设置超时机制(30秒)
+                                    String questionImage = null;
+                                    String answerImage = null;
+                                    try {
+                                        questionImage = questionImageFuture.orTimeout(30, TimeUnit.SECONDS).join();
+                                    } catch (CompletionException e) {
+                                        log.warn("问题图片生成超时或失败，跳过", e);
+                                    }
+                                    try {
+                                        answerImage = answerImageFuture.orTimeout(30, TimeUnit.SECONDS).join();
+                                    } catch (CompletionException e) {
+                                        log.warn("答案图片生成超时或失败，跳过", e);
+                                    }
                                     
                                     card.put("questionImage", questionImage);
                                     card.put("answerImage", answerImage);
                                     
                                     log.info("✅ 第 {}/{} 张卡片图片处理完成", cardIndex, totalCards);
+                                    
+                                    // 检查连接是否仍然活跃
+                                    if (!connectionActive.get()) {
+                                        log.warn("连接已断开，停止处理卡片图片");
+                                        return null;
+                                    }
                                     
                                     // 发送进度通知
                                     try {
@@ -412,8 +473,15 @@ public class VolcEngineService {
                             futures.add(future);
                         }
                         
-                        // 等待所有卡片处理完成
-                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                        // 等待所有卡片处理完成，但设置超时机制(5分钟)
+                        try {
+                            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                                .orTimeout(5, TimeUnit.MINUTES)
+                                .join();
+                        } catch (CompletionException e) {
+                            log.error("图片生成整体超时或失败", e);
+                            // 即使超时也继续处理已完成的任务，而不是完全失败
+                        }
                         long parallelEndTime = System.currentTimeMillis();
                         log.info("⏱️ [计时] 所有卡片图片并行生成完成 - 耗时:{}ms", parallelEndTime - parallelStartTime);
                         
@@ -423,6 +491,12 @@ public class VolcEngineService {
                             if (card != null) {
                                 updatedCards.add(card);
                             }
+                        }
+                        
+                        // 检查连接是否仍然活跃
+                        if (!connectionActive.get()) {
+                            log.warn("连接已断开，停止发送图片数据");
+                            return accumulatedContent.toString();
                         }
                         
                         // 发送更新后的完整JSON（包含图片URL）

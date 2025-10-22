@@ -39,7 +39,7 @@ export const questionBankApi = {
 
     eventSource.addEventListener('message', (event) => {
       const content = event.data
-      const timestamp = new Date().toISOString()
+      const timestamp = new Date()
       console.log(`[SSE接收] 时间=${timestamp}, 内容长度=${content.length}, 内容前50字=${content.substring(0, 50)}`)
       console.log('[SSE接收] 完整内容:', content)
       if (content && content !== '[DONE]') {
