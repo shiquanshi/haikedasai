@@ -41,6 +41,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         ObjectMapper objectMapper = new ObjectMapper();
         // 注册JavaTimeModule以支持Java 8日期时间类型
         objectMapper.registerModule(new JavaTimeModule());
+        // 设置时区为东八区（Asia/Shanghai），解决日期时间序列化时的时区问题
+        objectMapper.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Shanghai"));
         return objectMapper;
     }
 }
