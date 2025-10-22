@@ -311,12 +311,29 @@ export const questionBankApi = {
     })
   },
 
+  // 更新卡片
+  updateCard(cardId: number, params: { question: string; answer: string; questionImage?: string; answerImage?: string }) {
+    return request({
+      url: `/api/question-bank/cards/${cardId}`,
+      method: 'put',
+      data: params
+    })
+  },
+
   // 生成题库分享码
   generateShareCode(bankId: number, expireHours?: number) {
     return request({
       url: `/api/question-bank/${bankId}/share`,
       method: 'post',
       params: { expireHours }
+    })
+  },
+
+  // 取消题库分享
+  cancelShare(bankId: number) {
+    return request({
+      url: `/api/question-bank/${bankId}/share`,
+      method: 'delete'
     })
   },
 

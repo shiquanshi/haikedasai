@@ -1314,6 +1314,59 @@ public class QuestionBankService {
     }
     
     /**
+     * 更新卡片
+     */
+    @Transactional
+    public QuestionCardDTO updateCard(Long cardId, Long userId, String question, String answer, 
+                                      String questionImage, String answerImage) {
+        // 查询卡片
+        QuestionCard card = questionCardMapper.selectById(cardId);
+        if (card == null) {
+            throw new RuntimeException("卡片不存在");
+        }
+        
+        // 查询题库
+        QuestionBank bank = questionBankMapper.findById(card.getBankId());
+        if (bank == null) {
+            throw new RuntimeException("题库不存在");
+        }
+        
+        // 权限检查：只有题库创建者可以编辑卡片（系统题库除外）
+        if (!"system".equals(bank.getType()) && !bank.getUserId().equals(String.valueOf(userId))) {
+            throw new RuntimeException("无权限编辑此卡片");
+        }
+        
+        // 处理图片上传到MinIO
+        if (questionImage != null && questionImage.startsWith("data:image")) {
+            questionImage = minioService.uploadBase64Image(questionImage);
+        }
+        if (answerImage != null && answerImage.startsWith("data:image")) {
+            answerImage = minioService.uploadBase64Image(answerImage);
+        }
+        
+        // 更新卡片信息
+        card.setQuestion(question);
+        card.setAnswer(answer);
+        card.setQuestionImage(questionImage);
+        card.setAnswerImage(answerImage);
+        card.setUpdatedAt(new java.util.Date());
+        
+        // 保存更新
+        questionCardMapper.updateById(card);
+        
+        // 更新题库的更新时间
+        bank.setUpdatedAt(new java.util.Date());
+        questionBankMapper.update(bank);
+        
+        // 清除缓存
+        questionBankCache.clear();
+        
+        log.info("卡片更新成功: cardId={}", cardId);
+        
+        return convertToDTO(card);
+    }
+    
+    /**
      * 为题库生成分享码
      */
     @Transactional
@@ -1360,6 +1413,32 @@ public class QuestionBankService {
         
         log.info("为题库 {} 生成分享码: {}, 过期时间: {}", bankId, shareCode, expireTime);
         return shareCode;
+    }
+    
+    /**
+     * 取消题库分享
+     */
+    @Transactional
+    public void cancelShare(Long bankId, Long userId) {
+        // 查询题库
+        QuestionBank bank = questionBankMapper.selectById(bankId);
+        if (bank == null) {
+            throw new RuntimeException("题库不存在");
+        }
+        
+        // 检查权限（只有题库创建者可以取消分享）
+        if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
+            throw new RuntimeException("无权限操作此题库");
+        }
+        
+        // 将过期时间设置为当前时间，使分享立即失效
+        Date now = new Date();
+        questionBankMapper.updateShareCode(bankId, bank.getShareCode(), now);
+        
+        // 清除缓存
+        questionBankCache.clear();
+        
+        log.info("取消题库 {} 的分享，设置过期时间为: {}", bankId, now);
     }
     
     /**

@@ -507,6 +507,29 @@ public class QuestionBankController {
     }
     
     /**
+     * 更新卡片
+     */
+    @PutMapping("/cards/{cardId}")
+    public Result<QuestionCardDTO> updateCard(
+            @PathVariable Long cardId,
+            @RequestBody Map<String, Object> request,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String question = (String) request.get("question");
+            String answer = (String) request.get("answer");
+            String questionImage = (String) request.get("questionImage");
+            String answerImage = (String) request.get("answerImage");
+            
+            QuestionCardDTO card = questionBankService.updateCard(cardId, userId, question, answer, questionImage, answerImage);
+            return Result.success(card);
+        } catch (Exception e) {
+            log.error("更新卡片失败: {}", e.getMessage(), e);
+            return Result.error("更新失败: " + e.getMessage());
+        }
+    }
+    
+    /**
      * 生成题库分享码
      */
     @PostMapping("/{bankId}/share")
@@ -521,6 +544,23 @@ public class QuestionBankController {
         } catch (Exception e) {
             log.error("生成分享码失败: {}", e.getMessage(), e);
             return Result.error("生成分享码失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 取消题库分享
+     */
+    @DeleteMapping("/{bankId}/share")
+    public Result<Void> cancelShare(
+            @PathVariable Long bankId,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            questionBankService.cancelShare(bankId, userId);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("取消分享失败: {}", e.getMessage(), e);
+            return Result.error("取消分享失败: " + e.getMessage());
         }
     }
     

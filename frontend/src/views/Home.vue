@@ -559,6 +559,16 @@
             上一题
           </el-button>
           <el-button 
+            @click="handleEditCurrentCard" 
+            type="warning"
+            size="large"
+            v-if="currentBank && (currentBank.type === 'custom' || currentBank.type === 'ai')"
+            title="编辑当前卡片"
+          >
+            <el-icon><Edit /></el-icon>
+            编辑卡片
+          </el-button>
+          <el-button 
             @click="handleDeleteCurrentCard" 
             type="danger"
             size="large"
@@ -933,6 +943,82 @@
       </template>
     </el-dialog>
 
+    <!-- 编辑卡片对话框 -->
+    <el-dialog
+      v-model="showEditCardDialog"
+      title="编辑卡片"
+      width="600px"
+    >
+      <el-form :model="editCardForm" label-width="100px" class="edit-card-form">
+        <el-form-item label="问题" required>
+          <el-input
+            v-model="editCardForm.question"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入问题内容"
+          />
+        </el-form-item>
+        <el-form-item label="答案" required>
+          <el-input
+            v-model="editCardForm.answer"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入答案内容"
+          />
+        </el-form-item>
+        <el-form-item label="问题图片">
+          <div v-if="editCardForm.questionImage" class="current-image-preview">
+            <el-image :src="editCardForm.questionImage" fit="contain" style="max-width: 200px; max-height: 200px" />
+            <el-button @click="editCardForm.questionImage = ''" type="danger" size="small" style="margin-top: 8px">删除图片</el-button>
+          </div>
+          <el-upload
+            v-else
+            :auto-upload="false"
+            :limit="1"
+            accept="image/*"
+            :on-change="handleEditQuestionImageChange"
+            :file-list="editQuestionImageFileList"
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持jpg/png/gif格式,大小不超过2MB
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="答案图片">
+          <div v-if="editCardForm.answerImage" class="current-image-preview">
+            <el-image :src="editCardForm.answerImage" fit="contain" style="max-width: 200px; max-height: 200px" />
+            <el-button @click="editCardForm.answerImage = ''" type="danger" size="small" style="margin-top: 8px">删除图片</el-button>
+          </div>
+          <el-upload
+            v-else
+            :auto-upload="false"
+            :limit="1"
+            accept="image/*"
+            :on-change="handleEditAnswerImageChange"
+            :file-list="editAnswerImageFileList"
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持jpg/png/gif格式,大小不超过2MB
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showEditCardDialog = false" size="large">取消</el-button>
+          <el-button type="primary" @click="handleSubmitEditCard" size="large">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 分享题库对话框 -->
     <el-dialog
       v-model="showShareDialog"
@@ -1119,6 +1205,18 @@ const addCardForm = ref({
   questionImage: '',
   answerImage: ''
 })
+
+// 编辑卡片相关
+const showEditCardDialog = ref(false)
+const editCardForm = ref({
+  id: null as number | null,
+  question: '',
+  answer: '',
+  questionImage: '',
+  answerImage: ''
+})
+const editQuestionImageFileList = ref<any[]>([])
+const editAnswerImageFileList = ref<any[]>([])
 
 // 历史生成记录相关
 const historyRecords = ref<QuestionBank[]>([])
@@ -2102,6 +2200,116 @@ const handleSubmitNewCard = async () => {
   } catch (error: any) {
     console.error('创建卡片失败:', error)
     ElMessage.error(error.message || '创建卡片失败，请重试')
+  }
+}
+
+// 处理编辑当前卡片
+const handleEditCurrentCard = () => {
+  if (!currentCard.value || !currentCard.value.id) {
+    ElMessage.warning('无效的卡片')
+    return
+  }
+  
+  // 检查当前题库类型
+  if (currentBank.value && currentBank.value.type === 'system') {
+    ElMessage.warning('系统题库不支持编辑')
+    return
+  }
+  
+  // 填充编辑表单
+  editCardForm.value = {
+    id: currentCard.value.id,
+    question: currentCard.value.question,
+    answer: currentCard.value.answer,
+    questionImage: currentCard.value.questionImage || '',
+    answerImage: currentCard.value.answerImage || ''
+  }
+  
+  // 设置图片文件列表（用于回显）
+  editQuestionImageFileList.value = currentCard.value.questionImage 
+    ? [{ url: currentCard.value.questionImage }] 
+    : []
+  editAnswerImageFileList.value = currentCard.value.answerImage 
+    ? [{ url: currentCard.value.answerImage }] 
+    : []
+  
+  showEditCardDialog.value = true
+}
+
+// 处理编辑卡片的问题图片变化
+const handleEditQuestionImageChange = (file: any) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    editCardForm.value.questionImage = e.target?.result as string
+  }
+  reader.readAsDataURL(file.raw)
+  editQuestionImageFileList.value = [file]
+}
+
+// 处理编辑卡片的答案图片变化
+const handleEditAnswerImageChange = (file: any) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    editCardForm.value.answerImage = e.target?.result as string
+  }
+  reader.readAsDataURL(file.raw)
+  editAnswerImageFileList.value = [file]
+}
+
+// 删除编辑卡片的问题图片
+const handleRemoveEditQuestionImage = () => {
+  editCardForm.value.questionImage = ''
+  editQuestionImageFileList.value = []
+}
+
+// 删除编辑卡片的答案图片
+const handleRemoveEditAnswerImage = () => {
+  editCardForm.value.answerImage = ''
+  editAnswerImageFileList.value = []
+}
+
+// 提交编辑卡片
+const handleSubmitEditCard = async () => {
+  // 验证必填项
+  if (!editCardForm.value.question.trim()) {
+    ElMessage.warning('请输入问题内容')
+    return
+  }
+  
+  if (!editCardForm.value.answer.trim()) {
+    ElMessage.warning('请输入答案内容')
+    return
+  }
+  
+  if (!editCardForm.value.id) {
+    ElMessage.error('卡片ID无效')
+    return
+  }
+  
+  try {
+    await questionBankApi.updateCard(editCardForm.value.id, {
+      question: editCardForm.value.question.trim(),
+      answer: editCardForm.value.answer.trim(),
+      questionImage: editCardForm.value.questionImage.trim() || undefined,
+      answerImage: editCardForm.value.answerImage.trim() || undefined
+    })
+
+    ElMessage.success('卡片更新成功！')
+    
+    // 关闭对话框
+    showEditCardDialog.value = false
+    
+    // 刷新当前题库的卡片列表
+    if (currentBankId.value) {
+      await loadBankCards(currentBankId.value)
+    }
+    
+    // 刷新题库列表
+    await loadSystemBanks()
+    await loadCustomBanks()
+  } catch (error: any) {
+    console.error('更新卡片失败:', error)
+    ElMessage.error(error.message || '更新卡片失败，请重试')
   }
 }
 
