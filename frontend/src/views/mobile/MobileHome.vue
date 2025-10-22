@@ -178,6 +178,18 @@
               <el-icon><Box /></el-icon>
               <p>暂无推荐题库</p>
             </div>
+            
+            <!-- 分页组件 -->
+            <div v-if="systemBanks.length > 0" class="pagination-container">
+              <el-pagination
+                background
+                layout="prev, pager, next, total"
+                :total="systemTotal"
+                :page-size="systemPageSize"
+                :current-page="systemPage"
+                @current-change="handleSystemPageChange"
+              />
+            </div>
           </template>
           
           <!-- 我的题库 -->
@@ -246,6 +258,18 @@
               <div v-if="customBanks.length === 0" class="empty-state">
                 <el-icon><Box /></el-icon>
                 <p>暂无自定义题库</p>
+              </div>
+              
+              <!-- 分页组件 -->
+              <div v-if="customBanks.length > 0" class="pagination-container">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :total="customTotal"
+                  :page-size="customPageSize"
+                  :current-page="customPage"
+                  @current-change="handleCustomPageChange"
+                />
               </div>
             </template>
           </template>
@@ -319,6 +343,18 @@
                 <el-icon><Box /></el-icon>
                 <p>暂无分享记录</p>
               </div>
+              
+              <!-- 分享记录分页 -->
+              <div v-if="sharedBanks.length > 0" class="pagination-container">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :total="sharedTotal"
+                  :page-size="sharedPageSize"
+                  :current-page="sharedPage"
+                  @current-change="handleSharedPageChange"
+                />
+              </div>
             </template>
           </template>
           
@@ -387,6 +423,18 @@
                 <el-icon><Box /></el-icon>
                 <p>暂无历史生成记录</p>
               </div>
+              
+              <!-- 历史记录分页 -->
+              <div v-if="historyRecords.length > 0" class="pagination-container">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :total="historyTotal"
+                  :page-size="historyPageSize"
+                  :current-page="historyPage"
+                  @current-change="handleHistoryPageChange"
+                />
+              </div>
             </template>
           </template>
           
@@ -399,7 +447,7 @@
               class="function-button"
               :icon="Plus"
             >
-              创建新题库
+              创建题库
             </el-button>
             <el-button 
               type="success" 
@@ -408,7 +456,7 @@
               class="function-button"
               :icon="Upload"
             >
-              导入Excel题库
+              导入题库
             </el-button>
             <el-button 
               type="warning" 
@@ -417,7 +465,7 @@
               class="function-button"
               :icon="Search"
             >
-              访问分享题库
+              访问题库
             </el-button>
           </div>
         </div>
@@ -1101,6 +1149,12 @@ const systemTotal = ref(0)
 const customPage = ref(1)
 const customPageSize = ref(20)
 const customTotal = ref(0)
+const historyPage = ref(1)
+const historyPageSize = ref(10)
+const historyTotal = ref(0)
+const sharedPage = ref(1)
+const sharedPageSize = ref(10)
+const sharedTotal = ref(0)
 
 // 卡片相关状态
 const currentBankId = ref<number | null>(null)
@@ -1554,7 +1608,7 @@ const confirmGenerateShare = async () => {
       currentSharingBankId.value,
       shareExpireHours.value || undefined
     )
-    shareCode.value = response.data.shareCode
+    shareCode.value = response.data
     ElMessage.success('分享码生成成功！')
   } catch (error: any) {
     console.error('生成分享码失败:', error)
@@ -1652,7 +1706,7 @@ const loadUserBanks = async () => {
   if (!userStore.isLoggedIn || !userStore.userInfo) return
   
   try {
-    const response = await questionBankApi.getUserBanks(userStore.userInfo.id)
+    const response = await questionBankApi.getUserCustomBanks(1, 1000)
     if (response.code === 200) {
       userBanks.value = response.data
     }
@@ -1854,20 +1908,21 @@ const loadCustomBanks = async () => {
 }
 
 // 加载历史生成记录
-const loadHistoryRecords = async () => {
+const loadHistoryRecords = async (page: number = 1) => {
   if (!userStore.isLoggedIn || !userStore.userInfo) return
   
   isLoadingHistory.value = true
   try {
     const response = await questionBankApi.searchBanks({
-      page: 1,
-      pageSize: 20,
+      page: page,
+      pageSize: historyPageSize.value,
       sortBy: 'created_at',
       sortOrder: 'desc',
       userId: userStore.userInfo.id,
       type: 'ai'
     })
     historyRecords.value = response.data?.data || []
+    historyTotal.value = response.data?.total || 0
     console.log('历史记录数据:', historyRecords.value)
   } catch (error) {
     console.error('加载历史记录失败:', error)
@@ -1877,14 +1932,37 @@ const loadHistoryRecords = async () => {
   }
 }
 
+// 处理系统推荐题库分页变化
+const handleSystemPageChange = async (page: number) => {
+  systemPage.value = page
+  await loadSystemBanks()
+}
+
+// 处理我的题库分页变化
+const handleCustomPageChange = async (page: number) => {
+  customPage.value = page
+  await loadCustomBanks()
+}
+
+// 处理历史记录分页变化
+const handleHistoryPageChange = async (page: number) => {
+  historyPage.value = page
+  await loadHistoryRecords(page)
+}
+
 // 加载分享记录
-const loadSharedBanks = async () => {
+const loadSharedBanks = async (page: number = 1) => {
   if (!userStore.isLoggedIn) return
   
   isLoadingSharedBanks.value = true
   try {
     const response = await questionBankApi.getSharedRecords()
-    sharedBanks.value = response.data || []
+    // 注意：后端getSharedRecords可能不支持分页，这里先用前端分页
+    const allSharedBanks = response.data || []
+    sharedTotal.value = allSharedBanks.length
+    const startIndex = (page - 1) * sharedPageSize.value
+    const endIndex = startIndex + sharedPageSize.value
+    sharedBanks.value = allSharedBanks.slice(startIndex, endIndex)
     console.log('分享记录数据:', sharedBanks.value)
   } catch (error) {
     console.error('加载分享记录失败:', error)
@@ -1892,6 +1970,12 @@ const loadSharedBanks = async () => {
   } finally {
     isLoadingSharedBanks.value = false
   }
+}
+
+// 处理分享记录分页变化
+const handleSharedPageChange = async (page: number) => {
+  sharedPage.value = page
+  await loadSharedBanks(page)
 }
 
 // 直接复制分享码
@@ -2514,14 +2598,15 @@ initPage()
 /* 功能按钮区域 */
 .bank-functions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin: 20px 0;
 }
 
 .function-button {
   flex: 1;
-  height: 44px;
-  font-size: 14px;
+  height: 38px;
+  font-size: 12px;
+  padding: 0 8px;
 }
 
 .feature-buttons {
@@ -2974,5 +3059,37 @@ initPage()
   height: 300px;
   background: rgba(240, 245, 255, 0.6);
   border-radius: 15px;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 10px 0;
+}
+
+.pagination-container .el-pagination {
+  padding: 0;
+}
+
+.pagination-container .el-pagination button,
+.pagination-container .el-pagination .el-pager li {
+  background-color: white;
+  border-radius: 8px;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+
+.pagination-container .el-pagination button:hover,
+.pagination-container .el-pagination .el-pager li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-container .el-pagination .el-pager li.is-active {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  font-weight: 600;
 }
 </style>
