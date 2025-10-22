@@ -469,7 +469,7 @@
           <!-- 加载状态 -->
           <div v-if="isGenerating && cards.length === 0" class="loading-container">
             <el-icon class="loading-icon" :size="60"><Loading /></el-icon>
-            <div class="loading-text">正在生成闪卡...</div>
+            <div class="loading-text">{{ displayedLoadingText }}<span v-if="displayedLoadingText && displayedLoadingText.length < loadingText.length" class="typing-cursor">|</span></div>
             <!-- 思考过程展示 -->
             <div v-if="displayedThinking" class="thinking-process">
               <div class="thinking-header">
@@ -1164,9 +1164,12 @@ const streamContent = ref('')
 const thinkingProcess = ref('') // 思考过程
 const displayedThinking = ref('') // 当前显示的思考过程
 const isTyping = ref(false) // 是否正在打字
+const loadingText = ref('') // 加载文本
+const displayedLoadingText = ref('') // 当前显示的加载文本
 let streamEventSource: EventSource | null = null
 let typingTimer: any = null
 let hideTimer: any = null
+let loadingTextTimer: any = null
 
 // 打字机效果
 const startTypingEffect = (text: string) => {
@@ -1192,6 +1195,26 @@ const startTypingEffect = (text: string) => {
         displayedThinking.value = ''
         thinkingProcess.value = ''
       }, 3000)
+    }
+  }, speed)
+}
+
+// 加载文本打字机效果
+const startLoadingTextTyping = (text: string) => {
+  // 清除之前的定时器
+  if (loadingTextTimer) clearInterval(loadingTextTimer)
+  
+  displayedLoadingText.value = ''
+  
+  let index = 0
+  const speed = 100 // 每个字符显示间隔（毫秒）
+  
+  loadingTextTimer = setInterval(() => {
+    if (index < text.length) {
+      displayedLoadingText.value += text[index]
+      index++
+    } else {
+      clearInterval(loadingTextTimer)
     }
   }, speed)
 }
@@ -1325,6 +1348,8 @@ const generateCards = async () => {
     isGenerating.value = true
     streamContent.value = ''
     thinkingProcess.value = '' // 清空思考过程
+    loadingText.value = '正在生成闪卡...'
+    startLoadingTextTyping(loadingText.value) // 启动加载文本打字机效果
     displayedThinking.value = '' // 清空显示内容
     // 清除之前的定时器
     if (typingTimer) clearInterval(typingTimer)
@@ -1558,11 +1583,23 @@ const generateCards = async () => {
       // onError: 错误处理
       (error: string) => {
         isGenerating.value = false
+        // 清除加载文本定时器
+        if (loadingTextTimer) {
+          clearInterval(loadingTextTimer)
+          loadingTextTimer = null
+        }
+        displayedLoadingText.value = ''
         ElMessage.error(error || '生成闪卡失败，请重试')
       },
       // onComplete: 完成处理
       () => {
         isGenerating.value = false
+        // 清除加载文本定时器
+        if (loadingTextTimer) {
+          clearInterval(loadingTextTimer)
+          loadingTextTimer = null
+        }
+        displayedLoadingText.value = ''
         if (cards.value.length > 0) {
           ElMessage.success(`闪卡生成成功！共生成${cards.value.length}张卡片`)
           // 刷新历史生成记录列表
@@ -1583,6 +1620,12 @@ const generateCards = async () => {
     )
   } catch (error) {
     isGenerating.value = false
+    // 清除加载文本定时器
+    if (loadingTextTimer) {
+      clearInterval(loadingTextTimer)
+      loadingTextTimer = null
+    }
+    displayedLoadingText.value = ''
     ElMessage.error('生成闪卡失败，请重试')
   }
 }
