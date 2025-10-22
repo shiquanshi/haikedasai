@@ -2191,6 +2191,12 @@ const handleAccessSharedBank = async () => {
     const response = await questionBankApi.getByShareCode(accessShareCode.value.trim())
     const bank = response.data
     
+    // 检查返回的题库数据是否有效
+    if (!bank || !bank.id) {
+      ElMessage.error('未找到该分享码对应的题库')
+      return
+    }
+    
     // 加载该题库的卡片并显示
     await loadBankCards(bank.id)
     
