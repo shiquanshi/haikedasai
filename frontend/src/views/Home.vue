@@ -1174,20 +1174,25 @@ let loadingTextTimer: any = null
 
 // 打字机效果
 const startTypingEffect = (text: string) => {
-  // 更新thinkingProcess，让定时器能访问到最新文本
-  thinkingProcess.value = text
-  
   // 清除隐藏定时器（但不清除打字定时器，让它继续运行）
   if (hideTimer) clearTimeout(hideTimer)
   
-  // 如果新文本比当前显示的短，说明是新的生成过程，需要重置
-  if (text.length < displayedThinking.value.length) {
+  // 检查是否是完全新的思考内容（判断前几个字符是否相同）
+  const isCompletelyNew = displayedThinking.value.length > 0 && 
+    text.length > 0 && 
+    !text.startsWith(displayedThinking.value.substring(0, 5));
+  
+  // 如果是完全新的内容或者新文本比当前显示的短很多，说明是新的生成过程，需要重置
+  if (isCompletelyNew || text.length < displayedThinking.value.length * 0.8) {
     // 清除之前的打字定时器
     if (typingTimer) clearInterval(typingTimer)
     displayedThinking.value = ''
   }
   
-  // 如果已经有打字机在运行，让新文本继续使用现有打字机
+  // 更新thinkingProcess，让定时器能访问到最新文本
+  thinkingProcess.value = text
+  
+  // 如果已经有打字机在运行，让它继续使用最新的thinkingProcess.value
   // 如果没有打字机在运行，或者内容被重置了，启动新的打字机
   if (!typingTimer || displayedThinking.value === '') {
     isTyping.value = true
