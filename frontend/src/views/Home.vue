@@ -1184,17 +1184,17 @@ const startTypingEffect = (text: string) => {
     displayedThinking.value = ''
   }
   
-  // 如果已经有打字机在运行且新文本更长，不需要重启，它会自动继续
+  // 如果已经有打字机在运行，让新文本继续使用现有打字机
   // 如果没有打字机在运行，或者内容被重置了，启动新的打字机
   if (!typingTimer || displayedThinking.value === '') {
     isTyping.value = true
-    let currentLength = displayedThinking.value.length
     const speed = 30 // 每个字符显示间隔（毫秒）
     
     typingTimer = setInterval(() => {
+      // 每次都从当前显示长度继续
+      const currentLength = displayedThinking.value.length
       if (currentLength < text.length) {
         displayedThinking.value = text.substring(0, currentLength + 1)
-        currentLength++
       } else {
         clearInterval(typingTimer)
         typingTimer = null
