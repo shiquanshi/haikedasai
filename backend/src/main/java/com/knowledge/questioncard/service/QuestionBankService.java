@@ -1514,15 +1514,41 @@ public class QuestionBankService {
     }
     
     /**
-     * 生成随机码
+     * 生成唯一短码（基于雪花算法 + Base62编码）
      */
     private String generateRandomCode(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        Random random = new Random();
-        StringBuilder code = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            code.append(chars.charAt(random.nextInt(chars.length())));
+        // 使用雪花算法生成唯一ID
+        cn.hutool.core.lang.Snowflake snowflake = cn.hutool.core.util.IdUtil.getSnowflake(1, 1);
+        long id = snowflake.nextId();
+        
+        // 转换为Base62（0-9, a-z, A-Z）
+        String code = toBase62(id);
+        
+        // 如果生成的码长度小于要求，补充随机字符（理论上不会发生）
+        if (code.length() < length) {
+            String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            Random random = new Random();
+            while (code.length() < length) {
+                code += chars.charAt(random.nextInt(chars.length()));
+            }
         }
-        return code.toString();
+        
+        // 返回指定长度的码（从末尾截取，保留最新的时间戳信息）
+        return code.length() > length ? code.substring(code.length() - length) : code;
+    }
+    
+    /**
+     * 将长整型转换为Base62字符串
+     */
+    private String toBase62(long num) {
+        String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        StringBuilder sb = new StringBuilder();
+        
+        while (num > 0) {
+            sb.append(chars.charAt((int)(num % 62)));
+            num /= 62;
+        }
+        
+        return sb.reverse().toString();
     }
 }
