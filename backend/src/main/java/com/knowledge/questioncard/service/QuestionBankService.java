@@ -1324,8 +1324,13 @@ public class QuestionBankService {
             throw new RuntimeException("题库不存在");
         }
         
+        // 系统题库不允许生成分享码
+        if ("system".equals(bank.getType())) {
+            throw new RuntimeException("系统题库不支持分享功能");
+        }
+        
         // 检查权限（只有题库创建者可以生成分享码）
-        if (!bank.getUserId().equals(userId)) {
+        if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
             throw new RuntimeException("无权限分享此题库");
         }
         

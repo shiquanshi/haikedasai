@@ -163,22 +163,6 @@
                         circle
                         title="导出Excel"
                       />
-                      <el-button
-                        type="success"
-                        size="small"
-                        :icon="Star"
-                        @click.stop="handleShareBank(bank.id)"
-                        circle
-                        title="分享题库"
-                      />
-                      <el-button
-                        type="danger"
-                        size="small"
-                        :icon="Delete"
-                        @click.stop="handleDeleteBank(bank.id, bank.name)"
-                        circle
-                        title="删除题库"
-                      />
                     </div>
                   </div>
                 </template>
@@ -231,20 +215,28 @@
                         title="编辑题库"
                       />
                       <el-button
-                        type="danger"
-                        size="small"
-                        :icon="Delete"
-                        @click.stop="handleDeleteBank(bank.id)"
-                        circle
-                        title="删除题库"
-                      />
-                      <el-button
                         type="primary"
                         size="small"
                         :icon="Download"
                         @click.stop="exportBank(bank.id, bank.name)"
                         circle
                         title="导出Excel"
+                      />
+                      <el-button
+                        type="success"
+                        size="small"
+                        :icon="Star"
+                        @click.stop="handleShareBank(bank.id)"
+                        circle
+                        title="分享题库"
+                      />
+                      <el-button
+                        type="danger"
+                        size="small"
+                        :icon="Delete"
+                        @click.stop="handleDeleteBank(bank.id)"
+                        circle
+                        title="删除题库"
                       />
                     </div>
                   </div>
@@ -320,20 +312,44 @@
           <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
           <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
             <el-card
-              v-for="record in historyRecords"
-              :key="record.id"
-              class="bank-card"
-              @click="loadBankCards(record.id)"
-            >
-              <template #header>
-                <div class="card-header">
-                  <span>{{ record.name }}</span>
-                  <div class="card-header-actions">
-                    <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
-                    <el-tag size="small" type="info">{{ record.createTime }}</el-tag>
+                v-for="record in historyRecords"
+                :key="record.id"
+                class="bank-card"
+                @click="loadBankCards(record.id)"
+              >
+                <template #header>
+                  <div class="card-header">
+                    <span>{{ record.name }}</span>
+                    <div class="card-header-actions">
+                      <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
+                      <el-tag size="small" type="info">{{ record.createTime }}</el-tag>
+                      <el-button
+                        type="primary"
+                        size="small"
+                        :icon="Download"
+                        @click.stop="exportBank(record.id, record.name)"
+                        circle
+                        title="导出Excel"
+                      />
+                      <el-button
+                        type="success"
+                        size="small"
+                        :icon="Star"
+                        @click.stop="handleShareBank(record.id)"
+                        circle
+                        title="分享题库"
+                      />
+                      <el-button
+                        type="danger"
+                        size="small"
+                        :icon="Delete"
+                        @click.stop="handleDeleteBank(record.id)"
+                        circle
+                        title="删除题库"
+                      />
+                    </div>
                   </div>
-                </div>
-              </template>
+                </template>
               <div class="bank-meta">
                 <span class="bank-difficulty">{{ record.difficulty }}</span>
                 <span class="bank-language">{{ record.language }}</span>
