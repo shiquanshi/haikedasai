@@ -1028,7 +1028,7 @@
       <div v-if="!shareCode">
         <el-form label-width="120px">
           <el-form-item label="有效期">
-            <el-select v-model="shareExpireHours" placeholder="请选择有效期" style="width: 100%" size="large">
+            <el-select v-model="shareExpireHours" placeholder="不限制（永久有效）" style="width: 100%" size="large">
               <el-option label="24小时" :value="24" />
               <el-option label="3天" :value="72" />
               <el-option label="7天" :value="168" />
