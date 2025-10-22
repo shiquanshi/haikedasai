@@ -52,12 +52,23 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   
+  // 判断是否是手机端路由
+  const isMobileRoute = to.path.startsWith('/mobile')
+  
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    // 需要登录但未登录,跳转到登录页
-    next('/login')
-  } else if (to.path === '/login' && userStore.isLoggedIn) {
-    // 已登录访问登录页,跳转到首页
-    next('/')
+    // 需要登录但未登录,根据请求的路由类型跳转到对应的登录页
+    if (isMobileRoute) {
+      next('/mobile/login')
+    } else {
+      next('/login')
+    }
+  } else if ((to.path === '/login' || to.path === '/mobile/login') && userStore.isLoggedIn) {
+    // 已登录访问登录页,根据来源跳转到对应的首页
+    if (isMobileRoute) {
+      next('/mobile')
+    } else {
+      next('/')
+    }
   } else {
     next()
   }

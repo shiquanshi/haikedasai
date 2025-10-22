@@ -128,6 +128,7 @@
         </div>
         
         <div class="bank-list">
+          <!-- 推荐题库 -->
           <el-divider content-position="left">推荐题库</el-divider>
           <el-loading v-loading="isLoadingBanks" element-loading-text="加载中...">
             <el-card
@@ -146,7 +147,115 @@
                 <p>{{ bank.description }}</p>
               </div>
             </el-card>
+            
+            <div v-if="!isLoadingBanks && systemBanks.length === 0" class="no-data">
+              暂无推荐题库
+            </div>
           </el-loading>
+          
+          <!-- 我的题库 -->
+          <el-divider content-position="left" v-if="userStore.isLoggedIn">我的题库</el-divider>
+          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingCustomBanks" element-loading-text="加载中...">
+            <el-card
+              v-for="bank in customBanks"
+              :key="bank.id"
+              class="bank-card"
+              @click="loadBankCards(bank.id)"
+            >
+              <template #header>
+                <div class="card-header">
+                  <span>{{ bank.name }}</span>
+                  <el-tag size="small">{{ bank.cardCount }}张卡片</el-tag>
+                </div>
+              </template>
+              <div class="card-content">
+                <p>{{ bank.description }}</p>
+              </div>
+              <div class="bank-actions">
+                <el-button
+                  type="primary"
+                  size="small"
+                  icon="Edit"
+                  @click.stop="showEditBankDialogFunc(bank)"
+                  title="编辑题库"
+                />
+                <el-button
+                  type="success"
+                  size="small"
+                  icon="Share"
+                  @click.stop="handleShareBank(bank.id)"
+                  title="分享题库"
+                />
+                <el-button
+                  type="danger"
+                  size="small"
+                  icon="Delete"
+                  @click.stop="handleDeleteBank(bank.id)"
+                  title="删除题库"
+                />
+              </div>
+            </el-card>
+            
+            <div v-if="userStore.isLoggedIn && !isLoadingCustomBanks && customBanks.length === 0" class="no-data">
+              暂无自定义题库
+            </div>
+          </el-loading>
+          
+          <!-- 历史生成记录 -->
+          <el-divider content-position="left" v-if="userStore.isLoggedIn">历史生成记录</el-divider>
+          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
+            <el-card
+              v-for="record in historyRecords"
+              :key="record.id"
+              class="bank-card"
+              @click="loadBankCards(record.id)"
+            >
+              <template #header>
+                <div class="card-header">
+                  <span>{{ record.name }}</span>
+                  <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
+                </div>
+              </template>
+              <div class="card-meta">
+                <span>{{ formatDate(new Date(record.createTime), 'MM-DD HH:mm') }}</span>
+              </div>
+            </el-card>
+            
+            <div v-if="userStore.isLoggedIn && !isLoadingHistory && historyRecords.length === 0" class="no-data">
+              暂无历史生成记录
+            </div>
+          </el-loading>
+          
+          <!-- 功能按钮 -->
+          <div class="bank-functions" v-if="userStore.isLoggedIn">
+            <el-button 
+              type="primary" 
+              size="large"
+              @click="showCreateBankDialog = true"
+              class="function-button"
+              icon="Plus"
+            >
+              创建新题库
+            </el-button>
+            <el-button 
+              type="success" 
+              size="large"
+              @click="handleShowImportDialog"
+              class="function-button"
+              icon="Upload"
+            >
+              导入Excel题库
+            </el-button>
+            <el-button 
+              type="warning" 
+              size="large"
+              @click="showAccessDialog = true"
+              class="function-button"
+              icon="Search"
+            >
+              访问分享题库
+            </el-button>
+          </div>
         </div>
       </div>
 
@@ -249,9 +358,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useUserStore } from '../../stores/user'
-import { Search, VideoPlay, Star, Volume } from '@element-plus/icons-vue'
+import { Search, VideoPlay, Star, Volume, Edit, Share, Delete, Upload, Plus } from '@element-plus/icons-vue'
 import { questionBankApi } from '../../api/questionBank'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 用户状态
 const userStore = useUserStore()
@@ -269,6 +378,12 @@ const isGenerating = ref(false)
 const showCards = ref(false)
 const bankSearchText = ref('')
 const isLoadingBanks = ref(false)
+const isLoadingCustomBanks = ref(false)
+const isLoadingHistory = ref(false)
+const showCreateBankDialog = ref(false)
+const showAccessDialog = ref(false)
+
+// 题库数据
 const systemBanks = ref([
   {
     id: 1,
@@ -281,6 +396,26 @@ const systemBanks = ref([
     name: '英语词汇1000',
     description: '精选1000个常用英语词汇',
     cardCount: 50
+  }
+])
+
+const customBanks = ref([
+  // 示例数据，实际应从API获取
+  {
+    id: 101,
+    name: '我的前端学习笔记',
+    description: '记录前端开发中的重要知识点',
+    cardCount: 15
+  }
+])
+
+const historyRecords = ref([
+  // 示例数据，实际应从API获取
+  {
+    id: 201,
+    name: 'Vue3 响应式原理',
+    cardCount: 8,
+    createTime: new Date().toISOString()
   }
 ])
 
@@ -313,6 +448,22 @@ const currentCard = computed(() => {
 const totalCards = computed(() => {
   return cards.value.length
 })
+
+// 日期格式化函数
+const formatDate = (date: Date, format: string): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  
+  return format
+    .replace('YYYY', year.toString())
+    .replace('MM', month)
+    .replace('DD', day)
+    .replace('HH', hours)
+    .replace('mm', minutes)
+}
 
 // 退出登录
 const handleLogout = async () => {
@@ -362,6 +513,8 @@ const generateCards = async () => {
         ElMessage.success('闪卡生成成功')
         isGenerating.value = false
         showCards.value = true
+        // 生成成功后刷新历史记录
+        loadHistoryRecords()
       }
     )
   } catch (error) {
@@ -378,6 +531,120 @@ const loadBankCards = (bankId: number) => {
   currentCardIndex.value = 0
   isFlipped.value = false
   // 实际项目中这里应该调用API获取题库详情
+}
+
+// 显示编辑题库对话框
+const showEditBankDialogFunc = (bank: any) => {
+  ElMessage.info(`编辑题库: ${bank.name}`)
+  // 实际项目中这里应该打开编辑对话框
+}
+
+// 分享题库
+const handleShareBank = async (bankId: number) => {
+  try {
+    // 实际项目中这里应该调用分享API
+    const shareCode = 'ABC123'
+    ElMessage.success(`分享成功，分享码: ${shareCode}`)
+    
+    // 复制分享码到剪贴板
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(shareCode)
+      ElMessage.success('分享码已复制到剪贴板')
+    }
+  } catch (error) {
+    ElMessage.error('分享失败')
+  }
+}
+
+// 删除题库
+const handleDeleteBank = async (bankId: number) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个题库吗？', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    // 实际项目中这里应该调用删除API
+    ElMessage.success('删除成功')
+    // 删除成功后刷新题库列表
+    loadCustomBanks()
+  } catch (error) {
+    // 用户取消删除
+  }
+}
+
+// 显示导入对话框
+const handleShowImportDialog = () => {
+  ElMessage.info('打开导入Excel对话框')
+  // 实际项目中这里应该打开导入对话框
+}
+
+// 导入题库
+const handleImportBank = async (file: File) => {
+  try {
+    // 实际项目中这里应该调用导入API
+    ElMessage.success('导入成功')
+    // 导入成功后刷新题库列表
+    loadCustomBanks()
+  } catch (error) {
+    ElMessage.error('导入失败')
+  }
+}
+
+// 访问分享题库
+const accessSharedBank = async (shareCode: string) => {
+  try {
+    // 实际项目中这里应该调用访问分享题库API
+    ElMessage.success('访问成功')
+    // 访问成功后刷新题库列表
+    loadCustomBanks()
+  } catch (error) {
+    ElMessage.error('分享码无效')
+  }
+}
+
+// 加载推荐题库
+const loadSystemBanks = async () => {
+  isLoadingBanks.value = true
+  try {
+    // 实际项目中这里应该调用API获取推荐题库
+    // 这里使用模拟数据
+    isLoadingBanks.value = false
+  } catch (error) {
+    ElMessage.error('加载推荐题库失败')
+    isLoadingBanks.value = false
+  }
+}
+
+// 加载自定义题库
+const loadCustomBanks = async () => {
+  if (!userStore.isLoggedIn) return
+  
+  isLoadingCustomBanks.value = true
+  try {
+    // 实际项目中这里应该调用API获取自定义题库
+    // 这里使用模拟数据
+    isLoadingCustomBanks.value = false
+  } catch (error) {
+    ElMessage.error('加载我的题库失败')
+    isLoadingCustomBanks.value = false
+  }
+}
+
+// 加载历史生成记录
+const loadHistoryRecords = async () => {
+  if (!userStore.isLoggedIn) return
+  
+  isLoadingHistory.value = true
+  try {
+    // 实际项目中这里应该调用API获取历史生成记录
+    // 这里使用模拟数据
+    isLoadingHistory.value = false
+  } catch (error) {
+    ElMessage.error('加载历史记录失败')
+    isLoadingHistory.value = false
+  }
 }
 
 // 返回表单
@@ -424,6 +691,20 @@ const playAnswerVoice = () => {
     isPlayingAnswer.value = false
   }, 2000)
 }
+
+// 页面加载时执行
+const initPage = async () => {
+  await loadSystemBanks()
+  if (userStore.isLoggedIn) {
+    await Promise.all([
+      loadCustomBanks(),
+      loadHistoryRecords()
+    ])
+  }
+}
+
+// 初始化页面
+initPage()
 </script>
 
 <style scoped>
@@ -445,6 +726,17 @@ const playAnswerVoice = () => {
   font-size: 28px;
   margin-bottom: 15px;
   font-weight: bold;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username {
+  color: white;
+  font-size: 16px;
 }
 
 .mobile-content {
@@ -479,6 +771,7 @@ const playAnswerVoice = () => {
   font-weight: bold;
 }
 
+/* 题库模块样式 */
 .question-bank {
   margin-top: 30px;
 }
@@ -495,64 +788,163 @@ const playAnswerVoice = () => {
   font-size: 20px;
 }
 
+/* 搜索框样式 */
 .bank-search {
-  width: 150px;
-}
-
-.bank-card {
-  margin-bottom: 15px;
-  cursor: pointer;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.bank-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.card-header {
+  margin: 20px 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 15px 15px 0 15px;
 }
 
-.card-content {
-  margin-top: 10px;
-  color: #666;
-  padding: 0 15px 15px 15px;
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-/* 增大卡片内文本内容区域 */
-.el-card__body {
-  padding: 0 !important;
-}
-
-/* 调整卡片标题样式 */
-.card-header span {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-/* 调整标签样式 */
-.card-header .el-tag {
-  padding: 4px 12px;
+.bank-search input {
+  flex: 1;
+  height: 40px;
+  border: 1px solid #dcdfe6;
+  border-radius: 20px;
+  padding: 0 16px;
+  outline: none;
   font-size: 14px;
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* 题库列表样式 */
+.bank-list {
+  margin-top: 20px;
 }
 
-.username {
-  color: white;
+.bank-list h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* 题库卡片样式 */
+.bank-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.bank-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bank-name {
   font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.bank-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.bank-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #999;
+}
+
+.bank-count {
+  display: flex;
+  align-items: center;
+}
+
+.bank-count svg {
+  margin-right: 4px;
+}
+
+/* 题库操作按钮 */
+.bank-actions {
+  display: flex;
+  gap: 8px;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+}
+
+.bank-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.bank-action-btn:hover {
+  background: #e4e7ed;
+  color: #303133;
+}
+
+/* 功能按钮区域 */
+.feature-buttons {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.feature-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 13px;
+  color: #606266;
+}
+
+.feature-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.feature-btn svg {
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+}
+
+.empty-state svg {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  font-size: 14px;
 }
 
 /* 卡片展示区域样式 */
