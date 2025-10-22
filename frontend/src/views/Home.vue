@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="home-container">
     <!-- 顶部波浪装饰 -->
     <div class="wave-decoration"></div>
@@ -322,7 +322,7 @@
                     <span>{{ record.name }}</span>
                     <div class="card-header-actions">
                       <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
-                      <el-tag size="small" type="info">{{ record.createTime }}</el-tag>
+                      <el-tag size="small" type="info">{{ formatDate(record.createdAt, 'YYYY-MM-DD HH:mm') }}</el-tag>
                       <el-button
                         type="primary"
                         size="small"
@@ -1107,6 +1107,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
 import { useUserStore } from '../stores/user'
+import { formatDate } from '../utils/date'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -1177,24 +1178,20 @@ const startTypingEffect = (text: string) => {
   if (typingTimer) clearInterval(typingTimer)
   if (hideTimer) clearTimeout(hideTimer)
   
-  displayedThinking.value = ''
+  // 不清空已有内容，而是追加新内容
   isTyping.value = true
   
-  let index = 0
+  // 从已显示内容的长度开始，只添加新增的部分
+  let currentLength = displayedThinking.value.length
   const speed = 30 // 每个字符显示间隔（毫秒）
   
   typingTimer = setInterval(() => {
-    if (index < text.length) {
-      displayedThinking.value += text[index]
-      index++
+    if (currentLength < text.length) {
+      displayedThinking.value = text.substring(0, currentLength + 1)
+      currentLength++
     } else {
       clearInterval(typingTimer)
       isTyping.value = false
-      // 文字显示完毕后3秒消失
-      hideTimer = setTimeout(() => {
-        displayedThinking.value = ''
-        thinkingProcess.value = ''
-      }, 3000)
     }
   }, speed)
 }

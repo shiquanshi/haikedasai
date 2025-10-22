@@ -479,6 +479,8 @@ public class QuestionBankService {
         dto.setCardCount(bank.getCardCount());
         dto.setDifficulty(bank.getDifficulty());
         dto.setLanguage(bank.getLanguage());
+        dto.setCreatedAt(bank.getCreatedAt());
+        dto.setUpdatedAt(bank.getUpdatedAt());
         return dto;
     }
     
