@@ -470,6 +470,14 @@
           <div v-if="isGenerating && cards.length === 0" class="loading-container">
             <el-icon class="loading-icon" :size="60"><Loading /></el-icon>
             <div class="loading-text">正在生成闪卡...</div>
+            <!-- 思考过程展示 -->
+            <div v-if="thinkingProcess" class="thinking-process">
+              <div class="thinking-header">
+                <el-icon class="thinking-icon"><ChatDotRound /></el-icon>
+                <span>AI思考过程</span>
+              </div>
+              <div class="thinking-content">{{ thinkingProcess }}</div>
+            </div>
           </div>
           
           <!-- 正常卡片展示 -->
@@ -1150,6 +1158,7 @@ const customTotal = ref(0)
 // 流式生成相关
 const isGenerating = ref(false)
 const streamContent = ref('')
+const thinkingProcess = ref('') // 思考过程
 let streamEventSource: EventSource | null = null
 
 // 选题模式相关
@@ -1280,6 +1289,7 @@ const generateCards = async () => {
   try {
     isGenerating.value = true
     streamContent.value = ''
+    thinkingProcess.value = '' // 清空思考过程
     showCards.value = true
     cards.value = [] // 清空现有卡片
     
@@ -1523,6 +1533,11 @@ const generateCards = async () => {
         } else {
           ElMessage.warning('未能解析生成的卡片，请重试')
         }
+      },
+      // onThinking: 接收思考过程
+      (thinking: string) => {
+        thinkingProcess.value = thinking
+        console.log('🧠 接收到思考过程:', thinking.substring(0, 100))
       }
     )
   } catch (error) {
@@ -3623,6 +3638,53 @@ onMounted(() => {
   font-size: 16px;
   color: #606266;
   font-weight: 500;
+}
+
+/* 思考过程样式 */
+.thinking-process {
+  margin-top: 25px;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.08) 0%, rgba(0, 242, 254, 0.05) 100%);
+  border-left: 4px solid #4facfe;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.1);
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #4facfe;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.thinking-header .el-icon {
+  font-size: 18px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+.thinking-content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #606266;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* 分页容器样式 */

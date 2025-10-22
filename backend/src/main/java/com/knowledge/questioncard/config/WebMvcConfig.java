@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -23,6 +24,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/user/login",     // 排除登录
                     "/user/validate-token" // 排除token验证
                 );
+    }
+    
+    /**
+     * 配置异步请求支持
+     * 设置异步请求超时时间为10分钟，与SseEmitter超时时间保持一致
+     */
+    @Override
+    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
+        // 设置异步请求超时时间为10分钟（600000毫秒）
+        configurer.setDefaultTimeout(600000L);
     }
     
     @Bean

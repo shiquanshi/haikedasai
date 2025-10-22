@@ -16,7 +16,8 @@ export const questionBankApi = {
     params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string; withImages?: boolean },
     onMessage: (content: string) => void,
     onError?: (error: string) => void,
-    onComplete?: () => void
+    onComplete?: () => void,
+    onThinking?: (thinkingContent: string) => void
   ) {
     const token = localStorage.getItem('token')?.trim()
     // 使用相对路径,自动适配当前域名和协议
@@ -44,6 +45,15 @@ export const questionBankApi = {
       if (content && content !== '[DONE]') {
         onMessage(content)
         console.log('[SSE接收] 已调用onMessage回调')
+      }
+    })
+
+    eventSource.addEventListener('thinking', (event) => {
+      const thinkingContent = event.data
+      console.log('🧠 收到thinking事件，思考过程长度:', thinkingContent.length)
+      if (thinkingContent && onThinking) {
+        onThinking(thinkingContent)
+        console.log('[SSE接收] 已调用onThinking回调')
       }
     })
 
