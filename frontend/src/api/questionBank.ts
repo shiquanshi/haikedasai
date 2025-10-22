@@ -57,6 +57,18 @@ export const questionBankApi = {
       }
     })
 
+    eventSource.addEventListener('image_single', (event) => {
+      console.log('🖼️ 收到image_single事件，单张卡片图片数据')
+      try {
+        const cardData = JSON.parse(event.data)
+        console.log('单张卡片图片数据:', cardData)
+        // 通过特殊标记传递单张卡片图片数据
+        onMessage(JSON.stringify({ type: 'image_single', data: cardData }))
+      } catch (e) {
+        console.error('解析单张卡片图片数据失败:', e)
+      }
+    })
+
     eventSource.addEventListener('images', (event) => {
       console.log('📸 收到images事件，包含图片描述数据')
       try {

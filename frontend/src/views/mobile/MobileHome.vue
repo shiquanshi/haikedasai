@@ -429,8 +429,14 @@
         <div class="cards-header">
           <div class="header-left">
             <h2>{{ currentBankName || '我的闪卡' }}</h2>
-            <div class="card-progress">
-              进度 {{ currentCardIndex + 1 }}/{{ totalCards }}
+            <div class="card-progress" :class="{ 'generating': isGenerating }">
+              <template v-if="isGenerating">
+                <el-icon class="is-loading" style="margin-right: 8px"><Loading /></el-icon>
+                <span>正在生成中... 已生成 {{ cards.length }} 张卡片</span>
+              </template>
+              <template v-else>
+                进度 {{ currentCardIndex + 1 }}/{{ totalCards }}
+              </template>
             </div>
           </div>
           <div class="header-actions">
@@ -474,8 +480,9 @@
 
         <!-- 卡片容器 -->
         <div class="card-container">
+          <!-- 卡片（包含加载状态） -->
           <div 
-            v-if="currentCard" 
+            v-if="currentCard || (isGenerating && cards.length === 0)" 
             class="flip-card" 
             :class="{ 'flipped': isFlipped }"
             @click="flipCard"
@@ -483,30 +490,52 @@
             <div class="flip-card-inner">
               <!-- 问题面 -->
               <div class="flip-card-front">
-                <div class="card-badge">问题</div>
-                <div class="card-content">
-                  <div class="card-text question-text">{{ currentCard.question }}</div>
-                </div>
-                <div class="card-footer">
-                  <div class="tap-hint">点击翻转查看答案</div>
-                  <el-button 
-                    size="small" 
-                    class="voice-button"
-                    @click.stop="playQuestionVoice"
-                  >
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                    </svg>
-                    {{ isPlayingQuestion ? '播放中' : '语音' }}
-                  </el-button>
-                </div>
+                <!-- 加载状态下显示思考过程 -->
+                <template v-if="isGenerating && cards.length === 0">
+                  <div class="card-badge">AI生成中</div>
+                  <div class="card-content loading-content">
+                    <el-icon class="loading-icon" :size="48"><Loading /></el-icon>
+                    <div class="loading-text">{{ displayedLoadingText }}<span v-if="displayedLoadingText && displayedLoadingText.length < loadingText.length" class="typing-cursor">|</span></div>
+                    <!-- 思考过程展示 -->
+                    <div v-if="displayedThinking" class="thinking-process">
+                      <div class="thinking-header">
+                        <el-icon class="thinking-icon"><ChatDotRound /></el-icon>
+                        <span>思考过程</span>
+                      </div>
+                      <div class="thinking-content">
+                        {{ displayedThinking }}
+                        <span v-if="isTyping" class="typing-cursor">|</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- 正常卡片内容 -->
+                <template v-else>
+                  <div class="card-badge">问题</div>
+                  <div class="card-content">
+                    <div class="card-text question-text">{{ currentCard?.question }}</div>
+                  </div>
+                  <div class="card-footer">
+                    <div class="tap-hint">点击翻转查看答案</div>
+                    <el-button 
+                      size="small" 
+                      class="voice-button"
+                      @click.stop="playQuestionVoice"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                      </svg>
+                      {{ isPlayingQuestion ? '播放中' : '语音' }}
+                    </el-button>
+                  </div>
+                </template>
               </div>
 
               <!-- 答案面 -->
               <div class="flip-card-back">
                 <div class="card-badge">答案</div>
                 <div class="card-content">
-                  <div class="card-text">{{ currentCard.answer }}</div>
+                  <div class="card-text">{{ currentCard?.answer }}</div>
                 </div>
                 <div class="card-footer">
                   <div class="tap-hint">点击翻转查看问题</div>
@@ -1007,6 +1036,11 @@ const withImages = ref(false)
 // 状态管理
 const isGenerating = ref(false)
 const showCards = ref(false)
+const loadingText = ref('')
+const displayedLoadingText = ref('')
+const thinkingProcess = ref('')
+const displayedThinking = ref('')
+const isTyping = ref(false)
 const bankSearchText = ref('')
 const isLoadingBanks = ref(false)
 const isLoadingCustomBanks = ref(false)
@@ -1125,6 +1159,44 @@ const totalCards = computed(() => {
   return cards.value.length
 })
 
+// 思考过程智能累积显示 - 修复文本拼接问题
+const startTypingEffect = (newText: string) => {
+  // 确保思考过程区域显示
+  thinkingProcess.value = 'show'
+  
+  // 核心修复：实现正确的文本拼接逻辑
+  if (newText && newText.trim()) {
+    // 将新接收的文本追加到已有显示内容后面，而不是替换
+    displayedThinking.value = displayedThinking.value + newText
+    
+    // 同时更新原始思考过程变量
+    thinkingProcess.value = displayedThinking.value
+  }
+  
+  isTyping.value = false
+}
+
+// 加载文本打字机效果
+let loadingTextTimer: any = null
+const startLoadingTextTyping = (text: string) => {
+  // 清除之前的定时器
+  if (loadingTextTimer) clearInterval(loadingTextTimer)
+  
+  displayedLoadingText.value = ''
+  
+  let index = 0
+  const speed = 100 // 每个字符显示间隔（毫秒）
+  
+  loadingTextTimer = setInterval(() => {
+    if (index < text.length) {
+      displayedLoadingText.value += text[index]
+      index++
+    } else {
+      clearInterval(loadingTextTimer)
+    }
+  }, speed)
+}
+
 // 日期格式化函数
 const formatDate = (date: Date | string | number, format: string = 'YYYY-MM-DD HH:mm'): string => {
   if (!date) return ''
@@ -1165,6 +1237,19 @@ const generateCards = async () => {
   }
 
   isGenerating.value = true
+  showCards.value = true // 🔥 关键修复：立即切换到卡片展示页面
+  cards.value = [] // 清空旧卡片
+  currentCardIndex.value = 0 // 重置卡片索引
+  isFlipped.value = false // 重置翻转状态
+  
+  // 启动加载文本打字机效果
+  loadingText.value = '正在生成中，请稍候...'
+  displayedLoadingText.value = ''
+  startLoadingTextTyping()
+  
+  let allContent = '' // 累积所有内容
+  let lastCardCount = 0 // 上次解析的卡片数量
+  
   try {
     // 使用流式API生成闪卡
     questionBankApi.generateAIBankStream(
@@ -1177,25 +1262,202 @@ const generateCards = async () => {
         withImages: withImages.value
       },
       (content) => {
-        // 处理收到的内容
+        // 检查是否是特殊事件数据
         try {
-          const parsedContent = JSON.parse(content)
-          // 可以在这里处理不同类型的消息
+          const parsed = JSON.parse(content)
+          
+          // 处理单张卡片图片数据
+          if (parsed.type === 'image_single' && parsed.data) {
+            console.log('🖼️ 接收到单张卡片图片数据')
+            const cardData = parsed.data
+            // 根据索引更新对应卡片的图片
+            if (cardData.index !== undefined && cards.value[cardData.index]) {
+              cards.value[cardData.index].questionImage = cardData.questionImage
+              cards.value[cardData.index].answerImage = cardData.answerImage
+              console.log(`已更新第${cardData.index + 1}张卡片的图片`)
+            } else {
+              // 如果没有index，尝试通过question匹配
+              const matchingCardIndex = cards.value.findIndex(
+                card => card.question === cardData.question
+              )
+              if (matchingCardIndex >= 0) {
+                cards.value[matchingCardIndex].questionImage = cardData.questionImage
+                cards.value[matchingCardIndex].answerImage = cardData.answerImage
+                console.log(`通过问题匹配，已更新第${matchingCardIndex + 1}张卡片的图片`)
+              }
+            }
+            return
+          }
         } catch (e) {
-          // 处理普通文本内容
+          // 不是JSON格式，继续按普通流式内容处理
+        }
+        
+        // 累积内容
+        allContent += content
+        
+        // 解析并更新卡片
+        try {
+          const cleanContent = allContent.replace(/```json\n?|```\n?/g, '').trim()
+          
+          // 先尝试解析完整JSON数组
+          try {
+            const parsed = JSON.parse(cleanContent)
+            if (Array.isArray(parsed)) {
+              cards.value = parsed.map((card, index) => ({
+                ...card,
+                id: Date.now() + index
+              }))
+              return
+            }
+          } catch (e) {
+            // 完整JSON解析失败，使用流式解析
+          }
+          
+          // 提取JSON对象
+          const extractCards = (text: string) => {
+            const cards: string[] = []
+            let depth = 0
+            let startIndex = -1
+            
+            for (let i = 0; i < text.length; i++) {
+              if (text[i] === '{') {
+                if (depth === 0) startIndex = i
+                depth++
+              } else if (text[i] === '}') {
+                depth--
+                if (depth === 0 && startIndex >= 0) {
+                  const cardText = text.substring(startIndex, i + 1)
+                  if (cardText.includes('"question"')) {
+                    cards.push(cardText)
+                  }
+                  startIndex = -1
+                }
+              }
+            }
+            return cards
+          }
+          
+          const matches = extractCards(cleanContent)
+          
+          if (matches.length > 0) {
+            const allCards: any[] = []
+            
+            matches.forEach((block, index) => {
+              const card: any = {
+                id: Date.now() + index,
+                question: '',
+                answer: '',
+                difficulty: 'medium'
+              }
+              
+              try {
+                const parsed = JSON.parse(block)
+                if (parsed.question) card.question = parsed.question
+                if (parsed.answer) card.answer = parsed.answer
+                if (parsed.difficulty) card.difficulty = parsed.difficulty
+                if (parsed.questionImage) card.questionImage = parsed.questionImage
+                if (parsed.answerImage) card.answerImage = parsed.answerImage
+              } catch (e) {
+                // 使用正则提取
+                const questionMatch = block.match(/"question"\s*:\s*"((?:[^"\\]|\\.)*)"/)  
+                if (questionMatch) {
+                  card.question = questionMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                }
+                const answerMatch = block.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/)  
+                if (answerMatch) {
+                  card.answer = answerMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                }
+                const difficultyMatch = block.match(/"difficulty"\s*:\s*"([^"]*)"/)  
+                if (difficultyMatch) {
+                  card.difficulty = difficultyMatch[1]
+                }
+                
+                const questionImageMatch = block.match(/"questionImage"\s*:\s*"((?:[^"\\]|\\.)*)"/)  
+                if (questionImageMatch) {
+                  card.questionImage = questionImageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                }
+                
+                const answerImageMatch = block.match(/"answerImage"\s*:\s*"((?:[^"\\]|\\.)*)"/)  
+                if (answerImageMatch) {
+                  card.answerImage = answerImageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+                }
+              }
+              
+              if (card.question || card.answer) {
+                allCards.push(card)
+              }
+            })
+            
+            // 只添加新卡片，实现增量更新
+            if (allCards.length > lastCardCount) {
+              const newCards = allCards.slice(lastCardCount)
+              cards.value = [...cards.value, ...newCards]
+              lastCardCount = allCards.length
+            }
+          }
+        } catch (parseError) {
+          console.error('解析错误:', parseError)
         }
       },
       (error) => {
         ElMessage.error(error)
         isGenerating.value = false
       },
-      () => {
+      async () => {
         // 生成完成
-        ElMessage.success('闪卡生成成功')
         isGenerating.value = false
-        showCards.value = true
-        // 生成成功后刷新历史记录
-        loadHistoryRecords()
+        if (cards.value.length > 0) {
+          ElMessage.success(`闪卡生成成功！共生成${cards.value.length}张卡片`)
+          
+          // 保存卡片到题库
+          try {
+            const bankName = `${topic.value}${scenario.value ? '-' + scenario.value : ''}-${new Date().getTime()}`
+            const saveResponse = await questionBankApi.createAIBank({
+              name: bankName,
+              description: `主题: ${topic.value}${scenario.value ? ', 场景: ' + scenario.value : ''}`,
+              topic: topic.value,
+              scenario: scenario.value || '',
+              difficulty: difficulty.value,
+              language: language.value,
+              cardCount: cards.value.length,
+              cards: cards.value.map((card: any) => ({
+                question: card.question,
+                answer: card.answer,
+                questionImage: card.questionImage || '',
+                answerImage: card.answerImage || '',
+                difficulty: card.difficulty || difficulty.value
+              }))
+            })
+            
+            if (saveResponse.code === 200 && saveResponse.data) {
+              // 保存成功后,加载题库卡片并切换到展示界面
+              const bankId = saveResponse.data.id
+              currentBankId.value = bankId
+              currentBankName.value = bankName
+              currentBankType.value = 'ai'
+              
+              // 重新加载题库卡片(确保ID正确)
+              await loadBankCards(bankId, bankName, 'ai')
+              
+              // 刷新历史记录
+              loadHistoryRecords()
+            }
+          } catch (error) {
+            console.error('保存题库失败:', error)
+            ElMessage.error('保存题库失败，但卡片已生成')
+            // 即使保存失败，也显示已生成的卡片
+            showCards.value = true
+            currentCardIndex.value = 0
+            isFlipped.value = false
+          }
+        } else {
+          ElMessage.warning('未生成任何卡片')
+        }
+      },
+      // onThinking: 处理思考过程
+      (thinking: string) => {
+        thinkingProcess.value = thinking
+        startTypingEffect(thinking)
       }
     )
   } catch (error) {
@@ -2423,6 +2685,16 @@ initPage()
   perspective: 1000px;
 }
 
+
+
+/* 生成中的进度条样式 */
+.card-progress.generating {
+  display: flex;
+  align-items: center;
+  color: #409eff;
+  font-weight: 500;
+}
+
 /* 翻转卡片样式 */
 .flip-card {
   width: 100%;
@@ -2499,6 +2771,59 @@ initPage()
   justify-content: center;
   padding: 60px 30px 30px;
   overflow-y: auto;
+}
+
+/* 加载状态内容 */
+.loading-content {
+  flex-direction: column;
+  gap: 20px;
+}
+
+.loading-content .loading-icon {
+  animation: rotate 1.5s linear infinite;
+  margin-bottom: 10px;
+}
+
+.loading-content .loading-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+/* 思考过程样式 */
+.thinking-process {
+  width: 100%;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: left;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.thinking-icon {
+  font-size: 16px;
+}
+
+.thinking-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 卡片文本 */

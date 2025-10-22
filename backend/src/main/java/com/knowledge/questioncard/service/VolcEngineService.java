@@ -455,12 +455,21 @@ public class VolcEngineService {
                                         return null;
                                     }
                                     
-                                    // 发送进度通知
+                                    // 🔥 立即发送单张卡片的图片数据（包含索引信息）
                                     try {
-                                        emitter.send(SseEmitter.event().name("status")
-                                            .data(String.format("第 %d/%d 张卡片图片生成完成", cardIndex, totalCards)));
+                                        // 添加卡片索引信息
+                                        card.put("index", cardIndex - 1); // 使用0-based索引
+                                        
+                                        // 包装数据格式以匹配前端期望: {type: 'image_single', data: cardData}
+                                        Map<String, Object> eventData = new HashMap<>();
+                                        eventData.put("type", "image_single");
+                                        eventData.put("data", card);
+                                        
+                                        String singleCardJson = objectMapper.writeValueAsString(eventData);
+                                        emitter.send(SseEmitter.event().name("message").data(singleCardJson));
+                                        log.info("📤 已发送第 {}/{} 张卡片图片数据（索引: {}）", cardIndex, totalCards, cardIndex - 1);
                                     } catch (IOException e) {
-                                        log.error("发送进度通知失败", e);
+                                        log.error("发送单张卡片图片数据失败", e);
                                     }
                                     
                                     return card;
@@ -485,7 +494,7 @@ public class VolcEngineService {
                         long parallelEndTime = System.currentTimeMillis();
                         log.info("⏱️ [计时] 所有卡片图片并行生成完成 - 耗时:{}ms", parallelEndTime - parallelStartTime);
                         
-                        // 收集结果
+                        // 收集结果（用于返回完整数据）
                         for (CompletableFuture<Map<String, Object>> future : futures) {
                             Map<String, Object> card = future.join();
                             if (card != null) {
@@ -499,9 +508,9 @@ public class VolcEngineService {
                             return accumulatedContent.toString();
                         }
                         
-                        // 发送更新后的完整JSON（包含图片URL）
+                        // 🔥 不再发送批量images事件，因为已经通过image_single逐张发送了
                         String updatedJson = objectMapper.writeValueAsString(updatedCards);
-                        emitter.send(SseEmitter.event().name("images").data(updatedJson));
+                        log.info("✅ 所有图片数据已通过image_single事件逐张发送完成");
                         
                         // 🔑 关键修改：返回包含图片URL的完整JSON，而不是原始JSON
                         long imageEndTime = System.currentTimeMillis();

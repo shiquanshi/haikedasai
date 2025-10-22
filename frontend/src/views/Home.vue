@@ -1411,7 +1411,30 @@ const generateCards = async () => {
             return
           }
           
-          // 处理图片描述数据
+          // 处理单张卡片图片数据（新增）
+          if (parsed.type === 'image_single' && parsed.data) {
+            console.log('🖼️ 接收到单张卡片图片数据')
+            const cardData = parsed.data
+            // 根据索引或其他标识更新对应卡片的图片
+            if (cardData.index !== undefined && cards.value[cardData.index]) {
+              cards.value[cardData.index].questionImage = cardData.questionImage
+              cards.value[cardData.index].answerImage = cardData.answerImage
+              console.log(`已更新第${cardData.index + 1}张卡片的图片`)
+            } else {
+              // 如果没有index，尝试通过question匹配
+              const matchingCardIndex = cards.value.findIndex(
+                card => card.question === cardData.question
+              )
+              if (matchingCardIndex >= 0) {
+                cards.value[matchingCardIndex].questionImage = cardData.questionImage
+                cards.value[matchingCardIndex].answerImage = cardData.answerImage
+                console.log(`通过问题匹配，已更新第${matchingCardIndex + 1}张卡片的图片`)
+              }
+            }
+            return
+          }
+          
+          // 处理图片描述数据（保留原有逻辑）
           if (parsed.type === 'images' && parsed.data) {
             console.log('📸 接收到图片描述数据，更新卡片')
             // 更新现有卡片的图片描述

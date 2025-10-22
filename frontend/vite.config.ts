@@ -15,6 +15,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      '/minio': {
+        target: 'http://113.45.203.178:9150',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/minio/, '')
       }
     }
   }

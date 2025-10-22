@@ -55,7 +55,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖财务会计基础知识的系统题库");
         bank.setTopic("财务");
         bank.setType("system");
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -86,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
             "财务报表分析的主要方法包括:1.比率分析法-计算各种财务比率 2.比较分析法-不同时期或企业间比较 3.趋势分析法-分析数据变化趋势 4.因素分析法-分析影响因素。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(java.time.LocalDateTime.now());
+            card.setCreatedAt(new java.util.Date());
             questionCardMapper.insert(card);
         }
         
@@ -101,7 +101,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖税收基础知识和实务操作的系统题库");
         bank.setTopic("税务");
         bank.setType("system");
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -132,7 +132,7 @@ public class DataInitializer implements CommandLineRunner {
             "个人所得税专项附加扣除包括七项:1.子女教育 2.继续教育 3.大病医疗 4.住房贷款利息 5.住房租金 6.赡养老人 7.3岁以下婴幼儿照护。纳税人可按规定标准扣除。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(java.time.LocalDateTime.now());
+            card.setCreatedAt(new java.util.Date());
             questionCardMapper.insert(card);
         }
         
@@ -147,7 +147,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖企业常用法律知识的系统题库");
         bank.setTopic("法律");
         bank.setType("system");
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -178,7 +178,7 @@ public class DataInitializer implements CommandLineRunner {
             "企业常见法律风险包括:1.合同风险-合同条款不完善、履行纠纷 2.劳动用工风险-劳动合同管理不规范 3.知识产权风险-侵权或被侵权 4.税务风险 5.环保合规风险等。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(java.time.LocalDateTime.now());
+            card.setCreatedAt(new java.util.Date());
             questionCardMapper.insert(card);
         }
         
@@ -193,7 +193,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖企业管理理论与实践的系统题库");
         bank.setTopic("管理");
         bank.setType("system");
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -224,7 +224,7 @@ public class DataInitializer implements CommandLineRunner {
             "企业文化核心要素包括:1.价值观-企业的核心理念 2.使命-企业存在的意义 3.愿景-企业未来的目标 4.行为规范-员工的行为准则 5.物质载体-可见的文化表现形式。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(java.time.LocalDateTime.now());
+            card.setCreatedAt(new java.util.Date());
             questionCardMapper.insert(card);
         }
         
@@ -239,7 +239,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖市场营销理论与实践的系统题库");
         bank.setTopic("市场营销");
         bank.setType("system");
-        bank.setCreatedAt(java.time.LocalDateTime.now());
+        bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -270,7 +270,7 @@ public class DataInitializer implements CommandLineRunner {
             "社交媒体营销的优势包括:1.成本低-相比传统媒体更经济 2.互动性强-可与客户实时沟通 3.传播快-病毒式传播效应 4.精准定位-可针对特定群体 5.数据可追踪-效果可量化分析。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(java.time.LocalDateTime.now());
+            card.setCreatedAt(new java.util.Date());
             questionCardMapper.insert(card);
         }
         

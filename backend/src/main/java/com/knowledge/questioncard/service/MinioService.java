@@ -160,45 +160,80 @@ public class MinioService {
     }
 
     /**
-     * 从URL下载图片并上传到MinIO
+     * 从URL下载图片并上传到MinIO（带重试机制）
      */
     public String uploadFromUrl(String imageUrl) {
-        try {
-            ensureBucketExists();
-            
-            // 从URL下载图片
-            URL url = new URL(imageUrl);
-            InputStream inputStream = url.openStream();
-            
-            // 从URL中提取文件扩展名，如果没有则默认为.png
-            String extension = ".png";
-            String path = url.getPath();
-            if (path.contains(".")) {
-                extension = path.substring(path.lastIndexOf("."));
-                // 限制扩展名长度，防止异常
-                if (extension.length() > 5) {
-                    extension = ".png";
+        log.info("🔄 [MinIO上传] 开始处理: {}", imageUrl);
+        
+        int maxRetries = 3;
+        int retryCount = 0;
+        Exception lastException = null;
+        
+        while (retryCount < maxRetries) {
+            try {
+                ensureBucketExists();
+                
+                // 从URL下载图片
+                long downloadStartTime = System.currentTimeMillis();
+                URL url = new URL(imageUrl);
+                InputStream inputStream = url.openStream();
+                long downloadEndTime = System.currentTimeMillis();
+                log.info("⏱️ [MinIO上传] 下载图片完成 - 耗时:{}ms", downloadEndTime - downloadStartTime);
+                
+                // 从URL中提取文件扩展名，如果没有则默认为.png
+                String extension = ".png";
+                String path = url.getPath();
+                if (path.contains(".")) {
+                    extension = path.substring(path.lastIndexOf("."));
+                    // 限制扩展名长度，防止异常
+                    if (extension.length() > 5) {
+                        extension = ".png";
+                    }
+                }
+                
+                String fileName = UUID.randomUUID().toString() + extension;
+                
+                // 上传到MinIO，使用-1让MinIO自动检测大小
+                long uploadStartTime = System.currentTimeMillis();
+                minioClient.putObject(PutObjectArgs.builder()
+                        .bucket(minioConfig.getBucketName())
+                        .object(fileName)
+                        .stream(inputStream, -1, 10485760) // 最大10MB
+                        .contentType("image/" + extension.substring(1))
+                        .build());
+                
+                inputStream.close();
+                long uploadEndTime = System.currentTimeMillis();
+                
+                if (retryCount > 0) {
+                    log.info("✅ [MinIO上传] 成功（第{}次重试）- 上传耗时:{}ms, 总耗时:{}ms: {} -> {}", 
+                        retryCount, uploadEndTime - uploadStartTime, uploadEndTime - downloadStartTime, imageUrl, fileName);
+                } else {
+                    log.info("✅ [MinIO上传] 成功 - 上传耗时:{}ms, 总耗时:{}ms: {} -> {}", 
+                        uploadEndTime - uploadStartTime, uploadEndTime - downloadStartTime, imageUrl, fileName);
+                }
+                return getFileUrl(fileName);
+                
+            } catch (Exception e) {
+                lastException = e;
+                retryCount++;
+                
+                if (retryCount < maxRetries) {
+                    long waitTime = (long) Math.pow(2, retryCount - 1) * 1000; // 指数退避：1s, 2s, 4s
+                    log.warn("从URL上传图片失败（第{}次尝试），{}ms后重试: {}", retryCount, waitTime, imageUrl, e);
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("上传重试被中断: " + ie.getMessage());
+                    }
+                } else {
+                    log.error("从URL上传图片失败（已重试{}次）: {}", maxRetries, imageUrl, e);
                 }
             }
-            
-            String fileName = UUID.randomUUID().toString() + extension;
-            
-            // 上传到MinIO，使用-1让MinIO自动检测大小
-            minioClient.putObject(PutObjectArgs.builder()
-                    .bucket(minioConfig.getBucketName())
-                    .object(fileName)
-                    .stream(inputStream, -1, 10485760) // 最大10MB
-                    .contentType("image/" + extension.substring(1))
-                    .build());
-            
-            inputStream.close();
-            
-            log.info("从URL上传图片成功: {} -> {}", imageUrl, fileName);
-            return getFileUrl(fileName);
-        } catch (Exception e) {
-            log.error("从URL上传图片失败: {}", imageUrl, e);
-            throw new RuntimeException("从URL上传图片失败: " + e.getMessage());
         }
+        
+        throw new RuntimeException("从URL上传图片失败（已重试" + maxRetries + "次）: " + lastException.getMessage());
     }
 
     /**
