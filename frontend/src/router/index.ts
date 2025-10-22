@@ -6,6 +6,7 @@ import MobileHome from '../views/mobile/MobileHome.vue'
 import MobileLogin from '../views/mobile/MobileLogin.vue'
 import MobileImageGenerator from '../views/mobile/MobileImageGenerator.vue'
 import { useUserStore } from '../stores/user'
+import { isMobileDevice } from '../utils/device'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -54,17 +55,42 @@ router.beforeEach((to, from, next) => {
   
   // 判断是否是手机端路由
   const isMobileRoute = to.path.startsWith('/mobile')
+  // 检测当前设备类型
+  const isMobile = isMobileDevice()
+  
+  // 自动路由:根据设备类型自动跳转到对应的页面
+  // PC访问手机端路由,跳转到对应的PC端路由
+  if (!isMobile && isMobileRoute) {
+    if (to.path === '/mobile') {
+      return next('/')
+    } else if (to.path === '/mobile/login') {
+      return next('/login')
+    } else if (to.path === '/mobile/image-generator') {
+      return next('/image-generator')
+    }
+  }
+  
+  // 手机访问PC端路由,跳转到对应的手机端路由
+  if (isMobile && !isMobileRoute) {
+    if (to.path === '/') {
+      return next('/mobile')
+    } else if (to.path === '/login') {
+      return next('/mobile/login')
+    } else if (to.path === '/image-generator') {
+      return next('/mobile/image-generator')
+    }
+  }
   
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    // 需要登录但未登录,根据请求的路由类型跳转到对应的登录页
-    if (isMobileRoute) {
+    // 需要登录但未登录,根据设备类型跳转到对应的登录页
+    if (isMobile) {
       next('/mobile/login')
     } else {
       next('/login')
     }
   } else if ((to.path === '/login' || to.path === '/mobile/login') && userStore.isLoggedIn) {
-    // 已登录访问登录页,根据来源跳转到对应的首页
-    if (isMobileRoute) {
+    // 已登录访问登录页,根据设备类型跳转到对应的首页
+    if (isMobile) {
       next('/mobile')
     } else {
       next('/')
