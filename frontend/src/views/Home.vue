@@ -322,7 +322,7 @@
                     <span>{{ record.name }}</span>
                     <div class="card-header-actions">
                       <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
-                      <el-tag size="small" type="info">{{ formatDate(new Date(), 'YYYY-MM-DD HH:mm') }}</el-tag>
+                      <el-tag size="small" type="info">{{ formatDate(new Date(record.createdAt || record.createTime), 'YYYY-MM-DD HH:mm') }}</el-tag>
                       <el-button
                         type="primary"
                         size="small"

@@ -168,6 +168,14 @@ export const questionBankApi = {
     })
   },
 
+  // 根据ID获取题库详情
+  getBankById(bankId: number) {
+    return request({
+      url: `/api/question-bank/${bankId}`,
+      method: 'get'
+    })
+  },
+
   // 上传自定义文档生成题库
   uploadCustomBank(formData: FormData) {
     return request({

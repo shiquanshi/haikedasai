@@ -8,10 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Component
@@ -20,13 +18,9 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
     private final QuestionBankMapper questionBankMapper;
     private final QuestionCardMapper questionCardMapper;
-    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) {
-        // 检查并添加expire_time字段
-        checkAndAddExpireTimeColumn();
-        
         // 检查是否已有数据
         List<QuestionBank> existingBanks = questionBankMapper.selectAll();
         if (!existingBanks.isEmpty()) {
@@ -61,7 +55,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖财务会计基础知识的系统题库");
         bank.setTopic("财务");
         bank.setType("system");
-        bank.setCreatedAt(new Date());
+        bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -92,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
             "财务报表分析的主要方法包括:1.比率分析法-计算各种财务比率 2.比较分析法-不同时期或企业间比较 3.趋势分析法-分析数据变化趋势 4.因素分析法-分析影响因素。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(new Date());
+            card.setCreatedAt(java.time.LocalDateTime.now());
             questionCardMapper.insert(card);
         }
         
@@ -107,7 +101,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖税收基础知识和实务操作的系统题库");
         bank.setTopic("税务");
         bank.setType("system");
-        bank.setCreatedAt(new Date());
+        bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -138,7 +132,7 @@ public class DataInitializer implements CommandLineRunner {
             "个人所得税专项附加扣除包括七项:1.子女教育 2.继续教育 3.大病医疗 4.住房贷款利息 5.住房租金 6.赡养老人 7.3岁以下婴幼儿照护。纳税人可按规定标准扣除。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(new Date());
+            card.setCreatedAt(java.time.LocalDateTime.now());
             questionCardMapper.insert(card);
         }
         
@@ -153,7 +147,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖企业常用法律知识的系统题库");
         bank.setTopic("法律");
         bank.setType("system");
-        bank.setCreatedAt(new Date());
+        bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -184,7 +178,7 @@ public class DataInitializer implements CommandLineRunner {
             "企业常见法律风险包括:1.合同风险-合同条款不完善、履行纠纷 2.劳动用工风险-劳动合同管理不规范 3.知识产权风险-侵权或被侵权 4.税务风险 5.环保合规风险等。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(new Date());
+            card.setCreatedAt(java.time.LocalDateTime.now());
             questionCardMapper.insert(card);
         }
         
@@ -199,7 +193,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖企业管理理论与实践的系统题库");
         bank.setTopic("管理");
         bank.setType("system");
-        bank.setCreatedAt(new Date());
+        bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -230,7 +224,7 @@ public class DataInitializer implements CommandLineRunner {
             "企业文化核心要素包括:1.价值观-企业的核心理念 2.使命-企业存在的意义 3.愿景-企业未来的目标 4.行为规范-员工的行为准则 5.物质载体-可见的文化表现形式。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(new Date());
+            card.setCreatedAt(java.time.LocalDateTime.now());
             questionCardMapper.insert(card);
         }
         
@@ -245,7 +239,7 @@ public class DataInitializer implements CommandLineRunner {
         bank.setDescription("涵盖市场营销理论与实践的系统题库");
         bank.setTopic("市场营销");
         bank.setType("system");
-        bank.setCreatedAt(new Date());
+        bank.setCreatedAt(java.time.LocalDateTime.now());
         questionBankMapper.insert(bank);
 
         List<QuestionCard> cards = new ArrayList<>();
@@ -276,7 +270,7 @@ public class DataInitializer implements CommandLineRunner {
             "社交媒体营销的优势包括:1.成本低-相比传统媒体更经济 2.互动性强-可与客户实时沟通 3.传播快-病毒式传播效应 4.精准定位-可针对特定群体 5.数据可追踪-效果可量化分析。", bankId));
 
         for (QuestionCard card : cards) {
-            card.setCreatedAt(new Date());
+            card.setCreatedAt(java.time.LocalDateTime.now());
             questionCardMapper.insert(card);
         }
         
@@ -289,28 +283,6 @@ public class DataInitializer implements CommandLineRunner {
         int cardCount = questionCardMapper.countByBankId(bankId);
         questionBankMapper.updateStatistics(bankId, cardCount);
         System.out.println("题库 ID=" + bankId + " 的卡片数量已更新为: " + cardCount);
-    }
-
-    private void checkAndAddExpireTimeColumn() {
-        try {
-            // 检查expire_time字段是否存在
-            String checkSql = "SELECT COUNT(*) FROM information_schema.COLUMNS " +
-                    "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "AND TABLE_NAME = 'question_banks' " +
-                    "AND COLUMN_NAME = 'expire_time'";
-            Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class);
-            
-            if (count != null && count == 0) {
-                // 字段不存在,添加字段
-                String addColumnSql = "ALTER TABLE question_banks ADD COLUMN expire_time DATETIME DEFAULT NULL COMMENT '分享过期时间'";
-                jdbcTemplate.execute(addColumnSql);
-                System.out.println("成功添加expire_time字段到question_banks表");
-            } else {
-                System.out.println("expire_time字段已存在,跳过添加");
-            }
-        } catch (Exception e) {
-            System.err.println("检查或添加expire_time字段时出错: " + e.getMessage());
-        }
     }
 
     private QuestionCard createCard(String question, String answer, Long bankId) {
