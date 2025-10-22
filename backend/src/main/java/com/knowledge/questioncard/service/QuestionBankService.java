@@ -1317,21 +1317,16 @@ public class QuestionBankService {
      * 为题库生成分享码
      */
     @Transactional
-    public String generateShareCode(Long bankId, Long userId) {
+    public String generateShareCode(Long bankId, Long userId, Integer expireHours) {
         // 查询题库
         QuestionBank bank = questionBankMapper.selectById(bankId);
         if (bank == null) {
             throw new RuntimeException("题库不存在");
         }
         
-        // 检查权限（只有题库创建者或system类型题库可以生成分享码）
-        if (!"system".equals(bank.getType()) && !bank.getUserId().equals(userId)) {
+        // 检查权限（只有题库创建者可以生成分享码）
+        if (!bank.getUserId().equals(userId)) {
             throw new RuntimeException("无权限分享此题库");
-        }
-        
-        // 如果已有分享码，直接返回
-        if (bank.getShareCode() != null && !bank.getShareCode().isEmpty()) {
-            return bank.getShareCode();
         }
         
         // 生成6位随机码（字母+数字）
@@ -1342,13 +1337,23 @@ public class QuestionBankService {
             shareCode = generateRandomCode(6);
         }
         
-        // 更新题库分享码
-        questionBankMapper.updateShareCode(bankId, shareCode);
+        // 计算过期时间
+        Date expireTime = null;
+        if (expireHours != null && expireHours > 0) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.HOUR, expireHours);
+            expireTime = calendar.getTime();
+        }
+        
+        // 更新题库分享码和过期时间
+        bank.setShareCode(shareCode);
+        bank.setExpireTime(expireTime);
+        questionBankMapper.updateShareCode(bankId, shareCode, expireTime);
         
         // 清除缓存
         questionBankCache.clear();
         
-        log.info("为题库 {} 生成分享码: {}", bankId, shareCode);
+        log.info("为题库 {} 生成分享码: {}, 过期时间: {}", bankId, shareCode, expireTime);
         return shareCode;
     }
     
@@ -1360,6 +1365,11 @@ public class QuestionBankService {
         QuestionBank bank = questionBankMapper.selectByShareCode(shareCode);
         if (bank == null) {
             throw new RuntimeException("无效的分享码");
+        }
+        
+        // 检查分享是否过期
+        if (bank.getExpireTime() != null && bank.getExpireTime().before(new Date())) {
+            throw new RuntimeException("分享链接已过期");
         }
         
         // 增加浏览次数

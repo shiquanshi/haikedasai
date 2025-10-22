@@ -19,6 +19,7 @@
         <result column="user_id" property="userId" />
         <result column="updated_at" property="updatedAt" />
         <result column="share_code" property="shareCode" />
+        <result column="expire_time" property="expireTime" />
     </resultMap>
 
     <insert id="insert" parameterType="com.knowledge.questioncard.entity.QuestionBank" 
@@ -164,10 +165,11 @@
     <select id="selectByShareCode" resultMap="BaseResultMap">
         SELECT * FROM question_banks WHERE share_code = #{shareCode}
     </select>
-    
+ <!-- 更新题库分享码 -->
     <update id="updateShareCode">
-        UPDATE question_banks
+        UPDATE question_banks 
         SET share_code = #{shareCode},
+            expire_time = #{expireTime},
             updated_at = NOW()
         WHERE id = #{id}
     </update>

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -19,9 +20,13 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
     private final QuestionBankMapper questionBankMapper;
     private final QuestionCardMapper questionCardMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) {
+        // 检查并添加expire_time字段
+        checkAndAddExpireTimeColumn();
+        
         // 检查是否已有数据
         List<QuestionBank> existingBanks = questionBankMapper.selectAll();
         if (!existingBanks.isEmpty()) {
@@ -284,6 +289,28 @@ public class DataInitializer implements CommandLineRunner {
         int cardCount = questionCardMapper.countByBankId(bankId);
         questionBankMapper.updateStatistics(bankId, cardCount);
         System.out.println("题库 ID=" + bankId + " 的卡片数量已更新为: " + cardCount);
+    }
+
+    private void checkAndAddExpireTimeColumn() {
+        try {
+            // 检查expire_time字段是否存在
+            String checkSql = "SELECT COUNT(*) FROM information_schema.COLUMNS " +
+                    "WHERE TABLE_SCHEMA = DATABASE() " +
+                    "AND TABLE_NAME = 'question_banks' " +
+                    "AND COLUMN_NAME = 'expire_time'";
+            Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class);
+            
+            if (count != null && count == 0) {
+                // 字段不存在,添加字段
+                String addColumnSql = "ALTER TABLE question_banks ADD COLUMN expire_time DATETIME DEFAULT NULL COMMENT '分享过期时间'";
+                jdbcTemplate.execute(addColumnSql);
+                System.out.println("成功添加expire_time字段到question_banks表");
+            } else {
+                System.out.println("expire_time字段已存在,跳过添加");
+            }
+        } catch (Exception e) {
+            System.err.println("检查或添加expire_time字段时出错: " + e.getMessage());
+        }
     }
 
     private QuestionCard createCard(String question, String answer, Long bankId) {

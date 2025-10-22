@@ -923,7 +923,24 @@
       title="分享题库"
       width="500px"
     >
-      <div v-if="shareCode" class="share-content">
+      <div v-if="!shareCode">
+        <el-form label-width="120px">
+          <el-form-item label="有效期">
+            <el-select v-model="shareExpireHours" placeholder="请选择有效期" style="width: 100%" size="large">
+              <el-option label="24小时" :value="24" />
+              <el-option label="3天" :value="72" />
+              <el-option label="7天" :value="168" />
+              <el-option label="30天" :value="720" />
+              <el-option label="永久有效" :value="null" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div style="text-align: center; margin-top: 20px">
+          <el-button type="primary" @click="confirmGenerateShare" size="large">生成分享码</el-button>
+          <el-button @click="showShareDialog = false" size="large">取消</el-button>
+        </div>
+      </div>
+      <div v-else class="share-content">
         <p style="margin-bottom: 15px">分享码已生成，请复制分享码给其他用户：</p>
         <el-input
           v-model="shareCode"
@@ -937,10 +954,9 @@
         <p style="margin-top: 15px; color: #909399; font-size: 14px">
           其他用户可以通过此分享码访问您的题库
         </p>
-      </div>
-      <div v-else style="text-align: center; padding: 20px">
-        <el-icon class="is-loading" :size="40"><Loading /></el-icon>
-        <p style="margin-top: 10px">正在生成分享码...</p>
+        <p v-if="shareExpireHours" style="margin-top: 10px; color: #e6a23c; font-size: 14px">
+          ⏰ 有效期：{{ shareExpireHours }}小时
+        </p>
       </div>
     </el-dialog>
 
@@ -1107,6 +1123,8 @@ const showShareDialog = ref(false)
 const shareCode = ref('')
 const showAccessDialog = ref(false)
 const accessShareCode = ref('')
+const shareExpireHours = ref<number | null>(null) // 分享有效期（小时）
+const currentSharingBankId = ref<number | null>(null) // 当前正在分享的题库ID
 
 const currentCard = computed(() => cards.value[currentCardIndex.value] || { question: '', answer: '' })
 const isCurrentCardSelected = computed(() => {
@@ -2148,12 +2166,23 @@ watch(bankSearchText, () => {
   }, 300)
 })
 
-// 分享题库 - 生成分享码
-const handleShareBank = async (bankId: number) => {
+// 分享题库 - 打开分享对话框
+const handleShareBank = (bankId: number) => {
+  currentSharingBankId.value = bankId
+  shareCode.value = ''
+  shareExpireHours.value = null // 默认永久有效
+  showShareDialog.value = true
+}
+
+// 确认生成分享码
+const confirmGenerateShare = async () => {
+  if (!currentSharingBankId.value) return
+  
   try {
-    shareCode.value = ''
-    showShareDialog.value = true
-    const response = await questionBankApi.generateShareCode(bankId)
+    const response = await questionBankApi.generateShareCode(
+      currentSharingBankId.value,
+      shareExpireHours.value
+    )
     shareCode.value = response.data
     ElMessage.success('分享码生成成功')
   } catch (error) {

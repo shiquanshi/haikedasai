@@ -512,10 +512,11 @@ public class QuestionBankController {
     @PostMapping("/{bankId}/share")
     public Result<String> generateShareCode(
             @PathVariable Long bankId,
+            @RequestParam(required = false) Integer expireHours,
             HttpServletRequest httpRequest) {
         try {
             Long userId = (Long) httpRequest.getAttribute("userId");
-            String shareCode = questionBankService.generateShareCode(bankId, userId);
+            String shareCode = questionBankService.generateShareCode(bankId, userId, expireHours);
             return Result.success(shareCode);
         } catch (Exception e) {
             log.error("生成分享码失败: {}", e.getMessage(), e);

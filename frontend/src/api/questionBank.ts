@@ -312,10 +312,11 @@ export const questionBankApi = {
   },
 
   // 生成题库分享码
-  generateShareCode(bankId: number) {
+  generateShareCode(bankId: number, expireHours?: number) {
     return request({
       url: `/api/question-bank/${bankId}/share`,
-      method: 'post'
+      method: 'post',
+      params: { expireHours }
     })
   },
 

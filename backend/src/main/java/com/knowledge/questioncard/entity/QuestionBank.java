@@ -21,4 +21,5 @@ public class QuestionBank {
     private String userId;
     private Date updatedAt;
     private String shareCode; // 分享码
+    private Date expireTime; // 分享过期时间
 }

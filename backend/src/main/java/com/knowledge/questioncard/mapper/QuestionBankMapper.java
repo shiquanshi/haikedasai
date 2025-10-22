@@ -67,7 +67,7 @@ public interface QuestionBankMapper {
     QuestionBank selectByShareCode(@Param("shareCode") String shareCode);
     
     // 更新题库分享码
-    int updateShareCode(@Param("id") Long id, @Param("shareCode") String shareCode);
+    int updateShareCode(@Param("id") Long id, @Param("shareCode") String shareCode, @Param("expireTime") java.util.Date expireTime);
     
     // 查询用户已分享的题库列表（有分享码的题库）
     List<QuestionBank> selectSharedBanksByUser(@Param("userId") String userId);
