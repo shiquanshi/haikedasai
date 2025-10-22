@@ -31,6 +31,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # 复制 supervisor 配置
 COPY supervisord.conf /etc/supervisord.conf
 
+# 设置环境变量
+ENV SPRING_PROFILES_ACTIVE=docker
+
 # 暴露端口
 EXPOSE 8080
 

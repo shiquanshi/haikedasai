@@ -471,12 +471,15 @@
             <el-icon class="loading-icon" :size="60"><Loading /></el-icon>
             <div class="loading-text">正在生成闪卡...</div>
             <!-- 思考过程展示 -->
-            <div v-if="thinkingProcess" class="thinking-process">
+            <div v-if="displayedThinking" class="thinking-process">
               <div class="thinking-header">
                 <el-icon class="thinking-icon"><ChatDotRound /></el-icon>
                 <span>AI思考过程</span>
               </div>
-              <div class="thinking-content">{{ thinkingProcess }}</div>
+              <div class="thinking-content">
+                {{ displayedThinking }}
+                <span v-if="isTyping" class="typing-cursor">|</span>
+              </div>
             </div>
           </div>
           
@@ -1159,7 +1162,39 @@ const customTotal = ref(0)
 const isGenerating = ref(false)
 const streamContent = ref('')
 const thinkingProcess = ref('') // 思考过程
+const displayedThinking = ref('') // 当前显示的思考过程
+const isTyping = ref(false) // 是否正在打字
 let streamEventSource: EventSource | null = null
+let typingTimer: any = null
+let hideTimer: any = null
+
+// 打字机效果
+const startTypingEffect = (text: string) => {
+  // 清除之前的定时器
+  if (typingTimer) clearInterval(typingTimer)
+  if (hideTimer) clearTimeout(hideTimer)
+  
+  displayedThinking.value = ''
+  isTyping.value = true
+  
+  let index = 0
+  const speed = 30 // 每个字符显示间隔（毫秒）
+  
+  typingTimer = setInterval(() => {
+    if (index < text.length) {
+      displayedThinking.value += text[index]
+      index++
+    } else {
+      clearInterval(typingTimer)
+      isTyping.value = false
+      // 文字显示完毕后3秒消失
+      hideTimer = setTimeout(() => {
+        displayedThinking.value = ''
+        thinkingProcess.value = ''
+      }, 3000)
+    }
+  }, speed)
+}
 
 // 选题模式相关
 const isSelectionMode = ref(false)
@@ -1290,6 +1325,10 @@ const generateCards = async () => {
     isGenerating.value = true
     streamContent.value = ''
     thinkingProcess.value = '' // 清空思考过程
+    displayedThinking.value = '' // 清空显示内容
+    // 清除之前的定时器
+    if (typingTimer) clearInterval(typingTimer)
+    if (hideTimer) clearTimeout(hideTimer)
     showCards.value = true
     cards.value = [] // 清空现有卡片
     
@@ -1538,6 +1577,8 @@ const generateCards = async () => {
       (thinking: string) => {
         thinkingProcess.value = thinking
         console.log('🧠 接收到思考过程:', thinking.substring(0, 100))
+        // 启动打字机效果
+        startTypingEffect(thinking)
       }
     )
   } catch (error) {
@@ -3642,28 +3683,29 @@ onMounted(() => {
 
 /* 思考过程样式 */
 .thinking-process {
-  margin-top: 25px;
-  padding: 20px 25px;
-  background: linear-gradient(135deg, rgba(79, 172, 254, 0.08) 0%, rgba(0, 242, 254, 0.05) 100%);
-  border-left: 4px solid #4facfe;
-  border-radius: 12px;
-  max-width: 800px;
+  margin-top: 30px;
+  padding: 30px 35px;
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.12) 0%, rgba(0, 242, 254, 0.08) 100%);
+  border-left: 5px solid #4facfe;
+  border-radius: 16px;
+  max-width: 1000px;
   width: 100%;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.1);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.15);
+  min-height: 150px;
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 18px;
   color: #4facfe;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .thinking-header .el-icon {
-  font-size: 18px;
+  font-size: 24px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -3679,12 +3721,26 @@ onMounted(() => {
 }
 
 .thinking-content {
-  font-size: 14px;
-  line-height: 1.8;
-  color: #606266;
+  font-size: 16px;
+  line-height: 2;
+  color: #303133;
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: 0.3px;
+}
+
+.typing-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+  color: #4facfe;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* 分页容器样式 */
