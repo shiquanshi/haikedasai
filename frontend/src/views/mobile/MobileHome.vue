@@ -303,8 +303,9 @@ const loadBankCards = (bankId: number) => {
 
 .generate-button {
   width: 100%;
-  padding: 12px 0;
+  padding: 16px 0;
   font-size: 18px;
+  font-weight: bold;
 }
 
 .question-bank {
@@ -330,21 +331,46 @@ const loadBankCards = (bankId: number) => {
 .bank-card {
   margin-bottom: 15px;
   cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .bank-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 15px 15px 0 15px;
 }
 
 .card-content {
   margin-top: 10px;
   color: #666;
+  padding: 0 15px 15px 15px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* 增大卡片内文本内容区域 */
+.el-card__body {
+  padding: 0 !important;
+}
+
+/* 调整卡片标题样式 */
+.card-header span {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 调整标签样式 */
+.card-header .el-tag {
+  padding: 4px 12px;
+  font-size: 14px;
 }
 
 .user-info {

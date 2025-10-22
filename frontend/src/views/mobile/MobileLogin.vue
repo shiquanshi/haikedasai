@@ -170,8 +170,9 @@ const handleSubmit = async () => {
 .mobile-login-box h2 {
   text-align: center;
   margin-bottom: 30px;
-  font-size: 24px;
+  font-size: 26px;
   color: #333;
+  font-weight: bold;
 }
 
 .el-form {
@@ -179,28 +180,36 @@ const handleSubmit = async () => {
 }
 
 .el-form-item {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .el-input {
   border-radius: 8px;
+  font-size: 16px;
+}
+
+/* 增大输入框高度 */
+.el-input__wrapper {
+  height: 50px !important;
 }
 
 .el-button {
   border-radius: 8px;
-  padding: 12px 0;
-  font-size: 16px;
+  padding: 16px 0;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .toggle-mode {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 25px;
 }
 
 .toggle-mode span {
   color: #667eea;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .toggle-mode span:hover {

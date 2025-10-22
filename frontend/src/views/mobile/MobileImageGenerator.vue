@@ -239,13 +239,18 @@ const viewHistoryImage = (item: HistoryItem) => {
 
 .el-button {
   border-radius: 8px;
-  padding: 12px 0;
+  padding: 16px 0;
   font-size: 16px;
+  font-weight: bold;
 }
 
 .result-card {
   margin-bottom: 30px;
   text-align: center;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .result-card h3 {
@@ -259,7 +264,7 @@ const viewHistoryImage = (item: HistoryItem) => {
   background: #f5f5f5;
   border-radius: 12px;
   padding: 15px;
-  min-height: 200px;
+  min-height: 250px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -274,6 +279,11 @@ const viewHistoryImage = (item: HistoryItem) => {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+.image-actions .el-button {
+  padding: 10px 20px;
+  font-size: 14px;
 }
 
 .history-section {
@@ -294,20 +304,21 @@ const viewHistoryImage = (item: HistoryItem) => {
 
 .history-item {
   cursor: pointer;
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 10px;
-  transition: transform 0.2s;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .history-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .history-prompt {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 14px;
   color: #666;
   overflow: hidden;
   text-overflow: ellipsis;
