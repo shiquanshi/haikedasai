@@ -77,8 +77,8 @@ public class QuestionBankController {
         // 获取用户信息
         Long userId = (Long) request.getAttribute("userId");
         
-        // 创建SSE发射器,超时时间设置为5分钟
-        SseEmitter emitter = new SseEmitter(300000L);
+        // 创建SSE发射器,超时时间设置为10分钟（与application.yml中的mvc.async.request-timeout保持一致）
+        SseEmitter emitter = new SseEmitter(600000L);
         
         // 使用专用线程池异步执行生成任务
         CompletableFuture.runAsync(() -> {
