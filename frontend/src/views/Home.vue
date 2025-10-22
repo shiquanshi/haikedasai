@@ -1174,6 +1174,9 @@ let loadingTextTimer: any = null
 
 // 打字机效果
 const startTypingEffect = (text: string) => {
+  // 更新thinkingProcess，让定时器能访问到最新文本
+  thinkingProcess.value = text
+  
   // 清除隐藏定时器（但不清除打字定时器，让它继续运行）
   if (hideTimer) clearTimeout(hideTimer)
   
@@ -1191,10 +1194,11 @@ const startTypingEffect = (text: string) => {
     const speed = 30 // 每个字符显示间隔（毫秒）
     
     typingTimer = setInterval(() => {
-      // 每次都从当前显示长度继续
+      // 每次都从当前显示长度继续，并使用thinkingProcess.value获取最新文本
       const currentLength = displayedThinking.value.length
-      if (currentLength < text.length) {
-        displayedThinking.value = text.substring(0, currentLength + 1)
+      const latestText = thinkingProcess.value
+      if (currentLength < latestText.length) {
+        displayedThinking.value = latestText.substring(0, currentLength + 1)
       } else {
         clearInterval(typingTimer)
         typingTimer = null
