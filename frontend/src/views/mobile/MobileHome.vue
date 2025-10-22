@@ -298,7 +298,9 @@
                       class="voice-button"
                       @click.stop="playQuestionVoice"
                     >
-                      <el-icon><Volume /></el-icon>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                      </svg>
                       {{ isPlayingQuestion ? '播放中...' : '播放语音' }}
                     </el-button>
                   </div>
@@ -318,7 +320,9 @@
                       class="voice-button"
                       @click.stop="playAnswerVoice"
                     >
-                      <el-icon><Volume /></el-icon>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                      </svg>
                       {{ isPlayingAnswer ? '播放中...' : '播放语音' }}
                     </el-button>
                   </div>
@@ -358,7 +362,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useUserStore } from '../../stores/user'
-import { Search, VideoPlay, Star, Volume, Edit, Share, Delete, Upload, Plus } from '@element-plus/icons-vue'
+import { Search, VideoPlay, Star, Edit, Share, Delete, Upload, Plus } from '@element-plus/icons-vue'
 import { questionBankApi } from '../../api/questionBank'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
