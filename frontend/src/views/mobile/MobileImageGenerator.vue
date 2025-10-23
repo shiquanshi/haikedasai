@@ -129,7 +129,7 @@ const generateImage = async () => {
       size: imageSize.value
     })
 
-    if (response.code === 200 && response.data) {
+    if (response.status === 200 && response.data) {
       generatedImageUrl.value = response.data
       ElMessage.success('图片生成成功！')
       

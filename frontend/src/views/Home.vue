@@ -248,7 +248,7 @@
 
             <!-- 我的分享 -->
             <el-divider v-if="userStore.isLoggedIn" content-position="left">我的分享</el-divider>
-            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingSharedBanks" element-loading-text="加载中...">
+            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingShared" element-loading-text="加载中...">
               <el-card
                 v-for="bank in sharedBanks"
                 :key="bank.id"
@@ -265,7 +265,7 @@
                         type="success"
                         size="small"
                         :icon="Star"
-                        @click.stop="copyShareCodeDirect(bank.shareCode)"
+                        @click.stop="bank.shareCode && copyShareCodeDirect(bank.shareCode)"
                         circle
                         title="复制分享码"
                       />
@@ -281,7 +281,7 @@
                 </div>
               </el-card>
               
-              <div v-if="userStore.isLoggedIn && !isLoadingSharedBanks && sharedBanks.length === 0" class="no-data">
+              <div v-if="userStore.isLoggedIn && !isLoadingShared && sharedBanks.length === 0" class="no-data">
                 暂无分享记录
               </div>
             </el-loading>
@@ -300,7 +300,7 @@
                     <span>{{ record.name }}</span>
                     <div class="card-header-actions">
                       <el-tag size="small">{{ record.cardCount }}张卡片</el-tag>
-                      <el-tag size="small" type="info">{{ formatDate(new Date(record.createdAt || record.createTime), 'YYYY-MM-DD HH:mm') }}</el-tag>
+                      <el-tag size="small" type="info">{{ formatDate(new Date(record.createTime), 'YYYY-MM-DD HH:mm') }}</el-tag>
                       <el-button
                         type="primary"
                         size="small"
@@ -1067,6 +1067,8 @@ interface Card {
   id: number
   question: string
   answer: string
+  questionImage?: string
+  answerImage?: string
 }
 
 interface QuestionBank {
@@ -1077,6 +1079,8 @@ interface QuestionBank {
   difficulty: string
   language: string
   createTime: string
+  shareCode?: string
+  type?: string
 }
 
 const topic = ref('')
@@ -1199,7 +1203,7 @@ const importForm = ref({
   difficulty: 'medium',
   language: '中文'
 })
-const fileList = ref([])
+const fileList = ref<any[]>([])
 const uploadRef = ref()
 const isImporting = ref(false)
 const userBanks = ref<QuestionBank[]>([]) // 用户的所有题库列表
@@ -1258,7 +1262,7 @@ const shareExpireHours = ref<number | null>(null) // 分享有效期（小时）
 const currentSharingBankId = ref<number | null>(null) // 当前正在分享的题库ID
 
 const currentCard = computed(() => cards.value[currentCardIndex.value] || { question: '', answer: '' })
-const isCurrentCardSelected = computed(() => {
+const _isCurrentCardSelected = computed(() => {
   const currentId = cards.value[currentCardIndex.value]?.id
   return selectedCardIds.value.includes(currentId)
 })
@@ -1727,14 +1731,14 @@ const flipCard = (index: number) => {
   }
 }
 
-const nextCard = () => {
+const _nextCard = () => {
   if (currentCardIndex.value < cards.value.length - 1) {
     currentCardIndex.value++
     isFlipped.value = false
   }
 }
 
-const previousCard = () => {
+const _previousCard = () => {
   if (currentCardIndex.value > 0) {
     currentCardIndex.value--
     isFlipped.value = false
@@ -1980,32 +1984,28 @@ const handleImport = async () => {
       formData.append('language', importForm.value.language)
     }
 
-    const response = await questionBankApi.importBankFromExcel(formData)
+    const result = await questionBankApi.importBankFromExcel(formData)
     
-    if (response.code === 200) {
-      ElMessage({
-        message: '导入成功！',
-        type: 'success',
-        showClose: false,
-        duration: 2000
-      })
-      showImportDialog.value = false
-      // 重置表单
-      importForm.value = {
-        importMode: 'new',
-        targetBankId: null,
-        bankName: '',
-        description: '',
-        difficulty: 'medium',
-        language: '中文'
-      }
-      fileList.value = []
-      // 刷新题库列表
-      await loadCustomBanks()
-      await loadSystemBanks()
-    } else {
-      ElMessage.error(response.message || '导入失败')
+    ElMessage({
+      message: '导入成功！',
+      type: 'success',
+      showClose: false,
+      duration: 2000
+    })
+    showImportDialog.value = false
+    // 重置表单
+    importForm.value = {
+      importMode: 'new',
+      targetBankId: null,
+      bankName: '',
+      description: '',
+      difficulty: 'medium',
+      language: '中文'
     }
+    fileList.value = []
+    // 刷新题库列表
+    await loadCustomBanks()
+    await loadSystemBanks()
   } catch (error: any) {
     console.error('导入失败:', error)
     ElMessage.error(error.message || '导入失败，请重试')
@@ -2078,15 +2078,11 @@ const handleDeleteBank = async (bankId: number) => {
       }
     )
 
-    const response = await questionBankApi.deleteBank(bankId)
+    await questionBankApi.deleteBank(bankId)
     
-    if (response.code === 200) {
-      ElMessage.success('删除成功！')
-      // 刷新题库列表
-      await loadCustomBanks()
-    } else {
-      ElMessage.error(response.message || '删除失败')
-    }
+    ElMessage.success('删除成功！')
+    // 刷新题库列表
+    await loadCustomBanks()
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
@@ -2441,7 +2437,7 @@ const handleLogout = () => {
 }
 
 // 监听搜索文本变化(防抖)
-let searchTimer: NodeJS.Timeout | null = null
+let searchTimer: number | null = null
 watch(bankSearchText, () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
@@ -2465,7 +2461,7 @@ const confirmGenerateShare = async () => {
   try {
     const response = await questionBankApi.generateShareCode(
       currentSharingBankId.value,
-      shareExpireHours.value
+      shareExpireHours.value || undefined
     )
     shareCode.value = response.data
     ElMessage.success('分享码生成成功')
@@ -2490,6 +2486,31 @@ const copyShareCode = async () => {
     document.execCommand('copy')
     document.body.removeChild(textarea)
     ElMessage.success('分享码已复制到剪贴板')
+  }
+}
+
+// 直接复制分享码
+const copyShareCodeDirect = async (code: string) => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(code)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = code
+      textArea.style.position = 'fixed'
+      textArea.style.top = '0'
+      textArea.style.left = '0'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+    ElMessage.success('分享码已复制到剪贴板')
+  } catch (error) {
+    console.error('复制失败:', error)
+    ElMessage.error('复制失败，请手动复制')
   }
 }
 

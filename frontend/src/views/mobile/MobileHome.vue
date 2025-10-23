@@ -111,7 +111,7 @@
         <div class="bank-list">
           <!-- 推荐题库 -->
           <h3>推荐题库</h3>
-          <div v-if="isLoadingSystemBanks" class="loading-state">
+          <div v-if="isLoadingBanks" class="loading-state">
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>加载中...</span>
           </div>
@@ -1085,8 +1085,10 @@ const displayedLoadingText = ref('')
 const thinkingProcess = ref('')
 const displayedThinking = ref('')
 const isTyping = ref(false)
+const eventSourceRef = ref<EventSource | null>(null) // 用于存储EventSource对象
 const bankSearchText = ref('')
 const isLoadingBanks = ref(false)
+const isLoadingSystemBanks = ref(false)
 const isLoadingCustomBanks = ref(false)
 const isLoadingHistory = ref(false)
 const isLoadingSharedBanks = ref(false)
@@ -1295,14 +1297,20 @@ const generateCards = async () => {
   // 启动加载文本打字机效果
   loadingText.value = '正在生成中，请稍候...'
   displayedLoadingText.value = ''
-  startLoadingTextTyping()
+  startLoadingTextTyping(loadingText.value)
   
   let allContent = '' // 累积所有内容
   let lastCardCount = 0 // 上次解析的卡片数量
   
   try {
+    // 关闭之前的连接（如果存在）
+    if (eventSourceRef.value) {
+      eventSourceRef.value.close()
+      eventSourceRef.value = null
+    }
+    
     // 使用流式API生成闪卡
-    questionBankApi.generateAIBankStream(
+    eventSourceRef.value = questionBankApi.generateAIBankStream(
       {
         topic: topic.value,
         scenario: scenario.value,
@@ -1522,6 +1530,19 @@ const generateCards = async () => {
   } catch (error) {
     ElMessage.error('生成失败，请重试')
     isGenerating.value = false
+    // 确保连接被关闭
+    if (eventSourceRef.value) {
+      eventSourceRef.value.close()
+      eventSourceRef.value = null
+    }
+  }
+}
+
+// 关闭EventSource连接（组件卸载时调用）
+const closeEventSource = () => {
+  if (eventSourceRef.value) {
+    eventSourceRef.value.close()
+    eventSourceRef.value = null
   }
 }
 
@@ -1545,9 +1566,10 @@ const loadBankCards = async (bankId: number, bankName?: string, bankType?: strin
     }
     
     const response = await questionBankApi.getBankCards(bankId)
+    const cardsData = response.data || []
     
-    if (response.code === 200 && response.data && response.data.length > 0) {
-      cards.value = response.data.map((card: any) => ({
+    if (cardsData && cardsData.length > 0) {
+      cards.value = cardsData.map((card: any) => ({
         id: card.id,
         question: card.question,
         answer: card.answer,
@@ -1713,7 +1735,7 @@ const loadUserBanks = async () => {
   
   try {
     const response = await questionBankApi.getUserCustomBanks(1, 1000)
-    if (response.code === 200) {
+    if (response.status === 200) {
       // 修复：正确处理API返回的数据结构，与PC端保持一致
       userBanks.value = response.data?.data || []
     }
@@ -1770,7 +1792,7 @@ const handleImport = async () => {
 
     const response = await questionBankApi.importBankFromExcel(formData)
     
-    if (response.code === 200) {
+    if (response.status === 200) {
       ElMessage({
         message: '导入成功！',
         type: 'success',
@@ -1791,7 +1813,7 @@ const handleImport = async () => {
       // 刷新题库列表
       await loadCustomBanks()
     } else {
-      ElMessage.error(response.message || '导入失败')
+      ElMessage.error(response.data?.message || '导入失败')
     }
   } catch (error: any) {
     console.error('导入失败:', error)
@@ -2086,11 +2108,11 @@ const playQuestionVoice = async () => {
     
     const textToPlay = currentCard.value.question
     const response = await questionBankApi.textToSpeech(textToPlay)
-    
-    if (response.success && response.audioData) {
-      // 创建音频元素并播放
-      const audioData = response.audioData
-      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioData = response.data
+      
+      if (audioData) {
+        // 创建音频元素并播放
+        const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
       const audioUrl = URL.createObjectURL(audioBlob)
       
       stopAudio() // 停止之前的播放
@@ -2132,11 +2154,11 @@ const playAnswerVoice = async () => {
     
     const textToPlay = currentCard.value.answer
     const response = await questionBankApi.textToSpeech(textToPlay)
-    
-    if (response.success && response.audioData) {
-      // 创建音频元素并播放
-      const audioData = response.audioData
-      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioData = response.data
+      
+      if (audioData) {
+        // 创建音频元素并播放
+        const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
       const audioUrl = URL.createObjectURL(audioBlob)
       
       stopAudio() // 停止之前的播放
@@ -2173,7 +2195,9 @@ const handleAddNewCard = () => {
   // 重置表单
   addCardForm.value = {
     question: '',
-    answer: ''
+    answer: '',
+    questionImage: null,
+    answerImage: null
   }
   questionImageFileList.value = []
   answerImageFileList.value = []
@@ -2210,7 +2234,7 @@ const handleSubmitNewCard = async () => {
   }
   
   try {
-    const params = {
+    const params: any = {
       question: addCardForm.value.question,
       answer: addCardForm.value.answer
     }
@@ -2222,12 +2246,16 @@ const handleSubmitNewCard = async () => {
       params.answerImage = addCardForm.value.answerImage
     }
     
-    const response = await questionBankApi.addCard(currentBankId.value, params)
-    if (response.code === 200) {
-      ElMessage.success('卡片添加成功')
-      showAddCardDialog.value = false
-      
-      // 重新加载卡片列表
+    if (currentBankId.value !== null) {
+      await questionBankApi.addCard(currentBankId.value, params)
+    } else {
+      throw new Error('当前题库ID无效')
+    }
+    ElMessage.success('卡片添加成功')
+    showAddCardDialog.value = false
+    
+    // 重新加载卡片列表
+    if (currentBankId.value !== null) {
       await loadBankCards(currentBankId.value, currentBankName.value)
     }
   } catch (error) {
@@ -2250,10 +2278,11 @@ const handleEditCurrentCard = () => {
   
   // 填充表单数据
   editCardForm.value = {
+    id: (currentCard.value as any)?.id || null,
     question: currentCard.value.question,
     answer: currentCard.value.answer,
-    questionImage: currentCard.value.questionImage,
-    answerImage: currentCard.value.answerImage
+    questionImage: currentCard.value.questionImage || '',
+    answerImage: currentCard.value.answerImage || ''
   }
   
   // 设置图片文件列表
@@ -2319,19 +2348,17 @@ const handleSubmitEditCard = async () => {
       answerImage: editCardForm.value.answerImage || ''
     }
     
-    const response = await questionBankApi.updateCard(currentCard.value.id, params)
-    if (response.code === 200) {
-      ElMessage.success('卡片更新成功')
-      showEditCardDialog.value = false
-      
-      // 更新当前卡片数据
-      cards.value[currentCardIndex.value] = {
-        ...cards.value[currentCardIndex.value],
-        question: editCardForm.value.question,
-        answer: editCardForm.value.answer,
-        questionImage: editCardForm.value.questionImage,
-        answerImage: editCardForm.value.answerImage
-      }
+    await questionBankApi.updateCard(currentCard.value.id, params)
+    ElMessage.success('卡片更新成功')
+    showEditCardDialog.value = false
+    
+    // 更新当前卡片数据
+    cards.value[currentCardIndex.value] = {
+      ...cards.value[currentCardIndex.value],
+      question: editCardForm.value.question,
+      answer: editCardForm.value.answer,
+      questionImage: editCardForm.value.questionImage,
+      answerImage: editCardForm.value.answerImage
     }
   } catch (error) {
     console.error('更新卡片失败:', error)
@@ -2367,22 +2394,20 @@ const handleDeleteCurrentCard = async () => {
       }
     )
     
-    const response = await questionBankApi.deleteCard(currentCard.value.id)
-    if (response.code === 200) {
-      ElMessage.success('卡片删除成功')
-      
-      // 从列表中移除当前卡片
-      cards.value.splice(currentCardIndex.value, 1)
-      
-      // 调整当前索引
-      if (currentCardIndex.value >= cards.value.length) {
-        currentCardIndex.value = cards.value.length - 1
-      }
-      
-      // 如果没有卡片了，返回主页
-      if (cards.value.length === 0) {
-        backToForm()
-      }
+    await questionBankApi.deleteCard(currentCard.value.id)
+    ElMessage.success('卡片删除成功')
+    
+    // 从列表中移除当前卡片
+    cards.value.splice(currentCardIndex.value, 1)
+    
+    // 调整当前索引
+    if (currentCardIndex.value >= cards.value.length) {
+      currentCardIndex.value = cards.value.length - 1
+    }
+    
+    // 如果没有卡片了，返回主页
+    if (cards.value.length === 0) {
+      backToForm()
     }
   } catch (error: any) {
     if (error !== 'cancel') {

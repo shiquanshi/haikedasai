@@ -146,7 +146,7 @@ export const questionBankApi = {
   },
 
   // 创建自定义题库
-  createCustomBank(params: { name: string; description?: string; topic: string }) {
+  createCustomBank(params: { name: string; description?: string; topic: string; difficulty?: string; language?: string }) {
     return request({
       url: '/api/question-bank/create',
       method: 'post',
