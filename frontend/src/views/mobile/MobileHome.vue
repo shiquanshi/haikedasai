@@ -2868,11 +2868,11 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 优化高度减少滑动并放大外部宽度 */
+/* 卡片容器样式 - 减小高度以给卡片留出更多空间 */
 .card-container {
   width: 100%;
-  min-height: 480px;
-  max-height: 500px;
+  min-height: 380px;
+  max-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2893,10 +2893,10 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 适配高度调整 */
+/* 翻转卡片样式 - 减小高度以给卡片留出更多空间 */
 .flip-card {
   width: 100%;
-  height: 480px;
+  height: 380px;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -2952,7 +2952,7 @@ initPage()
 
 .card-img {
   width: 100%;
-  height: 200px;
+  height: 150px;
   border-radius: 8px;
 }
 
@@ -2961,7 +2961,7 @@ initPage()
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 200px;
+  height: 150px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: #fff;
@@ -2989,17 +2989,17 @@ initPage()
 /* 卡片徽章 */
 .card-badge {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 10px;
+  left: 10px;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 卡片内容样式 - 增加左右内边距 */
