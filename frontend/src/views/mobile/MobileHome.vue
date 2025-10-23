@@ -1,24 +1,5 @@
 <template>
   <div class="mobile-home-container">
-    <!-- 头部区域 -->
-    <div class="mobile-header">
-      <h1 class="app-title">知识闪卡</h1>
-      <div class="header-actions">
-        <el-button 
-          v-if="!userStore.isLoggedIn"
-          type="primary" 
-          @click="$router.push('/mobile/login')"
-          size="normal"
-          round
-        >
-          登录
-        </el-button>
-        <div class="user-info" v-if="userStore.isLoggedIn">
-          <span class="username">{{ userStore.userInfo?.username }}</span>
-          <el-button size="small" @click="handleLogout" type="danger" round>退出</el-button>
-        </div>
-      </div>
-    </div>
 
     <!-- 主要内容区 -->
     <div class="mobile-content">
@@ -561,8 +542,15 @@
                 <template v-else>
                   <div class="card-badge">问题</div>
                   <div class="card-content">
-                    <div class="card-text question-text">{{ currentCard?.question }}</div>
-                  </div>
+                      <div class="card-text question-text">{{ currentCard?.question }}</div>
+                      <div v-if="currentCard?.questionImage" class="card-image">
+                        <el-image :src="currentCard.questionImage" fit="cover" class="card-img">
+                          <template #error>
+                            <div class="image-slot">加载失败</div>
+                          </template>
+                        </el-image>
+                      </div>
+                    </div>
                   <div class="card-footer">
                     <div class="tap-hint">点击翻转查看答案</div>
                     <el-button 
@@ -584,6 +572,13 @@
                 <div class="card-badge">答案</div>
                 <div class="card-content">
                   <div class="card-text">{{ currentCard?.answer }}</div>
+                  <div v-if="currentCard?.answerImage" class="card-image">
+                    <el-image :src="currentCard.answerImage" fit="cover" class="card-img">
+                      <template #error>
+                        <div class="image-slot">加载失败</div>
+                      </template>
+                    </el-image>
+                  </div>
                 </div>
                 <div class="card-footer">
                   <div class="tap-hint">点击翻转查看问题</div>
@@ -770,14 +765,9 @@
             <el-option
               v-for="bank in userBanks"
               :key="bank.id"
-              :label="bank.name"
+              :label="`${bank.name} (${bank.cardCount}张卡片)`"
               :value="bank.id"
-            >
-              <span>{{ bank.name }}</span>
-              <span style="float: right; color: var(--el-text-color-secondary); font-size: 13px">
-                {{ bank.cardCount }} 张卡片
-              </span>
-            </el-option>
+            />
           </el-select>
         </el-form-item>
         
@@ -1664,7 +1654,8 @@ const handleUpdateBank = async () => {
   }
 
   try {
-    await questionBankApi.updateBank(editBankForm.value.id, {
+    await questionBankApi.updateBank({
+      id: editBankForm.value.id,
       name: editBankForm.value.name.trim(),
       description: editBankForm.value.description.trim(),
       difficulty: editBankForm.value.difficulty,
@@ -2038,22 +2029,121 @@ const goToCard = (index: number) => {
   }
 }
 
+// 音频元素变量
+let audioElement: HTMLAudioElement | null = null
+
+// base64转Blob函数
+const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const byteCharacters = atob(base64)
+  const byteNumbers = new Array(byteCharacters.length)
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  }
+  const byteArray = new Uint8Array(byteNumbers)
+  return new Blob([byteArray], { type: mimeType })
+}
+
+// 停止音频播放
+const stopAudio = () => {
+  if (audioElement) {
+    audioElement.pause()
+    audioElement.currentTime = 0
+    audioElement = null
+  }
+  isPlayingQuestion.value = false
+  isPlayingAnswer.value = false
+}
+
 // 播放问题语音
-const playQuestionVoice = () => {
-  isPlayingQuestion.value = true
-  // 模拟语音播放
-  setTimeout(() => {
+const playQuestionVoice = async () => {
+  if (isPlayingQuestion.value) {
+    stopAudio()
+    return
+  }
+
+  try {
+    isPlayingQuestion.value = true
+    if (!currentCard.value?.question) {
+      throw new Error('没有可播放的问题内容')
+    }
+    
+    const textToPlay = currentCard.value.question
+    const response = await questionBankApi.textToSpeech(textToPlay)
+    
+    if (response.success && response.audioData) {
+      // 创建音频元素并播放
+      const audioData = response.audioData
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      stopAudio() // 停止之前的播放
+      audioElement = new Audio(audioUrl)
+      
+      audioElement.onended = () => {
+        isPlayingQuestion.value = false
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      audioElement.onerror = () => {
+        isPlayingQuestion.value = false
+        ElMessage.error('音频播放失败')
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      await audioElement.play()
+    } else {
+      throw new Error('获取音频数据失败')
+    }
+  } catch (error) {
     isPlayingQuestion.value = false
-  }, 2000)
+    ElMessage.error('播放失败')
+  }
 }
 
 // 播放答案语音
-const playAnswerVoice = () => {
-  isPlayingAnswer.value = true
-  // 模拟语音播放
-  setTimeout(() => {
+const playAnswerVoice = async () => {
+  if (isPlayingAnswer.value) {
+    stopAudio()
+    return
+  }
+
+  try {
+    isPlayingAnswer.value = true
+    if (!currentCard.value?.answer) {
+      throw new Error('没有可播放的答案内容')
+    }
+    
+    const textToPlay = currentCard.value.answer
+    const response = await questionBankApi.textToSpeech(textToPlay)
+    
+    if (response.success && response.audioData) {
+      // 创建音频元素并播放
+      const audioData = response.audioData
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      stopAudio() // 停止之前的播放
+      audioElement = new Audio(audioUrl)
+      
+      audioElement.onended = () => {
+        isPlayingAnswer.value = false
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      audioElement.onerror = () => {
+        isPlayingAnswer.value = false
+        ElMessage.error('音频播放失败')
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      await audioElement.play()
+    } else {
+      throw new Error('获取音频数据失败')
+    }
+  } catch (error) {
     isPlayingAnswer.value = false
-  }, 2000)
+    ElMessage.error('播放失败')
+  }
 }
 
 // 新增卡片
@@ -2103,20 +2193,19 @@ const handleSubmitNewCard = async () => {
   }
   
   try {
-    const cardData: any = {
-      bankId: currentBankId.value,
+    const params = {
       question: addCardForm.value.question,
       answer: addCardForm.value.answer
     }
     
     if (addCardForm.value.questionImage) {
-      cardData.questionImage = addCardForm.value.questionImage
+      params.questionImage = addCardForm.value.questionImage
     }
     if (addCardForm.value.answerImage) {
-      cardData.answerImage = addCardForm.value.answerImage
+      params.answerImage = addCardForm.value.answerImage
     }
     
-    const response = await questionBankApi.addCard(cardData)
+    const response = await questionBankApi.addCard(currentBankId.value, params)
     if (response.code === 200) {
       ElMessage.success('卡片添加成功')
       showAddCardDialog.value = false
@@ -2206,16 +2295,14 @@ const handleSubmitEditCard = async () => {
   }
   
   try {
-    const cardData: any = {
-      id: currentCard.value.id,
-      bankId: currentBankId.value,
+    const params = {
       question: editCardForm.value.question,
       answer: editCardForm.value.answer,
       questionImage: editCardForm.value.questionImage || '',
       answerImage: editCardForm.value.answerImage || ''
     }
     
-    const response = await questionBankApi.updateCard(cardData)
+    const response = await questionBankApi.updateCard(currentCard.value.id, params)
     if (response.code === 200) {
       ElMessage.success('卡片更新成功')
       showEditCardDialog.value = false
@@ -2376,9 +2463,10 @@ initPage()
 .mobile-content {
   background: white;
   border-radius: 16px;
-  padding: 16px;
+  padding: 8px 16px 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   margin-bottom: 20px;
+  margin-top: 0;
 }
 
 .form-item {
@@ -2761,12 +2849,13 @@ initPage()
 /* 卡片容器样式 */
 .card-container {
   width: 100%;
-  min-height: 450px;
+  min-height: 550px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  margin-top: 10px;
   perspective: 1000px;
 }
 
@@ -2783,7 +2872,7 @@ initPage()
 /* 翻转卡片样式 */
 .flip-card {
   width: 100%;
-  height: 450px;
+  height: 550px;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -2823,6 +2912,45 @@ initPage()
 .flip-card-front {
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   color: white;
+}
+
+/* 卡片图片相关样式 */
+.card-image {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-img {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* 答案面的图片样式特殊处理 */
+.flip-card-back .card-image {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px;
+}
+
+.flip-card-back .image-slot {
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
 }
 
 /* 答案面 - 绿色渐变 */
@@ -2913,19 +3041,47 @@ initPage()
 
 /* 卡片文本 */
 .card-text {
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.6;
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
   max-width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0 8px;
+  margin: 0 auto;
 }
 
 /* 问题文本特别强调 */
 .question-text {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.9;
+  line-height: 1.7;
+}
+
+/* 自定义滚动条样式 */
+.card-text::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.card-text::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+/* 答案面滚动条特殊处理 */
+.flip-card-back .card-text::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.flip-card-back .card-text::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* 卡片底部 */
