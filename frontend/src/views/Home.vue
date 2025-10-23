@@ -461,26 +461,45 @@
             </div>
           </div>
           
-          <!-- 田字格卡片展示 -->
-          <div class="grid-container" v-else-if="cards.length > 0">
-            <div v-for="(card, index) in cards" :key="index" class="grid-item">
-              <div 
-                v-if="isSelectionMode"
-                class="card-checkbox"
-                @click.stop="toggleCardSelection(index)"
+          <!-- 单卡片展示 -->
+          <div v-else-if="cards.length > 0" class="single-card-container">
+            <!-- 返回首页按钮 -->
+            <div class="card-top-controls">
+              <el-button 
+                @click="backToHome" 
+                type="primary" 
+                size="default"
+                class="back-home-button"
               >
-                <div class="checkbox-box" :class="{ checked: selectedCardIds.includes(index) }">
-                  <span v-if="selectedCardIds.includes(index)" class="checkmark">✓</span>
-                </div>
-              </div>
-              <div class="flip-card" :class="{ flipped: flippedCards[index] }" @click="flipCard(index)">
+                <el-icon><HomeFilled /></el-icon>
+                返回首页
+              </el-button>
+            </div>
+            
+            <!-- 卡片和导航按钮的容器 -->
+            <div class="card-with-navigation">
+              <!-- 上一张按钮 -->
+              <el-button 
+                @click="_previousCard" 
+                :disabled="currentCardIndex === 0"
+                size="large"
+                circle
+                class="nav-button nav-prev"
+              >
+                <el-icon><ArrowLeft /></el-icon>
+              </el-button>
+              
+              <!-- 卡片 -->
+              <div class="flip-card" :class="{ flipped: isFlipped }" @click="flipCard(currentCardIndex)" v-if="currentCard">
                 <div class="flip-card-inner">
                   <div class="flip-card-front">
-                    <div class="card-content">
-                      <div class="card-label">问题</div>
-                      <div class="card-text">{{ card.question }}</div>
-                      <div v-if="card.questionImage" class="card-image">
-                        <el-image :src="card.questionImage" fit="cover" class="card-img">
+                    <div class="card-content-wrapper">
+                      <div class="card-label-section">问题</div>
+                      <div class="card-text-section">
+                        <div class="card-text-scrollable">{{ currentCard.question }}</div>
+                      </div>
+                      <div v-if="currentCard.questionImage" class="card-image-section">
+                        <el-image :src="currentCard.questionImage" fit="cover" class="card-img">
                           <template #error>
                             <div class="image-slot">加载失败</div>
                           </template>
@@ -488,14 +507,14 @@
                       </div>
                       <div class="card-actions">
                         <el-button 
-                          @click.stop="playQuestion(index)" 
-                          :loading="isPlayingQuestion && playingQuestionIndex === index"
+                          @click.stop="playQuestion(currentCardIndex)" 
+                          :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
                           circle
                           size="small"
                           class="play-button"
                           title="播放问题"
                         >
-                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === index)">
+                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                             </svg>
@@ -506,11 +525,13 @@
                     </div>
                   </div>
                   <div class="flip-card-back">
-                    <div class="card-content">
-                      <div class="card-label">答案</div>
-                      <div class="card-text">{{ card.answer }}</div>
-                      <div v-if="card.answerImage" class="card-image">
-                        <el-image :src="card.answerImage" fit="cover" class="card-img">
+                    <div class="card-content-wrapper">
+                      <div class="card-label-section">答案</div>
+                      <div class="card-text-section">
+                        <div class="card-text-scrollable">{{ currentCard.answer }}</div>
+                      </div>
+                      <div v-if="currentCard.answerImage" class="card-image-section">
+                        <el-image :src="currentCard.answerImage" fit="cover" class="card-img">
                           <template #error>
                             <div class="image-slot">加载失败</div>
                           </template>
@@ -518,14 +539,14 @@
                       </div>
                       <div class="card-actions">
                         <el-button 
-                          @click.stop="playQuestion(index)" 
-                          :loading="isPlayingQuestion && playingQuestionIndex === index"
+                          @click.stop="playQuestion(currentCardIndex)" 
+                          :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
                           circle
                           size="small"
                           class="play-button"
                           title="播放答案"
                         >
-                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === index)">
+                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                             </svg>
@@ -537,18 +558,24 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- 下一张按钮 -->
+              <el-button 
+                @click="_nextCard" 
+                :disabled="currentCardIndex === cards.length - 1"
+                size="large"
+                circle
+                class="nav-button nav-next"
+              >
+                <el-icon><ArrowRight /></el-icon>
+              </el-button>
+            </div>
+            
+            <!-- 卡片计数显示 -->
+            <div class="card-counter">
+              <span class="counter-text">{{ currentCardIndex + 1 }} / {{ cards.length }}</span>
             </div>
           </div>
-        </div>
-
-        <div class="card-controls">
-          <el-button 
-            @click="backToHome" 
-            type="primary" 
-            size="large"
-          >
-            返回首页
-          </el-button>
         </div>
       </div>
     </div>
@@ -1055,7 +1082,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete } from '@element-plus/icons-vue'
+import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
 import { useUserStore } from '../stores/user'
 import { formatDate } from '../utils/date'
@@ -3026,9 +3053,11 @@ onMounted(() => {
   font-family: 'Courier New', monospace;
 }
 
+/* 卡片容器 - 外层固定高度 */
 .flip-card {
+  position: relative;
   width: 100%;
-  height: 100%;
+  height: 600px;
   cursor: pointer;
   transition: transform 0.3s ease;
 }
@@ -3037,6 +3066,7 @@ onMounted(() => {
   transform: scale(1.02);
 }
 
+/* 卡片翻转容器 */
 .flip-card-inner {
   position: relative;
   width: 100%;
@@ -3050,19 +3080,18 @@ onMounted(() => {
   transform: rotateY(180deg);
 }
 
+/* 卡片正反面 - 绝对定位填满容器 */
 .flip-card-front,
 .flip-card-back {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
   border-radius: 30px;
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .flip-card-front {
@@ -3076,54 +3105,88 @@ onMounted(() => {
   transform: rotateY(180deg);
 }
 
-.card-content {
-  padding: 20px 20px;
-  text-align: center;
+/* 新的卡片内容包装器 */
+.card-content-wrapper {
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  overflow: visible;
+  padding: 30px;
+  box-sizing: border-box;
+  display: block;
 }
 
-.card-label {
-  font-size: 11px;
+/* 标签区域 */
+.card-label-section {
+  width: 100%;
+  height: 40px;
+  font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 10px;
+  text-align: center;
   opacity: 0.9;
-  font-weight: 600;
-}
-
-.card-text {
-  font-size: clamp(18px, 4vw, 36px);
-  line-height: 1.6;
-  margin-bottom: 10px;
-  font-weight: 500;
+  margin-bottom: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  word-wrap: break-word;
-  word-break: normal;
-  white-space: normal;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  flex: 1;
 }
 
-.card-image {
-  margin-top: 10px;
-  margin-bottom: 10px;
+/* 文本区域容器 - 固定高度 */
+.card-text-section {
+  width: 100%;
+  height: 150px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+/* 可滚动的文本内容 */
+.card-text-scrollable {
+  width: 100%;
+  height: 100%;
+  padding: 15px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-align: center;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* 滚动条样式 */
+.card-text-scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-text-scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.card-text-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+}
+
+.card-text-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* 图片容器 - 固定高度 */
+.card-image-section {
+  width: 100%;
+  max-width: 520px;
+  height: 200px;
+  margin: 0 auto 20px;
   padding: 8px;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.3);
   border-radius: 12px;
   backdrop-filter: blur(5px);
-  width: 100%;
-  max-width: 600px;
-  /* 移除固定宽高比限制，让图片能够完整显示 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -3212,6 +3275,95 @@ onMounted(() => {
   opacity: 0.7;
   margin-top: 10px;
   font-weight: 400;
+}
+
+/* 单卡片容器样式 */
+.single-card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 20px;
+}
+
+/* 顶部控制按钮区域 */
+.card-top-controls {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+
+.back-home-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.3s ease !important;
+  font-weight: 600 !important;
+}
+
+.back-home-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+}
+
+/* 卡片和导航按钮的容器 */
+.card-with-navigation {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  max-width: 1400px;
+  justify-content: center;
+}
+
+/* 导航按钮样式 */
+.nav-button {
+  width: 60px !important;
+  height: 60px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0;
+}
+
+.nav-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(1.15) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.nav-button:active:not(:disabled) {
+  transform: scale(1.05) !important;
+}
+
+.nav-button:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.nav-button .el-icon {
+  font-size: 24px !important;
+  color: white;
+  font-weight: bold;
+}
+
+/* 卡片计数器样式 */
+.card-counter {
+  margin-top: 10px;
+}
+
+.counter-text {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1px;
 }
 
 /* 卡片控制按钮样式 */
@@ -3379,8 +3531,12 @@ onMounted(() => {
     padding: 40px 20px;
   }
   
-  .card-text {
-    font-size: 20px;
+  .card-text-section {
+    height: 120px;
+  }
+  
+  .card-text-scrollable {
+    font-size: 18px;
   }
   
   .cards-header {

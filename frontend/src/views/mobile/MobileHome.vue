@@ -3176,21 +3176,42 @@ initPage()
   word-break: break-word;
 }
 
-/* 卡片文本 - 移除最大高度限制，确保内容完全显示 */
+/* 卡片文本 - 设置固定高度以显示滚动条 */
 .card-text {
   font-size: 13px;
   line-height: 1.5;
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
-  max-width: 100%; /* 改为100%宽度 */
+  max-width: 100%;
   width: 100%;
-  max-height: none; /* 移除最大高度限制，让文本完全显示 */
-  overflow-y: auto;
-  padding: 0 8px; /* 减小左右padding */
+  height: 150px; /* 设置固定高度 */
+  max-height: 150px; /* 最大高度限制 */
+  overflow-y: auto; /* 允许垂直滚动 */
+  overflow-x: hidden; /* 隐藏水平滚动 */
+  padding: 0 8px;
   margin: 0 auto;
-  /* 增加文字边框 */
   -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+/* 自定义滚动条样式 */
+.card-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-text::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.card-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.card-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* 问题文本特别强调 */
