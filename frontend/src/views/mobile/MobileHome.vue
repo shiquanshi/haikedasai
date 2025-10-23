@@ -544,7 +544,7 @@
                   <div class="card-content">
                       <div class="card-text question-text">{{ currentCard?.question }}</div>
                       <div v-if="currentCard?.questionImage" class="card-image">
-                        <el-image :src="currentCard.questionImage" fit="cover" class="card-img">
+                        <el-image :src="currentCard.questionImage" fit="contain" class="card-img">
                           <template #error>
                             <div class="image-slot">加载失败</div>
                           </template>
@@ -573,7 +573,7 @@
                 <div class="card-content">
                   <div class="card-text">{{ currentCard?.answer }}</div>
                   <div v-if="currentCard?.answerImage" class="card-image">
-                    <el-image :src="currentCard.answerImage" fit="cover" class="card-img">
+                    <el-image :src="currentCard.answerImage" fit="contain" class="card-img">
                       <template #error>
                         <div class="image-slot">加载失败</div>
                       </template>
@@ -765,7 +765,7 @@
             <el-option
               v-for="bank in userBanks"
               :key="bank.id"
-              :label="`${bank.name} (${bank.cardCount}张卡片)`"
+              :label="`${bank.name}`"
               :value="bank.id"
             />
           </el-select>
@@ -2980,9 +2980,10 @@ initPage()
 .card-content {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 30px 30px;
+  padding: 40px 40px 30px;
   overflow-y: auto;
 }
 
@@ -3047,7 +3048,7 @@ initPage()
   word-wrap: break-word;
   text-align: center;
   max-width: 100%;
-  max-height: 220px;
+  max-height: 260px;
   overflow-y: auto;
   padding: 0 8px;
   margin: 0 auto;
@@ -3055,7 +3056,7 @@ initPage()
 
 /* 问题文本特别强调 */
 .question-text {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 600;
   line-height: 1.7;
 }
