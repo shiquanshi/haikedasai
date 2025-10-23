@@ -1167,6 +1167,8 @@ const isPlayingAnswer = ref(false)
 const touchStartX = ref(0)
 const touchOffset = ref(0)
 const isSwiping = ref(false)
+const touchStartTime = ref(0)
+const touchMoved = ref(false)
 
 // 新增卡片相关
 const showAddCardDialog = ref(false)
@@ -2045,6 +2047,10 @@ const backToForm = () => {
 
 // 翻转卡片
 const flipCard = () => {
+  // 如果是滑动操作，不触发翻转
+  if (touchMoved.value) {
+    return
+  }
   isFlipped.value = !isFlipped.value
 }
 
@@ -2075,6 +2081,8 @@ const goToCard = (index: number) => {
 // 触摸开始
 const handleTouchStart = (e: TouchEvent) => {
   touchStartX.value = e.touches[0].clientX
+  touchStartTime.value = Date.now()
+  touchMoved.value = false
   isSwiping.value = true
 }
 
@@ -2084,6 +2092,11 @@ const handleTouchMove = (e: TouchEvent) => {
   
   const currentX = e.touches[0].clientX
   const diff = currentX - touchStartX.value
+  
+  // 如果移动超过10px，标记为滑动
+  if (Math.abs(diff) > 10) {
+    touchMoved.value = true
+  }
   
   // 限制滑动范围，避免过度拖拽
   if (Math.abs(diff) < 200) {
@@ -2108,6 +2121,7 @@ const handleTouchEnd = (e: TouchEvent) => {
   // 重置状态
   touchOffset.value = 0
   isSwiping.value = false
+  touchMoved.value = false
 }
 
 // 音频元素变量

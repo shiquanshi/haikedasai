@@ -14,11 +14,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.core5.util.Timeout;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,15 +56,37 @@ public class VolcEngineService {
     private final ObjectMapper objectMapper;
     private final Executor sseTaskExecutor;
     
-    // 构造函数中初始化RestTemplate并配置超时
+    // 构造函数中初始化RestTemplate并配置HTTP连接池
     @Autowired
     public VolcEngineService(Executor sseTaskExecutor, ObjectMapper objectMapper) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(30000); // 连接超时30秒
-        factory.setReadTimeout(60000);    // 读取超时60秒
+        // 1. 创建连接池管理器
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(200);                    // 最大总连接数
+        connectionManager.setDefaultMaxPerRoute(20);           // 每个路由（域名）的最大连接数
+        
+        // 2. 配置请求超时
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectionRequestTimeout(Timeout.ofSeconds(30))  // 从连接池获取连接超时
+                .setConnectTimeout(Timeout.ofSeconds(60))            // 连接超时
+                .setResponseTimeout(Timeout.ofSeconds(180))          // 响应超时（读取超时）
+                .build();
+        
+        // 3. 创建 HttpClient
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .evictIdleConnections(Timeout.ofSeconds(30))     // 清理空闲连接30秒
+                .build();
+        
+        // 4. 创建请求工厂
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        
+        // 4. 初始化 RestTemplate
         this.restTemplate = new RestTemplate(factory);
         this.sseTaskExecutor = sseTaskExecutor;
         this.objectMapper = objectMapper;
+        
+        log.info("VolcEngineService initialized with HTTP connection pool - MaxTotal: 200, MaxPerRoute: 20");
     }
     
     /**
@@ -430,18 +459,18 @@ public class VolcEngineService {
                                         }
                                     }, sseTaskExecutor);
                                     
-                                    // 等待两个图片都生成完成，但设置超时机制(30秒)
+                                    // 等待两个图片都生成完成，设置统一超时机制(3分钟)
                                     String questionImage = null;
                                     String answerImage = null;
                                     try {
-                                        questionImage = questionImageFuture.orTimeout(360, TimeUnit.SECONDS).join();
+                                        questionImage = questionImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("问题图片生成超时或失败，跳过", e);
+                                        log.warn("问题图片生成超时或失败（180秒），跳过", e);
                                     }
                                     try {
-                                        answerImage = answerImageFuture.orTimeout(30, TimeUnit.SECONDS).join();
+                                        answerImage = answerImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("答案图片生成超时或失败，跳过", e);
+                                        log.warn("答案图片生成超时或失败（180秒），跳过", e);
                                     }
                                     
                                     card.put("questionImage", questionImage);
@@ -473,13 +502,13 @@ public class VolcEngineService {
                             futures.add(future);
                         }
 
-                        // 等待所有卡片处理完成，但设置超时机制(5分钟)
+                        // 等待所有卡片处理完成，但设置超时机制(10分钟，适应多卡片并行生成）
                         try {
                             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                                .orTimeout(5, TimeUnit.MINUTES)
+                                .orTimeout(10, TimeUnit.MINUTES)
                                 .join();
                         } catch (CompletionException e) {
-                            log.error("图片生成整体超时或失败", e);
+                            log.error("图片生成整体超时（10分钟）或失败", e);
                             // 即使超时也继续处理已完成的任务，而不是完全失败
                         }
                         long parallelEndTime = System.currentTimeMillis();
@@ -802,11 +831,22 @@ public class VolcEngineService {
             }
             
         } catch (HttpClientErrorException e) {
-            log.error("生成图片失败 - HTTP错误: {}, 响应体: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            log.error("请求参数: prompt={}, size={}", prompt, size);
+            long endTime = System.currentTimeMillis();
+            log.error("⏱️ [图片生成API] HTTP请求失败 - 耗时:{}ms, 状态码:{}, 响应体:{}", 
+                endTime - startTime, e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("请求参数: model={}, prompt长度={}, size={}", 
+                volcEngineConfig.getImageModel(), prompt.length(), size);
+            return null;
+        } catch (ResourceAccessException e) {
+            long endTime = System.currentTimeMillis();
+            log.error("⏱️ [图片生成API] 网络超时或连接失败 - 耗时:{}ms, 错误:{}", 
+                endTime - startTime, e.getMessage());
+            log.error("建议: 检查火山引擎API网络连接或增加超时时间");
             return null;
         } catch (Exception e) {
-            log.error("生成图片失败 - 异常: {}", e.getMessage(), e);
+            long endTime = System.currentTimeMillis();
+            log.error("⏱️ [图片生成API] 未知异常 - 耗时:{}ms, 类型:{}, 消息:{}", 
+                endTime - startTime, e.getClass().getName(), e.getMessage(), e);
             return null;
         }
     }

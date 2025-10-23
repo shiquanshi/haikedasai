@@ -517,6 +517,17 @@
               <div class="flip-card" :class="{ flipped: isFlipped }" @click="flipCard(currentCardIndex)" v-if="currentCard">
                 <div class="flip-card-inner">
                   <div class="flip-card-front">
+                    <!-- 选题模式下的复选框 -->
+                    <div 
+                      v-if="isSelectionMode" 
+                      class="card-checkbox"
+                    >
+                      <div class="checkbox-box" :class="{ checked: _isCurrentCardSelected }" @click.stop="toggleCardSelection(currentCardIndex)">
+                        <svg v-if="_isCurrentCardSelected" viewBox="0 0 24 24" class="checkbox-icon">
+                          <polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" fill="none" />
+                        </svg>
+                      </div>
+                    </div>
                     <div class="card-content-wrapper">
                       <div class="card-label-section">问题</div>
                       <div class="card-text-section">
@@ -529,22 +540,22 @@
                           </template>
                         </el-image>
                       </div>
-                      <div class="card-actions">
-                        <el-button 
-                          @click.stop="playAnswer(currentCardIndex)" 
-                          :loading="isPlayingAnswer && playingAnswerIndex === currentCardIndex"
-                          circle
-                          size="small"
-                          class="play-button"
-                          title="播放问题"
-                        >
-                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                            </svg>
-                          </template>
-                        </el-button>
-                      </div>
+                    </div>
+                    <div class="card-bottom-controls">
+                      <el-button 
+                        @click.stop="playAnswer(currentCardIndex)" 
+                        :loading="isPlayingAnswer && playingAnswerIndex === currentCardIndex"
+                        circle
+                        size="small"
+                        class="play-button"
+                        title="播放问题"
+                      >
+                        <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                          </svg>
+                        </template>
+                      </el-button>
                       <div class="flip-hint">点击查看答案</div>
                     </div>
                   </div>
@@ -561,22 +572,22 @@
                           </template>
                         </el-image>
                       </div>
-                      <div class="card-actions">
-                        <el-button 
-                          @click.stop="playQuestion(currentCardIndex)" 
-                          :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
-                          circle
-                          size="small"
-                          class="play-button"
-                          title="播放答案"
-                        >
-                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                            </svg>
-                          </template>
-                        </el-button>
-                      </div>
+                    </div>
+                    <div class="card-bottom-controls">
+                      <el-button 
+                        @click.stop="playQuestion(currentCardIndex)" 
+                        :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
+                        circle
+                        size="small"
+                        class="play-button"
+                        title="播放答案"
+                      >
+                        <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                          </svg>
+                        </template>
+                      </el-button>
                       <div class="flip-hint">点击返回问题</div>
                     </div>
                   </div>
@@ -1315,9 +1326,20 @@ const shareExpireHours = ref<number | null>(null) // 分享有效期（小时）
 const currentSharingBankId = ref<number | null>(null) // 当前正在分享的题库ID
 
 const currentCard = computed(() => cards.value[currentCardIndex.value] || { question: '', answer: '' })
-const _isCurrentCardSelected = computed(() => {
-  const currentId = cards.value[currentCardIndex.value]?.id
-  return selectedCardIds.value.includes(currentId)
+const _isCurrentCardSelected = computed({
+  get: () => {
+    const currentId = cards.value[currentCardIndex.value]?.id
+    return selectedCardIds.value.includes(currentId)
+  },
+  set: (value: boolean) => {
+    const currentId = cards.value[currentCardIndex.value]?.id
+    if (value && !selectedCardIds.value.includes(currentId)) {
+      selectedCardIds.value.push(currentId)
+    } else if (!value && selectedCardIds.value.includes(currentId)) {
+      const index = selectedCardIds.value.indexOf(currentId)
+      selectedCardIds.value.splice(index, 1)
+    }
+  }
 })
 const currentBank = computed(() => {
   if (!currentBankId.value) return null
@@ -1772,16 +1794,10 @@ const loadBankCards = async (bankId: number) => {
 }
 
 const flipCard = (index: number) => {
-  // 如果是单个卡片模式，使用原来的isFlipped
-  if (cards.value.length === 1) {
-    isFlipped.value = !isFlipped.value
-  } else {
-    // 如果是田字格模式，使用flippedCards数组
-    if (!flippedCards.value[index]) {
-      flippedCards.value[index] = false
-    }
-    flippedCards.value[index] = !flippedCards.value[index]
-  }
+  console.log('flipCard called, index:', index, 'current isFlipped:', isFlipped.value, 'cards.length:', cards.value.length)
+  // 单卡片模式直接翻转
+  isFlipped.value = !isFlipped.value
+  console.log('new isFlipped:', isFlipped.value)
 }
 
 const _nextCard = () => {
@@ -1857,7 +1873,9 @@ const exportBank = async (bankId: number, bankName: string) => {
 
 // 切换选题模式
 const toggleSelectionMode = () => {
+  console.log('toggleSelectionMode被调用，当前状态:', isSelectionMode.value)
   isSelectionMode.value = !isSelectionMode.value
+  console.log('切换后的状态:', isSelectionMode.value)
   if (!isSelectionMode.value) {
     selectedCardIds.value = []
   }
@@ -3105,27 +3123,27 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   color: white;
   width: 100%;
 }
 
 .header-left {
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .cards-header h2 {
-  font-size: 28px;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  font-weight: 700;
+  font-size: 18px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
 }
 
 .card-progress {
   background: rgba(255, 255, 255, 0.2);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
   backdrop-filter: blur(10px);
   display: inline-block;
   align-self: flex-start;
@@ -3135,18 +3153,18 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   backdrop-filter: blur(10px);
-  height: 50px;
-  padding: 0 30px;
-  font-size: 16px;
-  border-radius: 25px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
+  border-radius: 16px;
   transition: all 0.3s ease;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
 }
 
 .cards-header .el-button:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
 }
 
 /* 卡片容器样式 */
@@ -3266,8 +3284,9 @@ onMounted(() => {
 .flip-card {
   position: relative;
   width: 100%;
-  max-width: 1400px;
-  height: calc(100vh - 40px);
+  max-width: 1200px;
+  height: calc(100vh - 180px);
+  max-height: 600px;
   cursor: pointer;
   transition: transform 0.3s ease;
   will-change: transform;
@@ -3322,11 +3341,13 @@ onMounted(() => {
   transform: rotateY(180deg);
 }
 
+
+
 /* 新的卡片内容包装器 - 左右布局 */
 .card-content-wrapper {
   width: 100%;
   min-height: 100%;
-  padding: 60px 30px 30px 30px;
+  padding: 60px 40px 40px 40px;
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
@@ -3463,29 +3484,22 @@ onMounted(() => {
   color: #555;
 }
 
-.card-actions {
-  margin-top: auto;
-  padding-top: 20px;
+/* 卡片底部控制区域 */
+.card-bottom-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: none;
 }
 
-.card-actions .el-button {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  backdrop-filter: blur(10px);
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.card-actions .el-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.card-bottom-controls * {
+  pointer-events: auto;
 }
 
 /* 播放按钮样式 - 参考移动端透明度设计 */
@@ -3519,16 +3533,18 @@ onMounted(() => {
 
 /* 翻转提示文本 - 添加图标 */
 .flip-hint {
-  font-size: 11px;
-  opacity: 0.85;
-  margin-top: auto;
-  padding-top: 10px;
-  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.9;
+  font-weight: 500;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  border-radius: 20px;
 }
 
 .flip-hint::before {
@@ -3609,9 +3625,12 @@ onMounted(() => {
 }
 
 .nav-button:disabled {
-  opacity: 0.3 !important;
+  opacity: 0.5 !important;
   cursor: not-allowed !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%) !important;
+  border: 2px solid rgba(165, 180, 252, 0.4) !important;
+  color: #a5b4fc !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
 }
 
 .nav-button .el-icon {
@@ -3830,32 +3849,39 @@ onMounted(() => {
 /* 选题模式样式 */
 .card-checkbox {
   position: absolute;
-  top: 30px;
-  right: 30px;
+  top: 20px;
+  right: 20px;
   z-index: 10;
-  transform: scale(1.5);
+  cursor: pointer;
 }
 
-.card-checkbox :deep(.el-checkbox__inner) {
-  width: 24px;
-  height: 24px;
+.checkbox-box {
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.card-checkbox :deep(.el-checkbox__inner::after) {
-  width: 10px;
-  height: 18px;
-  left: 5px;
-  top: 1px;
-  border-width: 3px;
+.checkbox-box:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.05);
 }
 
-.card-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+.checkbox-box.checked {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   border-color: #4facfe;
+}
+
+.checkbox-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* 加载更多按钮样式 */

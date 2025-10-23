@@ -173,10 +173,13 @@ public class MinioService {
             try {
                 ensureBucketExists();
                 
-                // 从URL下载图片
+                // 从URL下载图片（设置超时）
                 long downloadStartTime = System.currentTimeMillis();
                 URL url = new URL(imageUrl);
-                InputStream inputStream = url.openStream();
+                java.net.URLConnection connection = url.openConnection();
+                connection.setConnectTimeout(30000); // 连接超时30秒
+                connection.setReadTimeout(60000);    // 读取超时60秒
+                InputStream inputStream = connection.getInputStream();
                 long downloadEndTime = System.currentTimeMillis();
                 log.info("⏱️ [MinIO上传] 下载图片完成 - 耗时:{}ms", downloadEndTime - downloadStartTime);
                 
@@ -214,13 +217,13 @@ public class MinioService {
                 }
                 return getFileUrl(fileName);
                 
-            } catch (Exception e) {
+            } catch (java.net.SocketTimeoutException e) {
                 lastException = e;
                 retryCount++;
-                
+                log.warn("⏱️ [MinIO上传] 下载超时（第{}次尝试）: {} - {}", retryCount, imageUrl, e.getMessage());
                 if (retryCount < maxRetries) {
-                    long waitTime = (long) Math.pow(2, retryCount - 1) * 1000; // 指数退避：1s, 2s, 4s
-                    log.warn("从URL上传图片失败（第{}次尝试），{}ms后重试: {}", retryCount, waitTime, imageUrl, e);
+                    long waitTime = (long) Math.pow(2, retryCount - 1) * 1000;
+                    log.info("等待{}ms后进行第{}次重试...", waitTime, retryCount + 1);
                     try {
                         Thread.sleep(waitTime);
                     } catch (InterruptedException ie) {
@@ -228,7 +231,38 @@ public class MinioService {
                         throw new RuntimeException("上传重试被中断: " + ie.getMessage());
                     }
                 } else {
-                    log.error("从URL上传图片失败（已重试{}次）: {}", maxRetries, imageUrl, e);
+                    log.error("❌ [MinIO上传] 多次超时失败（已重试{}次）: {}", maxRetries, imageUrl);
+                }
+            } catch (java.io.IOException e) {
+                lastException = e;
+                retryCount++;
+                log.warn("🌐 [MinIO上传] 网络IO错误（第{}次尝试）: {} - {}", retryCount, imageUrl, e.getMessage());
+                if (retryCount < maxRetries) {
+                    long waitTime = (long) Math.pow(2, retryCount - 1) * 1000;
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("上传重试被中断: " + ie.getMessage());
+                    }
+                } else {
+                    log.error("❌ [MinIO上传] 网络错误失败（已重试{}次）: {}", maxRetries, imageUrl);
+                }
+            } catch (Exception e) {
+                lastException = e;
+                retryCount++;
+                log.warn("⚠️ [MinIO上传] 未知错误（第{}次尝试）: {} - 类型:{}, 消息:{}", 
+                    retryCount, imageUrl, e.getClass().getName(), e.getMessage());
+                if (retryCount < maxRetries) {
+                    long waitTime = (long) Math.pow(2, retryCount - 1) * 1000;
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("上传重试被中断: " + ie.getMessage());
+                    }
+                } else {
+                    log.error("❌ [MinIO上传] 未知错误失败（已重试{}次）: {}", maxRetries, imageUrl, e);
                 }
             }
         }
