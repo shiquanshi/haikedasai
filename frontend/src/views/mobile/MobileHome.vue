@@ -2935,9 +2935,7 @@ initPage()
   margin-bottom: 10px;
   margin-top: 8px;
   perspective: 1000px;
-  padding: 0 10px;
   align-items: center;
-  overflow-y: auto; /* 允许卡片内容在必要时滚动 */
 }
 
 
@@ -2950,11 +2948,11 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 自适应高度且优化内容展示 */
+/* 翻转卡片样式 - 完全自适应高度，确保内容不被截断 */
 .flip-card {
   width: 100%;
   min-height: 350px;
-  max-height: 650px; /* 增加卡片最大高度，让内容有更多展示空间 */
+  max-height: none; /* 移除最大高度限制，让内容完全显示 */
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -2962,7 +2960,6 @@ initPage()
   display: flex;
   flex-direction: column;
   transition: height 0.3s ease;
-  overflow: hidden; /* 防止卡片内容溢出 */
 }
 
 .flip-card:active {
@@ -2991,7 +2988,6 @@ initPage()
   min-height: 100%;
   backface-visibility: hidden;
   border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3011,6 +3007,9 @@ initPage()
   background: rgba(255, 255, 255, 0.1);
   padding: 3px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  display: flex;
+  justify-content: center;
 }
 
 .card-img {
@@ -3037,6 +3036,9 @@ initPage()
 .flip-card-back .card-image {
   background: rgba(255, 255, 255, 0.9);
   padding: 6px;
+  width: 90%;
+  display: flex;
+  justify-content: center;
 }
 
 .flip-card-back .card-img {
@@ -3073,16 +3075,17 @@ initPage()
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 卡片内容样式 - 调整内边距适应缩小的卡片 */
+/* 卡片内容样式 - 优化内边距和滚动，确保内容完全显示 */
 .card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start; /* 改为从上到下排列，优先显示图片 */
-  padding: 30px 16px 20px; /* 减少padding，为图片留出更多空间 */
+  padding: 25px 16px 20px; /* 调整padding，为内容留出更多空间 */
   overflow-y: auto;
-  width: 100%;
+  width: 90%;
+  margin: 0 auto;
 }
 
 /* 紧凑的题库名称样式 */
@@ -3155,16 +3158,16 @@ initPage()
   word-break: break-word;
 }
 
-/* 卡片文本 - 调整适应缩小的卡片 */
+/* 卡片文本 - 移除最大高度限制，确保内容完全显示 */
 .card-text {
   font-size: 13px;
   line-height: 1.5;
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
-  max-width: 100%;
+  max-width: 90%;
   width: 100%;
-  max-height: 350px; /* 增加文本区域最大高度 */
+  max-height: none; /* 移除最大高度限制，让文本完全显示 */
   overflow-y: auto;
   padding: 0 12px;
   margin: 0 auto;
@@ -3262,7 +3265,7 @@ initPage()
   justify-content: center;
   padding: 16px 0;
   background: white;
-  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.03);
+  border-top: 1px solid #f0f0f0;
 }
 
 .progress-dots {
@@ -3295,24 +3298,27 @@ initPage()
   transform: scale(1.2);
 }
 
-/* 卡片导航按钮区域 */
+/* 卡片导航按钮区域 - 移除白色背景，与卡片更好融合 */
 .card-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 10px;
   padding: 16px;
-  background: white;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  background: transparent;
+  border-top: none;
   box-sizing: border-box;
+  width: 90%;
+  margin: 0 auto;
 }
 
-/* 卡片容器 - 调整整体样式 */
+/* 卡片容器 - 移除白色背景，与卡片内容更好融合 */
 .card-container {
-  border-radius: 15px;
+  border-radius: 24px;
   overflow: hidden;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
   margin: 0 16px;
+  position: relative;
 }
 
 /* 调整卡片展示区域底部边距 */
