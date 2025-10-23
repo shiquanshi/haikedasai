@@ -454,10 +454,14 @@
 
       <!-- 卡片展示区域 -->
       <div v-if="showCards" class="cards-section">
-        <!-- 卡片头部：标题、进度和操作按钮 -->
+        <!-- 卡片标题区域 -->
+        <div class="cards-title">
+          <h2>{{ currentBankName || '我的闪卡' }}</h2>
+        </div>
+        
+        <!-- 卡片进度和操作按钮区域 -->
         <div class="cards-header">
           <div class="header-left">
-            <h2>{{ currentBankName || '我的闪卡' }}</h2>
             <div class="card-progress" :class="{ 'generating': isGenerating }">
               <template v-if="isGenerating">
                 <el-icon class="is-loading" style="margin-right: 8px"><Loading /></el-icon>
@@ -559,7 +563,7 @@
                       class="voice-button"
                       @click.stop="playQuestionVoice"
                     >
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                         <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
                       </svg>
                       {{ isPlayingQuestion ? '播放中' : '语音' }}
@@ -589,7 +593,7 @@
                     class="voice-button"
                     @click.stop="playAnswerVoice"
                   >
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                       <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
                     </svg>
                     {{ isPlayingAnswer ? '播放中' : '语音' }}
@@ -2784,7 +2788,26 @@ initPage()
   width: 100%;
 }
 
-/* 卡片头部样式 - 排成一排并放大外部宽度 */
+/* 卡片标题样式 */
+.cards-title {
+  width: 100%;
+  margin-bottom: 15px;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.cards-title h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 卡片头部样式 - 调整为显示进度和按钮 */
 .cards-section {
   width: 100%;
   max-width: 100%;
@@ -2795,7 +2818,7 @@ initPage()
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   color: #333;
   width: 100%;
 }
@@ -2806,16 +2829,6 @@ initPage()
   gap: 10px;
   flex: 1;
   flex-wrap: nowrap;
-}
-
-.cards-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: bold;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .card-progress {
@@ -2870,18 +2883,18 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 调整比例增加留白并让卡片顶到底部 */
+/* 卡片容器样式 - 让卡片自适应高度 */
 .card-container {
   width: 100%;
-  min-height: 450px;
-  max-height: 480px;
+  min-height: 350px;
   display: flex;
   flex-direction: column;
   position: relative;
-  margin-bottom: 0;
+  margin-bottom: 15px;
   margin-top: 8px;
   perspective: 1000px;
   padding: 0 10px;
+  align-items: center;
 }
 
 
@@ -2894,15 +2907,17 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 调整比例增加留白并让卡片顶到底部 */
+/* 翻转卡片样式 - 让卡片自适应高度 */
 .flip-card {
   width: 100%;
-  height: 450px;
+  min-height: 350px;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
   max-width: 100%;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  transition: height 0.3s ease;
 }
 
 .flip-card:active {
@@ -2912,10 +2927,12 @@ initPage()
 .flip-card-inner {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   text-align: center;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
+  display: flex;
+  flex-direction: column;
 }
 
 .flip-card.flipped .flip-card-inner {
@@ -2926,7 +2943,7 @@ initPage()
 .flip-card-back {
   position: absolute;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   backface-visibility: hidden;
   border-radius: 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -2941,20 +2958,20 @@ initPage()
   color: white;
 }
 
-/* 卡片图片相关样式 */
+/* 卡片图片相关样式 - 调整适应缩小的卡片 */
 .card-image {
-  margin-top: 16px;
-  border-radius: 12px;
+  margin-top: 12px;
+  border-radius: 10px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.1);
-  padding: 4px;
+  padding: 3px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .card-img {
   width: 100%;
-  height: 150px;
-  border-radius: 8px;
+  height: 120px;
+  border-radius: 7px;
 }
 
 .image-slot {
@@ -2962,11 +2979,11 @@ initPage()
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 150px;
+  height: 120px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: 7px;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* 答案面的图片样式特殊处理 */
@@ -2994,23 +3011,23 @@ initPage()
   left: 10px;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 卡片内容样式 - 增加留白边框并确保内容居中 */
+/* 卡片内容样式 - 调整内边距适应缩小的卡片 */
 .card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px 50px;
+  padding: 40px 16px 30px;
   overflow-y: auto;
   width: 100%;
 }
@@ -3050,16 +3067,16 @@ initPage()
   margin-bottom: 10px;
 }
 
-/* 思考过程样式 */
+/* 思考过程样式 - 调整适应缩小的卡片 */
 .thinking-process {
   width: 100%;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 16px;
+  padding: 14px;
   text-align: left;
-  max-height: 250px;
+  max-height: 180px;
   overflow-y: auto;
 }
 
@@ -3085,18 +3102,18 @@ initPage()
   word-break: break-word;
 }
 
-/* 卡片文本 - 放宽宽度并增加文字边框 */
+/* 卡片文本 - 调整适应缩小的卡片 */
 .card-text {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
   max-width: 100%;
   width: 100%;
-  max-height: 280px;
+  max-height: 220px;
   overflow-y: auto;
-  padding: 0 16px;
+  padding: 0 12px;
   margin: 0 auto;
   /* 增加文字边框 */
   -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.1);
@@ -3104,9 +3121,9 @@ initPage()
 
 /* 问题文本特别强调 */
 .question-text {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.7;
+  line-height: 1.6;
   /* 增加问题文字边框 */
   -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.15);
 }
@@ -3135,23 +3152,25 @@ initPage()
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* 卡片底部 */
+/* 卡片底部 - 自适应高度 */
 .card-footer {
-  padding: 20px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* 提示文本 */
+/* 提示文本 - 减小尺寸 */
 .tap-hint {
-  font-size: 12px;
+  font-size: 10px;
   opacity: 0.8;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tap-hint::before {
@@ -3159,19 +3178,19 @@ initPage()
   font-size: 14px;
 }
 
-/* 语音按钮 */
+/* 语音按钮 - 减小尺寸 */
 .voice-button {
   background: rgba(255, 255, 255, 0.3) !important;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   color: white !important;
-  font-size: 10px !important;
-  padding: 5px 12px !important;
+  font-size: 9px !important;
+  padding: 4px 10px !important;
   border-radius: 20px !important;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   transition: all 0.3s ease;
 }
 
