@@ -54,8 +54,8 @@ volcengine:
 
 # MinIO配置
 minio:
-  endpoint: http://113.45.203.178:9150
-  access-key: quanshi
+  endpoint: https://nohavebug.preview.huawei-zeabur.cn
+  access-key: minio
   secret-key: quanshi666
   bucket-name: question-card-images
 

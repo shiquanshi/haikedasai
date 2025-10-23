@@ -35,7 +35,7 @@ COPY supervisord.conf /etc/supervisord.conf
 ENV SPRING_PROFILES_ACTIVE=docker
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 80 8080
 
 # 使用 supervisor 同时运行 nginx 和 Spring Boot
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

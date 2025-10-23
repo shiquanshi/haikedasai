@@ -1691,18 +1691,26 @@ const handleUpdateBank = async () => {
 // 删除题库
 const handleDeleteBank = async (bankId: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个题库吗？', '确认删除', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      '确定要删除这个题库吗？删除后将无法恢复。',
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await questionBankApi.deleteBank(bankId)
     
-    // 实际项目中这里应该调用删除API
-    ElMessage.success('删除成功')
-    // 删除成功后刷新题库列表
-    loadCustomBanks()
-  } catch (error) {
-    // 用户取消删除
+    ElMessage.success('删除成功！')
+    // 刷新题库列表
+    await loadCustomBanks()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error(error.message || '删除失败，请重试')
+    }
   }
 }
 
@@ -2136,11 +2144,11 @@ const playQuestionVoice = async () => {
     
     const textToPlay = currentCard.value.question
     const response = await questionBankApi.textToSpeech(textToPlay)
-      const audioData = response.data
-      
-      if (audioData) {
-        // 创建音频元素并播放
-        const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+    const audioData = response.data
+    
+    if (audioData) {
+      // 创建音频元素并播放
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
       const audioUrl = URL.createObjectURL(audioBlob)
       
       stopAudio() // 停止之前的播放
@@ -2162,6 +2170,7 @@ const playQuestionVoice = async () => {
       throw new Error('获取音频数据失败')
     }
   } catch (error) {
+    console.error('播放语音失败:', error)
     isPlayingQuestion.value = false
     ElMessage.error('播放失败')
   }
@@ -2182,11 +2191,11 @@ const playAnswerVoice = async () => {
     
     const textToPlay = currentCard.value.answer
     const response = await questionBankApi.textToSpeech(textToPlay)
-      const audioData = response.data
-      
-      if (audioData) {
-        // 创建音频元素并播放
-        const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+    const audioData = response.data
+    
+    if (audioData) {
+      // 创建音频元素并播放
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
       const audioUrl = URL.createObjectURL(audioBlob)
       
       stopAudio() // 停止之前的播放
@@ -2208,6 +2217,7 @@ const playAnswerVoice = async () => {
       throw new Error('获取音频数据失败')
     }
   } catch (error) {
+    console.error('播放语音失败:', error)
     isPlayingAnswer.value = false
     ElMessage.error('播放失败')
   }
