@@ -2883,18 +2883,20 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 让卡片自适应高度 */
+/* 卡片容器样式 - 自适应高度且不遮挡底部导航 */
 .card-container {
   width: 100%;
   min-height: 350px;
+  max-height: calc(100vh - 200px); /* 确保卡片容器不会超出可视区域过多 */
   display: flex;
   flex-direction: column;
   position: relative;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   margin-top: 8px;
   perspective: 1000px;
   padding: 0 10px;
   align-items: center;
+  overflow-y: auto; /* 允许卡片内容在必要时滚动 */
 }
 
 
@@ -2907,10 +2909,11 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 让卡片自适应高度 */
+/* 翻转卡片样式 - 自适应高度且优化内容展示 */
 .flip-card {
   width: 100%;
   min-height: 350px;
+  max-height: 500px; /* 设置卡片最大高度，防止内容过多时占用过多空间 */
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -2918,6 +2921,7 @@ initPage()
   display: flex;
   flex-direction: column;
   transition: height 0.3s ease;
+  overflow: hidden; /* 防止卡片内容溢出 */
 }
 
 .flip-card:active {
@@ -2970,8 +2974,9 @@ initPage()
 
 .card-img {
   width: 100%;
-  height: 120px;
+  height: 180px; /* 增加图片高度，使其更大 */
   border-radius: 7px;
+  object-fit: contain; /* 确保图片完全显示且不变形 */
 }
 
 .image-slot {
@@ -2979,7 +2984,7 @@ initPage()
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 120px;
+  height: 180px; /* 同步增加占位区域高度 */
   background: rgba(255, 255, 255, 0.2);
   border-radius: 7px;
   color: #fff;
@@ -2990,6 +2995,10 @@ initPage()
 .flip-card-back .card-image {
   background: rgba(255, 255, 255, 0.9);
   padding: 6px;
+}
+
+.flip-card-back .card-img {
+  object-fit: contain; /* 确保答案面图片也完全显示且不变形 */
 }
 
 .flip-card-back .image-slot {
@@ -3240,13 +3249,15 @@ initPage()
   transform: scale(1.2);
 }
 
-/* 底部按钮区域 - 缩小按钮和间距 */
+/* 底部按钮区域 - 固定在底部且不会被遮挡 */
 .card-actions {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   margin-top: 16px;
-  margin-bottom: 15px;
+  margin-bottom: 30px; /* 增加底部边距，确保在小屏幕设备上不被遮挡 */
+  position: relative;
+  z-index: 10;
 }
 
 .nav-button {

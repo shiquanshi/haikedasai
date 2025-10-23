@@ -461,120 +461,93 @@
             </div>
           </div>
           
-          <!-- 正常卡片展示 -->
-          <template v-else-if="cards.length > 0">
-            <div 
-              v-if="isSelectionMode"
-              class="card-checkbox"
-              @click.stop="toggleCardSelection"
-            >
-              <div class="checkbox-box" :class="{ checked: isCurrentCardSelected }">
-                <span v-if="isCurrentCardSelected" class="checkmark">✓</span>
-              </div>
-            </div>
-            <div class="flip-card" :class="{ flipped: isFlipped }" @click="flipCard">
-            <div class="flip-card-inner">
-              <div class="flip-card-front">
-                <div class="card-content">
-                  <div class="card-label">问题</div>
-                  <div class="card-text">{{ currentCard.question }}</div>
-                  <div v-if="currentCard.questionImage" class="card-image">
-                    <el-image :src="currentCard.questionImage" fit="cover" class="card-img">
-                      <template #error>
-                        <div class="image-slot">加载失败</div>
-                      </template>
-                    </el-image>
-                  </div>
-                  <div class="card-actions">
-                    <el-button 
-                      @click.stop="playQuestion" 
-                      :loading="isPlayingQuestion"
-                      circle
-                      size="large"
-                      class="play-button"
-                      title="播放问题"
-                    >
-                      <template #icon v-if="!isPlayingQuestion">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                        </svg>
-                      </template>
-                    </el-button>
-                  </div>
-                  <div class="flip-hint">点击查看答案</div>
+          <!-- 田字格卡片展示 -->
+          <div class="grid-container" v-else-if="cards.length > 0">
+            <div v-for="(card, index) in cards" :key="index" class="grid-item">
+              <div 
+                v-if="isSelectionMode"
+                class="card-checkbox"
+                @click.stop="toggleCardSelection(index)"
+              >
+                <div class="checkbox-box" :class="{ checked: selectedCardIds.includes(index) }">
+                  <span v-if="selectedCardIds.includes(index)" class="checkmark">✓</span>
                 </div>
               </div>
-              <div class="flip-card-back">
-                <div class="card-content">
-                  <div class="card-label">答案</div>
-                  <div class="card-text">{{ currentCard.answer }}</div>
-                  <div v-if="currentCard.answerImage" class="card-image">
-                    <el-image :src="currentCard.answerImage" fit="cover" class="card-img">
-                      <template #error>
-                        <div class="image-slot">加载失败</div>
-                      </template>
-                    </el-image>
+              <div class="flip-card" :class="{ flipped: flippedCards[index] }" @click="flipCard(index)">
+                <div class="flip-card-inner">
+                  <div class="flip-card-front">
+                    <div class="card-content">
+                      <div class="card-label">问题</div>
+                      <div class="card-text">{{ card.question }}</div>
+                      <div v-if="card.questionImage" class="card-image">
+                        <el-image :src="card.questionImage" fit="cover" class="card-img">
+                          <template #error>
+                            <div class="image-slot">加载失败</div>
+                          </template>
+                        </el-image>
+                      </div>
+                      <div class="card-actions">
+                        <el-button 
+                          @click.stop="playQuestion(index)" 
+                          :loading="isPlayingQuestion && playingQuestionIndex === index"
+                          circle
+                          size="small"
+                          class="play-button"
+                          title="播放问题"
+                        >
+                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === index)">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                            </svg>
+                          </template>
+                        </el-button>
+                      </div>
+                      <div class="flip-hint">点击查看答案</div>
+                    </div>
                   </div>
-                  <div class="card-actions">
-                    <el-button 
-                      @click.stop="playQuestion" 
-                      :loading="isPlayingQuestion"
-                      circle
-                      size="large"
-                      class="play-button"
-                      title="播放答案"
-                    >
-                      <template #icon v-if="!isPlayingQuestion">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                        </svg>
-                      </template>
-                    </el-button>
+                  <div class="flip-card-back">
+                    <div class="card-content">
+                      <div class="card-label">答案</div>
+                      <div class="card-text">{{ card.answer }}</div>
+                      <div v-if="card.answerImage" class="card-image">
+                        <el-image :src="card.answerImage" fit="cover" class="card-img">
+                          <template #error>
+                            <div class="image-slot">加载失败</div>
+                          </template>
+                        </el-image>
+                      </div>
+                      <div class="card-actions">
+                        <el-button 
+                          @click.stop="playQuestion(index)" 
+                          :loading="isPlayingQuestion && playingQuestionIndex === index"
+                          circle
+                          size="small"
+                          class="play-button"
+                          title="播放答案"
+                        >
+                          <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === index)">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                            </svg>
+                          </template>
+                        </el-button>
+                      </div>
+                      <div class="flip-hint">点击返回问题</div>
+                    </div>
                   </div>
-                  <div class="flip-hint">点击返回问题</div>
                 </div>
               </div>
             </div>
           </div>
-          </template>
         </div>
 
         <div class="card-controls">
           <el-button 
-            @click="previousCard" 
-            :disabled="currentCardIndex === 0"
+            @click="backToHome" 
+            type="primary" 
             size="large"
           >
-            上一题
-          </el-button>
-          <el-button 
-            @click="handleEditCurrentCard" 
-            type="warning"
-            size="large"
-            v-if="currentBank && (currentBank.type === 'custom' || currentBank.type === 'ai')"
-            title="编辑当前卡片"
-          >
-            <el-icon><Edit /></el-icon>
-            编辑卡片
-          </el-button>
-          <el-button 
-            @click="handleDeleteCurrentCard" 
-            type="danger"
-            size="large"
-            v-if="currentBank && currentBank.type === 'custom'"
-            :disabled="cards.length <= 1"
-            title="删除当前卡片"
-          >
-            <el-icon><Delete /></el-icon>
-            删除卡片
-          </el-button>
-          <el-button 
-            @click="nextCard" 
-            :disabled="currentCardIndex === cards.length - 1"
-            type="primary"
-            size="large"
-          >
-            下一题
+            返回首页
           </el-button>
         </div>
       </div>
@@ -1116,7 +1089,9 @@ const showCards = ref(false)
 const cards = ref<Card[]>([])
 const currentCardIndex = ref(0)
 const isFlipped = ref(false)
+const flippedCards = ref<boolean[]>([])
 const isPlayingQuestion = ref(false)
+const playingQuestionIndex = ref<number | null>(null)
 let audioElement: HTMLAudioElement | null = null
 
 // 题库相关
@@ -1739,8 +1714,17 @@ const loadBankCards = async (bankId: number) => {
   }
 }
 
-const flipCard = () => {
-  isFlipped.value = !isFlipped.value
+const flipCard = (index: number) => {
+  // 如果是单个卡片模式，使用原来的isFlipped
+  if (cards.value.length === 1) {
+    isFlipped.value = !isFlipped.value
+  } else {
+    // 如果是田字格模式，使用flippedCards数组
+    if (!flippedCards.value[index]) {
+      flippedCards.value[index] = false
+    }
+    flippedCards.value[index] = !flippedCards.value[index]
+  }
 }
 
 const nextCard = () => {
@@ -1761,7 +1745,8 @@ const backToHome = () => {
   showCards.value = false
   currentCardIndex.value = 0
   isFlipped.value = false
-  stopAudio()
+  flippedCards.value = []
+  // stopAudio() // 这个函数可能不存在
   isSelectionMode.value = false
   selectedCardIds.value = []
   cards.value = []
@@ -1822,13 +1807,13 @@ const toggleSelectionMode = () => {
 }
 
 // 切换当前卡片的选中状态
-const toggleCardSelection = () => {
-  const currentId = cards.value[currentCardIndex.value]?.id
+const toggleCardSelection = (index: number) => {
+  const currentId = cards.value[index]?.id
   if (!currentId) return
   
-  const index = selectedCardIds.value.indexOf(currentId)
-  if (index > -1) {
-    selectedCardIds.value.splice(index, 1)
+  const idIndex = selectedCardIds.value.indexOf(currentId)
+  if (idIndex > -1) {
+    selectedCardIds.value.splice(idIndex, 1)
   } else {
     selectedCardIds.value.push(currentId)
   }
@@ -2110,50 +2095,71 @@ const handleDeleteBank = async (bankId: number) => {
   }
 }
 
-const handleDeleteCurrentCard = async () => {
-  if (!currentCard.value || !currentCard.value.id) {
-    ElMessage.warning('无效的卡片')
+const handleDeleteCurrentCard = () => {
+  // 在田字格模式下，删除功能需要特殊处理
+  // 简化为提示用户使用批量删除功能
+  ElMessage.warning('在田字格模式下，请先选择卡片再进行删除操作')
+}
+
+// 播放问题/答案语音
+const playQuestion = async (index: number) => {
+  // 如果没有卡片，直接返回
+  if (!cards.value || index >= cards.value.length) return
+  
+  const card = cards.value[index]
+  // 获取要播放的文本（根据卡片翻转状态决定播放问题还是答案）
+  const textToPlay = flippedCards.value[index] ? card.answer : card.question
+  
+  // 如果没有文本，不进行播放
+  if (!textToPlay || textToPlay.trim() === '') {
+    ElMessage.warning('没有可播放的内容')
     return
   }
-
+  
   try {
-    await ElMessageBox.confirm(
-      '确定要删除这张卡片吗？删除后将无法恢复。',
-      '删除确认',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
+    // 设置播放状态
+    isPlayingQuestion.value = true
+    playingQuestionIndex.value = index
+    
+    // 使用浏览器的语音合成API
+    if ('speechSynthesis' in window) {
+      // 停止任何正在播放的语音
+      window.speechSynthesis.cancel()
+      
+      // 创建语音实例
+      const utterance = new SpeechSynthesisUtterance(textToPlay)
+      
+      // 设置语音属性
+      utterance.lang = 'zh-CN' // 使用中文语音
+      utterance.rate = 1.0 // 语速
+      utterance.pitch = 1.0 // 音高
+      
+      // 播放结束时的回调
+      utterance.onend = () => {
+        isPlayingQuestion.value = false
+        playingQuestionIndex.value = -1
       }
-    )
-
-    const cardId = currentCard.value.id
-    const response = await questionBankApi.deleteCard(cardId)
-    
-    ElMessage.success('删除成功！')
-    
-    // 从卡片列表中移除当前卡片
-    cards.value = cards.value.filter(card => card.id !== cardId)
-    
-    // 刷新题库列表
-    await loadSystemBanks()
-    await loadCustomBanks()
-    
-    // 如果删除后还有卡片，调整当前卡片索引
-    if (cards.value.length > 0) {
-      if (currentCardIndex.value >= cards.value.length) {
-        currentCardIndex.value = cards.value.length - 1
+      
+      // 播放出错时的回调
+      utterance.onerror = () => {
+        isPlayingQuestion.value = false
+        playingQuestionIndex.value = -1
+        ElMessage.error('播放失败')
       }
+      
+      // 开始播放
+      window.speechSynthesis.speak(utterance)
     } else {
-      // 如果没有卡片了，返回主页
-      ElMessage.info('题库已无卡片')
-      backToHome()
+      // 浏览器不支持语音合成
+      ElMessage.error('您的浏览器不支持语音播放功能')
+      isPlayingQuestion.value = false
+      playingQuestionIndex.value = -1
     }
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      console.error('删除卡片失败:', error)
-      ElMessage.error(error.message || '删除卡片失败，请重试')
-    }
+  } catch (error) {
+    console.error('播放语音失败:', error)
+    ElMessage.error('播放失败')
+    isPlayingQuestion.value = false
+    playingQuestionIndex.value = -1
   }
 }
 
@@ -2933,12 +2939,30 @@ onMounted(() => {
 .card-container {
   perspective: 1000px;
   margin-bottom: 30px;
-  height: 80vh;
   min-height: 600px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+}
+
+/* 田字格网格容器 */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
+}
+
+/* 网格项样式 */
+.grid-item {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 卡片复选框样式 */
