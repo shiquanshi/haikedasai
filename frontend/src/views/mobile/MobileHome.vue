@@ -1,5 +1,17 @@
 <template>
   <div class="mobile-home-container">
+    <!-- 头部区域 -->
+    <div class="mobile-header">
+      <h1 class="header-title">智能闪卡生成系统</h1>
+      <el-button 
+        type="danger" 
+        size="small" 
+        @click="handleLogout"
+        class="logout-button"
+      >
+        登出
+      </el-button>
+    </div>
 
     <!-- 主要内容区 -->
     <div class="mobile-content">
@@ -1032,7 +1044,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { Search, VideoPlay, Star, Edit, Share, Delete, Upload, Plus, Document, Box, Loading, Clock, Download, DocumentCopy } from '@element-plus/icons-vue'
 import { questionBankApi } from '../../api/questionBank'
@@ -1040,6 +1053,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 用户状态
 const userStore = useUserStore()
+const router = useRouter()
 
 // 表单数据
 const topic = ref('')
@@ -1245,17 +1259,6 @@ const formatDate = (date: Date | string | number, format: string = 'YYYY-MM-DD H
     .replace('DD', day)
     .replace('HH', hours)
     .replace('mm', minutes)
-}
-
-// 退出登录
-const handleLogout = async () => {
-  try {
-    await userStore.logout()
-    ElMessage.success('退出成功')
-    window.location.href = '/mobile/login'
-  } catch (error) {
-    ElMessage.error('退出失败')
-  }
 }
 
 // 生成闪卡
@@ -2500,6 +2503,27 @@ const copyShareCode = async () => {
   }
 }
 
+// 登出方法
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    userStore.logout()
+    router.push('/login')
+    ElMessage.success('已退出登录')
+  } catch {
+    // 用户取消操作
+  }
+}
+
 // 初始化页面
 initPage()
 </script>
@@ -2516,10 +2540,28 @@ initPage()
 }
 
 .mobile-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 24px;
   color: white;
-  padding: 8px 0;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.mobile-header h1 {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-header .el-button {
+  flex-shrink: 0;
 }
 
 .app-title {
