@@ -801,7 +801,7 @@
             <template #tip>
               <div class="el-upload__tip">
                 仅支持.xlsx格式的Excel文件<br/>
-                文件格式:第一列-问题,第二列-答案,第三列-图片URL(可选)
+                文件格式:第一列-问题,第二列-答案,第三列-问题图片URL(可选),第四列-答案图片URL(可选)
               </div>
             </template>
           </el-upload>
@@ -2164,7 +2164,7 @@ const playQuestionVoice = async () => {
     
     const textToPlay = currentCard.value.question
     const response = await questionBankApi.textToSpeech(textToPlay)
-    const audioData = response.data
+    const audioData = response.audioData
     
     if (audioData) {
       // 创建音频元素并播放
@@ -2211,7 +2211,7 @@ const playAnswerVoice = async () => {
     
     const textToPlay = currentCard.value.answer
     const response = await questionBankApi.textToSpeech(textToPlay)
-    const audioData = response.data
+    const audioData = response.audioData
     
     if (audioData) {
       // 创建音频元素并播放

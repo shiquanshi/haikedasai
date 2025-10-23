@@ -378,23 +378,23 @@ public class VolcEngineService {
                     JsonNode cardsArray = objectMapper.readTree(cardsJson);
                     
                     if (cardsArray.isArray()) {
-                        List<Map<String, Object>> updatedCards = new ArrayList<>();
                         int totalCards = cardsArray.size();
                         int currentCard = 0;
                         
-                        // 🚀 优化：使用CompletableFuture并行生成图片
-                        List<CompletableFuture<Map<String, Object>>> futures = new ArrayList<>();
+                        // 🚀 优化：使用CompletableFuture并行生成图片，每完成一张立即发送
                         long parallelStartTime = System.currentTimeMillis();
                         log.info("⏱️ [计时] 开始并行处理{}张卡片的图片", totalCards);
+                        
+                        // 收集所有异步任务
+                        List<CompletableFuture<Void>> allTasks = new ArrayList<>();
                         
                         for (JsonNode cardNode : cardsArray) {
                             final int cardIndex = ++currentCard;
                             
-                            // 为每张卡片创建异步任务
-                            CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
+                            // 为每张卡片创建异步任务，完成后立即发送
+                            CompletableFuture<Void> cardTask = CompletableFuture.runAsync(() -> {
                                 try {
                                     log.info("📝 处理第 {}/{} 张卡片", cardIndex, totalCards);
-                                    Map<String, Object> card = new HashMap<>();
                                     
                                     // 安全获取字段值
                                     JsonNode questionNode = cardNode.get("question");
@@ -402,19 +402,11 @@ public class VolcEngineService {
                                     
                                     if (questionNode == null || answerNode == null) {
                                         log.warn("卡片字段缺失，跳过: {}", cardNode.toString());
-                                        return null;
+                                        return;
                                     }
                                     
                                     String question = questionNode.asText();
                                     String answer = answerNode.asText();
-                                    card.put("question", question);
-                                    card.put("answer", answer);
-                                    
-                                    // 保留原始ID（如果存在）
-                                    JsonNode idNode = cardNode.get("id");
-                                    if (idNode != null) {
-                                        card.put("id", idNode.asLong());
-                                    }
                                     
                                     // 并行生成问题和答案的图片
                                     CompletableFuture<String> questionImageFuture = CompletableFuture.supplyAsync(() -> {
@@ -473,70 +465,49 @@ public class VolcEngineService {
                                         log.warn("答案图片生成超时或失败（180秒），跳过", e);
                                     }
                                     
-                                    card.put("questionImage", questionImage);
-                                    card.put("answerImage", answerImage);
-                                    
                                     log.info("✅ 第 {}/{} 张卡片图片处理完成", cardIndex, totalCards);
                                     
-                                    // 检查连接是否仍然活跃
-                                    if (!connectionActive.get()) {
-                                        log.warn("连接已断开，停止处理卡片图片");
-                                        return null;
+                                    // 立即发送这张卡片的图片数据
+                                    try {
+                                        Map<String, Object> cardImageData = new HashMap<>();
+                                        cardImageData.put("question", question);
+                                        cardImageData.put("answer", answer);
+                                        cardImageData.put("questionImage", questionImage);
+                                        cardImageData.put("answerImage", answerImage);
+                                        cardImageData.put("index", cardIndex - 1); // 索引从0开始
+                                        
+                                        // 保留原始ID（如果存在）
+                                        JsonNode idNode = cardNode.get("id");
+                                        if (idNode != null) {
+                                            cardImageData.put("id", idNode.asLong());
+                                        }
+                                        
+                                        String cardJson = objectMapper.writeValueAsString(cardImageData);
+                                        emitter.send(SseEmitter.event().name("image_single").data(cardJson));
+                                        log.info("📤 已发送第 {}/{} 张卡片的图片数据", cardIndex, totalCards);
+                                    } catch (IOException e) {
+                                        log.error("发送卡片图片数据失败", e);
                                     }
                                     
-                                    // 发送进度通知
-                                    try {
-                                        emitter.send(SseEmitter.event().name("status")
-                                            .data(String.format("第 %d/%d 张卡片图片生成完成", cardIndex, totalCards)));
-                                    } catch (IOException e) {
-                                        log.error("发送进度通知失败", e);
-                                    }
-
-                                    return card;
                                 } catch (Exception e) {
                                     log.error("处理卡片异常", e);
-                                    return null;
                                 }
                             }, sseTaskExecutor);
-
-                            futures.add(future);
+                            
+                            allTasks.add(cardTask);
                         }
-
-                        // 等待所有卡片处理完成，但设置超时机制(10分钟，适应多卡片并行生成）
-                        try {
-                            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                                .orTimeout(10, TimeUnit.MINUTES)
-                                .join();
-                        } catch (CompletionException e) {
-                            log.error("图片生成整体超时（10分钟）或失败", e);
-                            // 即使超时也继续处理已完成的任务，而不是完全失败
-                        }
-                        long parallelEndTime = System.currentTimeMillis();
-                        log.info("⏱️ [计时] 所有卡片图片并行生成完成 - 耗时:{}ms", parallelEndTime - parallelStartTime);
-
-                        // 收集结果
-                        for (CompletableFuture<Map<String, Object>> future : futures) {
-                            Map<String, Object> card = future.join();
-                            if (card != null) {
-                                updatedCards.add(card);
-                            }
-                        }
-
-                        // 检查连接是否仍然活跃
-                        if (!connectionActive.get()) {
-                            log.warn("连接已断开，停止发送图片数据");
-                            return accumulatedContent.toString();
-                        }
-
-                        // 发送更新后的完整JSON（包含图片URL）
-                        String updatedJson = objectMapper.writeValueAsString(updatedCards);
-                        emitter.send(SseEmitter.event().name("images").data(updatedJson));
                         
-                        // 🔑 关键修改：返回包含图片URL的完整JSON，而不是原始JSON
-                        long imageEndTime = System.currentTimeMillis();
-                        log.info("⏱️ [计时] 图片生成任务完成 - 总耗时:{}ms", imageEndTime - imageStartTime);
-                        log.info("⏱️ [计时总结] 整个卡片生成流程完成 - 总耗时:{}ms", imageEndTime - startTime);
-                        return updatedJson;
+                        // 等待所有图片生成任务完成
+                        try {
+                            CompletableFuture.allOf(allTasks.toArray(new CompletableFuture[0])).join();
+                            log.info("✅ 所有卡片图片生成完成");
+                        } catch (Exception e) {
+                            log.error("等待图片生成任务时发生异常", e);
+                        }
+                        
+                        long parallelEndTime = System.currentTimeMillis();
+                        log.info("⏱️ [计时] 所有卡片图片任务已完成 - 总耗时:{}ms", parallelEndTime - parallelStartTime);
+                        log.info("⏱️ [计时总结] 整个卡片生成流程完成 - 总耗时:{}ms", parallelEndTime - startTime);
                     }
                 } catch (Exception e) {
                     log.error("生成图片描述失败", e);

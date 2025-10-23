@@ -17,7 +17,7 @@ export default defineConfig({
         changeOrigin: true
       },
       '/minio': {
-        target: 'http://113.45.203.178:9150',
+        target: 'https://nohavebug.preview.huawei-zeabur.cn',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/minio/, '')
       }

@@ -543,8 +543,8 @@
                     </div>
                     <div class="card-bottom-controls">
                       <el-button 
-                        @click.stop="playAnswer(currentCardIndex)" 
-                        :loading="isPlayingAnswer && playingAnswerIndex === currentCardIndex"
+                        @click.stop="playQuestion(currentCardIndex)" 
+                        :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
                         circle
                         size="small"
                         class="play-button"
@@ -575,14 +575,14 @@
                     </div>
                     <div class="card-bottom-controls">
                       <el-button 
-                        @click.stop="playQuestion(currentCardIndex)" 
-                        :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
+                        @click.stop="playAnswer(currentCardIndex)" 
+                        :loading="isPlayingAnswer && playingAnswerIndex === currentCardIndex"
                         circle
                         size="small"
                         class="play-button"
                         title="播放答案"
                       >
-                        <template #icon v-if="!(isPlayingQuestion && playingQuestionIndex === currentCardIndex)">
+                        <template #icon v-if="!(isPlayingAnswer && playingAnswerIndex === currentCardIndex)">
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                           </svg>
@@ -841,7 +841,7 @@
             <template #tip>
               <div class="el-upload__tip">
                 仅支持.xlsx格式的Excel文件<br/>
-                文件格式:第一列-问题,第二列-答案,第三列-图片URL(可选)
+                文件格式:第一列-问题,第二列-答案,第三列-问题图片URL(可选),第四列-答案图片URL(可选)
               </div>
             </template>
           </el-upload>
@@ -2168,6 +2168,30 @@ const handleDeleteCurrentCard = () => {
   ElMessage.warning('在田字格模式下，请先选择卡片再进行删除操作')
 }
 
+// base64转Blob函数
+const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const byteCharacters = atob(base64)
+  const byteNumbers = new Array(byteCharacters.length)
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  }
+  const byteArray = new Uint8Array(byteNumbers)
+  return new Blob([byteArray], { type: mimeType })
+}
+
+// 停止音频播放
+const stopAudio = () => {
+  if (audioElement) {
+    audioElement.pause()
+    audioElement.currentTime = 0
+    audioElement = null
+  }
+  isPlayingQuestion.value = false
+  isPlayingAnswer.value = false
+  playingQuestionIndex.value = -1
+  playingAnswerIndex.value = -1
+}
+
 // 播放问题语音
 const playQuestion = async (index: number) => {
   // 如果没有卡片，直接返回
@@ -2182,44 +2206,45 @@ const playQuestion = async (index: number) => {
     return
   }
   
+  // 如果正在播放，则停止
+  if (isPlayingQuestion.value && playingQuestionIndex.value === index) {
+    stopAudio()
+    return
+  }
+  
   try {
     // 设置播放状态
     isPlayingQuestion.value = true
     playingQuestionIndex.value = index
     
-    // 使用浏览器的语音合成API
-    if ('speechSynthesis' in window) {
-      // 停止任何正在播放的语音
-      window.speechSynthesis.cancel()
+    // 调用后端TTS API
+    const response = await questionBankApi.textToSpeech(textToPlay)
+    const audioData = response.audioData
+    
+    if (audioData) {
+      // 创建音频元素并播放
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioUrl = URL.createObjectURL(audioBlob)
       
-      // 创建语音实例
-      const utterance = new SpeechSynthesisUtterance(textToPlay)
+      stopAudio() // 停止之前的播放
+      audioElement = new Audio(audioUrl)
       
-      // 设置语音属性
-      utterance.lang = 'zh-CN' // 使用中文语音
-      utterance.rate = 1.0 // 语速
-      utterance.pitch = 1.0 // 音高
-      
-      // 播放结束时的回调
-      utterance.onend = () => {
+      audioElement.onended = () => {
         isPlayingQuestion.value = false
         playingQuestionIndex.value = -1
+        URL.revokeObjectURL(audioUrl)
       }
       
-      // 播放出错时的回调
-      utterance.onerror = () => {
+      audioElement.onerror = () => {
         isPlayingQuestion.value = false
         playingQuestionIndex.value = -1
-        ElMessage.error('播放失败')
+        ElMessage.error('音频播放失败')
+        URL.revokeObjectURL(audioUrl)
       }
       
-      // 开始播放
-      window.speechSynthesis.speak(utterance)
+      await audioElement.play()
     } else {
-      // 浏览器不支持语音合成
-      ElMessage.error('您的浏览器不支持语音播放功能')
-      isPlayingQuestion.value = false
-      playingQuestionIndex.value = -1
+      throw new Error('获取音频数据失败')
     }
   } catch (error) {
     console.error('播放语音失败:', error)
@@ -2243,44 +2268,45 @@ const playAnswer = async (index: number) => {
     return
   }
   
+  // 如果正在播放，则停止
+  if (isPlayingAnswer.value && playingAnswerIndex.value === index) {
+    stopAudio()
+    return
+  }
+  
   try {
     // 设置播放状态
     isPlayingAnswer.value = true
     playingAnswerIndex.value = index
     
-    // 使用浏览器的语音合成API
-    if ('speechSynthesis' in window) {
-      // 停止任何正在播放的语音
-      window.speechSynthesis.cancel()
+    // 调用后端TTS API
+    const response = await questionBankApi.textToSpeech(textToPlay)
+    const audioData = response.audioData
+    
+    if (audioData) {
+      // 创建音频元素并播放
+      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
+      const audioUrl = URL.createObjectURL(audioBlob)
       
-      // 创建语音实例
-      const utterance = new SpeechSynthesisUtterance(textToPlay)
+      stopAudio() // 停止之前的播放
+      audioElement = new Audio(audioUrl)
       
-      // 设置语音属性
-      utterance.lang = 'zh-CN' // 使用中文语音
-      utterance.rate = 1.0 // 语速
-      utterance.pitch = 1.0 // 音高
-      
-      // 播放结束时的回调
-      utterance.onend = () => {
+      audioElement.onended = () => {
         isPlayingAnswer.value = false
         playingAnswerIndex.value = -1
+        URL.revokeObjectURL(audioUrl)
       }
       
-      // 播放出错时的回调
-      utterance.onerror = () => {
+      audioElement.onerror = () => {
         isPlayingAnswer.value = false
         playingAnswerIndex.value = -1
-        ElMessage.error('播放失败')
+        ElMessage.error('音频播放失败')
+        URL.revokeObjectURL(audioUrl)
       }
       
-      // 开始播放
-      window.speechSynthesis.speak(utterance)
+      await audioElement.play()
     } else {
-      // 浏览器不支持语音合成
-      ElMessage.error('您的浏览器不支持语音播放功能')
-      isPlayingAnswer.value = false
-      playingAnswerIndex.value = -1
+      throw new Error('获取音频数据失败')
     }
   } catch (error) {
     console.error('播放语音失败:', error)
@@ -2540,25 +2566,6 @@ const handleSubmitEditCard = async () => {
     console.error('更新卡片失败:', error)
     ElMessage.error(error.message || '更新卡片失败，请重试')
   }
-}
-
-const stopAudio = () => {
-  if (audioElement) {
-    audioElement.pause()
-    audioElement.currentTime = 0
-    audioElement = null
-  }
-  isPlayingQuestion.value = false
-}
-
-const base64ToBlob = (base64: string, mimeType: string): Blob => {
-  const byteCharacters = atob(base64)
-  const byteNumbers = new Array(byteCharacters.length)
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i)
-  }
-  const byteArray = new Uint8Array(byteNumbers)
-  return new Blob([byteArray], { type: mimeType })
 }
 
 // 退出登录
