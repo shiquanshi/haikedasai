@@ -1,5 +1,42 @@
 <template>
   <div class="home-container">
+    <!-- 顶部导航栏 -->
+    <div class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1 class="app-title">智能闪卡生成系统</h1>
+          <span class="app-subtitle">AI-Powered Flashcard Generator</span>
+        </div>
+        <div class="header-right">
+          <div v-if="userStore.isLoggedIn" class="user-info-section">
+            <el-avatar :size="40" class="user-avatar">
+              <el-icon><User /></el-icon>
+            </el-avatar>
+            <span class="username-display">{{ userStore.username }}</span>
+          </div>
+          <el-button
+            v-if="userStore.isLoggedIn"
+            type="danger"
+            :icon="SwitchButton"
+            @click="handleLogout"
+            class="logout-button"
+            round
+          >
+            退出登录
+          </el-button>
+          <el-button
+            v-else
+            type="primary"
+            @click="$router.push('/login')"
+            class="login-button"
+            round
+          >
+            登录
+          </el-button>
+        </div>
+      </div>
+    </div>
+    
     <!-- 主要内容区 -->
     <div class="main-content">
       <!-- 左侧：创建闪卡表单 -->
@@ -1082,7 +1119,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled } from '@element-plus/icons-vue'
+import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
 import { useUserStore } from '../stores/user'
 import { formatDate } from '../utils/date'
@@ -2458,9 +2495,23 @@ const base64ToBlob = (base64: string, mimeType: string): Blob => {
 }
 
 // 退出登录
-const handleLogout = () => {
-  userStore.logout()
-  router.push('/login')
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗?',
+      '确认退出',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    userStore.logout()
+    router.push('/login')
+    ElMessage.success('已退出登录')
+  } catch {
+    // 用户取消操作
+  }
 }
 
 // 监听搜索文本变化(防抖)
@@ -2595,13 +2646,119 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
+/* 顶部导航栏样式 */
+.app-header {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.header-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.app-title {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.app-subtitle {
+  font-size: 14px;
+  color: #666;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-info-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px;
+  background: rgba(79, 172, 254, 0.1);
+  border-radius: 25px;
+  transition: all 0.3s ease;
+}
+
+.user-info-section:hover {
+  background: rgba(79, 172, 254, 0.15);
+  transform: translateY(-2px);
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.username-display {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.logout-button {
+  height: 40px;
+  padding: 0 24px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(245, 108, 108, 0.3);
+  transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 108, 108, 0.4);
+}
+
+.login-button {
+  height: 40px;
+  padding: 0 24px;
+  font-size: 15px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
+
 .home-container {
   width: 100%;
   min-height: 100vh;
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   position: relative;
   overflow: hidden;
@@ -2617,6 +2774,7 @@ onMounted(() => {
   z-index: 1;
   flex-direction: row;
   margin: 0 auto;
+  padding: 40px 40px 20px 40px;
 }
 
 .content-section {
