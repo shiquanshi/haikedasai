@@ -2924,11 +2924,11 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 自适应高度且不遮挡底部导航 */
+/* 卡片容器样式 - 固定高度并确保内容不被底部元素遮挡 */
 .card-container {
   width: 100%;
   min-height: 350px;
-  max-height: calc(100vh - 200px); /* 确保卡片容器不会超出可视区域过多 */
+  max-height: calc(100vh - 180px); /* 为底部按钮和进度条留出空间 */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -2948,11 +2948,11 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 完全自适应高度，确保内容不被截断 */
+/* 翻转卡片样式 - 确保完整显示并与底部元素正确交互 */
 .flip-card {
   width: 100%;
   min-height: 350px;
-  max-height: none; /* 移除最大高度限制，让内容完全显示 */
+  max-height: calc(100vh - 180px); /* 为底部按钮和进度条留出空间 */
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -3075,14 +3075,14 @@ initPage()
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 卡片内容样式 - 优化内边距和滚动，确保内容完全显示 */
+/* 卡片内容样式 - 确保内容可滚动且不被底部元素遮挡 */
 .card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start; /* 改为从上到下排列，优先显示图片 */
-  padding: 25px 16px 20px; /* 调整padding，为内容留出更多空间 */
+  padding: 25px 16px 80px; /* 增加底部padding，为固定的底部元素留出空间 */
   overflow-y: auto;
   width: 90%;
   margin: 0 auto;
@@ -3208,8 +3208,11 @@ initPage()
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* 卡片底部 - 自适应高度 */
+/* 卡片底部 - 固定在卡片底部 */
 .card-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
   padding: 12px 16px;
   display: flex;
   justify-content: space-between;
@@ -3218,6 +3221,7 @@ initPage()
   backdrop-filter: blur(10px);
   width: 100%;
   box-sizing: border-box;
+  z-index: 10;
 }
 
 /* 提示文本 - 减小尺寸 */
@@ -3259,13 +3263,16 @@ initPage()
   transform: translateY(0);
 }
 
-/* 卡片进度指示器 */
+/* 卡片进度指示器 - 固定在底部 */
 .card-progress-bar {
   display: flex;
   justify-content: center;
-  padding: 16px 0;
-  background: white;
+  padding: 12px 0;
+  background: rgba(255, 255, 255, 0.95);
   border-top: 1px solid #f0f0f0;
+  position: sticky;
+  bottom: 70px; /* 在导航按钮上方 */
+  z-index: 20;
 }
 
 .progress-dots {
@@ -3298,17 +3305,20 @@ initPage()
   transform: scale(1.2);
 }
 
-/* 卡片导航按钮区域 - 移除白色背景，与卡片更好融合 */
+/* 卡片导航按钮区域 - 固定在最底部 */
 .card-actions {
   display: flex;
   justify-content: center;
   gap: 10px;
   padding: 16px;
-  background: transparent;
-  border-top: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid #f0f0f0;
   box-sizing: border-box;
-  width: 90%;
-  margin: 0 auto;
+  width: 100%;
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* 卡片容器 - 移除白色背景，与卡片内容更好融合 */
