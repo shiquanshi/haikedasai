@@ -3104,8 +3104,9 @@ onMounted(() => {
   perspective: 1000px;
   margin-bottom: 30px;
   min-height: 600px;
+  height: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
 }
@@ -3211,7 +3212,7 @@ onMounted(() => {
   font-family: 'Courier New', monospace;
 }
 
-/* 卡片容器 - 外层固定高度 */
+/* 卡片容器 - 固定最小高度 */
 .flip-card {
   position: relative;
   width: 100%;
@@ -3249,7 +3250,8 @@ onMounted(() => {
   backface-visibility: hidden;
   border-radius: 30px;
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .flip-card-front {
@@ -3266,10 +3268,11 @@ onMounted(() => {
 /* 新的卡片内容包装器 */
 .card-content-wrapper {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   padding: 30px;
   box-sizing: border-box;
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 标签区域 */
@@ -3288,10 +3291,11 @@ onMounted(() => {
   justify-content: center;
 }
 
-/* 文本区域容器 - 固定高度 */
+/* 文本区域容器 - 自适应高度 */
 .card-text-section {
   width: 100%;
-  height: 150px;
+  min-height: 100px;
+  max-height: 250px;
   margin-bottom: 20px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 15px;
@@ -3334,11 +3338,12 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.6);
 }
 
-/* 图片容器 - 固定高度 */
+/* 图片容器 - 自适应高度 */
 .card-image-section {
   width: 100%;
   max-width: 520px;
-  height: 200px;
+  min-height: 200px;
+  max-height: 500px;
   margin: 0 auto 20px;
   padding: 8px;
   box-sizing: border-box;
@@ -3348,23 +3353,22 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden;
 }
 
 .card-img {
   max-width: 100%;
-  max-height: 400px; /* 增加最大高度，确保图片能够完整显示 */
+  max-height: 480px;
   width: auto;
   height: auto;
   border-radius: 10px;
-  object-fit: contain; /* 保持图片比例，确保完全显示 */
+  object-fit: contain;
 }
 
 .image-slot {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 200px; /* 增加占位区域高度 */
+  min-height: 200px;
   color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
@@ -3383,7 +3387,8 @@ onMounted(() => {
 }
 
 .card-actions {
-  margin-top: 32px;
+  margin-top: auto;
+  padding-top: 20px;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -3431,8 +3436,10 @@ onMounted(() => {
 .flip-hint {
   font-size: 11px;
   opacity: 0.7;
-  margin-top: 10px;
+  margin-top: auto;
+  padding-top: 10px;
   font-weight: 400;
+  text-align: center;
 }
 
 /* 单卡片容器样式 */

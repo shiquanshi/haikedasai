@@ -518,7 +518,7 @@
               @click="backToForm"
               class="back-button"
             >
-              放回
+              返回
             </el-button>
           </div>
         </div>
@@ -1273,6 +1273,9 @@ const generateCards = async () => {
   cards.value = [] // 清空旧卡片
   currentCardIndex.value = 0 // 重置卡片索引
   isFlipped.value = false // 重置翻转状态
+  currentBankType.value = '' // 重置题库类型，允许显示添加题库和编辑按钮
+  currentBankId.value = null // 重置题库ID
+  currentBankName.value = '' // 重置题库名称
   
   // 启动加载文本打字机效果
   loadingText.value = '正在生成中，请稍候...'
