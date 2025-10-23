@@ -434,7 +434,7 @@ public class VolcEngineService {
                                     String questionImage = null;
                                     String answerImage = null;
                                     try {
-                                        questionImage = questionImageFuture.orTimeout(30, TimeUnit.SECONDS).join();
+                                        questionImage = questionImageFuture.orTimeout(2, TimeUnit.MINUTES).join();
                                     } catch (CompletionException e) {
                                         log.warn("问题图片生成超时或失败，跳过", e);
                                     }
