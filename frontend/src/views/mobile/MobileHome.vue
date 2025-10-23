@@ -605,46 +605,32 @@
           <div v-else class="no-cards">
             <el-empty description="暂无卡片内容" />
           </div>
-           
-          <!-- 卡片进度指示器 -->
-          <div class="card-progress-bar" v-if="totalCards > 0">
-            <div class="progress-dots">
-              <span 
-                v-for="(card, index) in cards" 
-                :key="index"
-                class="progress-dot"
-                :class="{ 'active': index === currentCardIndex }"
-                @click="goToCard(index)"
-              ></span>
-            </div>
-          </div>
-          
-          <!-- 卡片导航按钮 - 已合并到卡片容器中 -->
-          <div class="card-actions">
-            <el-button 
-              @click="prevCard"
-              :disabled="currentCardIndex === 0"
-              class="nav-button"
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;">
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-              </svg>
-              上一张
-            </el-button>
-            <el-button 
-              @click="nextCard"
-              :disabled="currentCardIndex === totalCards - 1"
-              class="nav-button"
-            >
-              下一张
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left: 4px;">
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-              </svg>
-            </el-button>
-          </div>
         </div>
 
+      </div>
 
+      <!-- 卡片导航按钮 - 与卡片区域同级 -->
+      <div v-if="showCards" class="card-actions">
+        <el-button 
+          @click="prevCard"
+          :disabled="currentCardIndex === 0"
+          class="nav-button"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+          </svg>
+          上一张
+        </el-button>
+        <el-button 
+          @click="nextCard"
+          :disabled="currentCardIndex === totalCards - 1"
+          class="nav-button"
+        >
+          下一张
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left: 4px;">
+            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+          </svg>
+        </el-button>
       </div>
     </div>
 
@@ -2832,7 +2818,7 @@ initPage()
 /* 卡片标题样式 */
 .cards-title {
   width: 100%;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   text-align: center;
   padding: 0 10px;
 }
@@ -2846,6 +2832,7 @@ initPage()
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 /* 卡片头部样式 - 调整为显示进度和按钮 */
@@ -2924,18 +2911,23 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 固定高度并确保内容不被底部元素遮挡 */
+/* 卡片容器样式 - 扩展到底部 */
 .card-container {
   width: 100%;
   min-height: 350px;
-  max-height: calc(100vh - 180px); /* 为底部按钮和进度条留出空间 */
+  max-height: none; /* 移除高度限制 */
   display: flex;
   flex-direction: column;
   position: relative;
-  margin-bottom: 10px;
-  margin-top: 8px;
+  margin: 8px auto 10px;
   perspective: 1000px;
   align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 16px 20px;
 }
 
 
@@ -2948,11 +2940,11 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 确保完整显示并与底部元素正确交互 */
+/* 翻转卡片样式 - 扩展到更大高度 */
 .flip-card {
   width: 100%;
-  min-height: 350px;
-  max-height: calc(100vh - 180px); /* 为底部按钮和进度条留出空间 */
+  min-height: 450px;
+  max-height: calc(100vh - 100px); /* 减少顶部预留,让卡片更大 */
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -3082,7 +3074,7 @@ initPage()
   flex-direction: column;
   align-items: center;
   justify-content: flex-start; /* 改为从上到下排列，优先显示图片 */
-  padding: 25px 16px 80px; /* 增加底部padding，为固定的底部元素留出空间 */
+  padding: 25px 16px 20px; /* 减小底部padding，缩短内容区域 */
   overflow-y: auto;
   width: 90%;
   margin: 0 auto;
@@ -3123,16 +3115,16 @@ initPage()
   margin-bottom: 10px;
 }
 
-/* 思考过程样式 - 调整适应缩小的卡片 */
+/* 思考过程样式 - 扩大显示区域 */
 .thinking-process {
   width: 100%;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 14px;
+  padding: 20px;
   text-align: left;
-  max-height: 180px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -3208,17 +3200,16 @@ initPage()
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* 卡片底部 - 固定在卡片底部 */
+/* 卡片底部 - 固定在卡片底部，移除背景遮罩 */
 .card-footer {
   position: absolute;
-  bottom: 0;
+  bottom: -15px;
   left: 0;
   padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  background: transparent;
   width: 100%;
   box-sizing: border-box;
   z-index: 10;
@@ -3263,73 +3254,26 @@ initPage()
   transform: translateY(0);
 }
 
-/* 卡片进度指示器 - 固定在底部 */
-.card-progress-bar {
-  display: flex;
-  justify-content: center;
-  padding: 12px 0;
-  background: rgba(255, 255, 255, 0.95);
-  border-top: 1px solid #f0f0f0;
-  position: sticky;
-  bottom: 70px; /* 在导航按钮上方 */
-  z-index: 20;
-}
 
-.progress-dots {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 
-.progress-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e0e0e0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.progress-dot.active {
-  width: 24px;
-  border-radius: 4px;
-  background: #409eff;
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.4);
-}
-
-.progress-dot:hover:not(.active) {
-  background: #c0c0c0;
-  transform: scale(1.2);
-}
-
-/* 卡片导航按钮区域 - 固定在最底部 */
+/* 卡片导航按钮区域 - 自然排列不遮盖 */
 .card-actions {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.95);
-  border-top: 1px solid #f0f0f0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  background: transparent;
+  border-top: none;
   box-sizing: border-box;
-  width: 100%;
-  position: sticky;
-  bottom: 0;
-  z-index: 30;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  width: 95%;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: none;
 }
 
-/* 卡片容器 - 移除白色背景，与卡片内容更好融合 */
-.card-container {
-  border-radius: 24px;
-  overflow: hidden;
-  background: transparent;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin: 0 16px;
-  position: relative;
-}
+
 
 /* 调整卡片展示区域底部边距 */
 .cards-section {
@@ -3345,14 +3289,14 @@ initPage()
 
 .nav-button {
   flex: 1;
-  padding: 14px 0 !important;
-  font-size: 14px !important;
+  padding: 8px 0 !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
-  border-radius: 16px !important;
+  border-radius: 10px !important;
   border: none !important;
   color: white !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
   height: auto !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
 }
