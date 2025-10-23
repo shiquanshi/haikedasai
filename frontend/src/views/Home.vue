@@ -1,28 +1,6 @@
 <template>
   <div class="home-container">
-    <!-- 顶部波浪装饰 -->
-    <div class="wave-decoration"></div>
-    
-    <!-- 头部区域 -->
-    <div class="header">
-      <div class="header-actions">
-        <el-button 
-          v-if="!userStore.isLoggedIn"
-          type="primary" 
-          @click="$router.push('/login')"
-          size="large"
-          round
-        >
-          登录
-        </el-button>
-        <div class="user-info" v-if="userStore.isLoggedIn">
-          <span class="username">{{ userStore.userInfo?.username }}</span>
-          <el-button size="small" @click="handleLogout" type="danger" round>退出</el-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 主要内容区，包含两侧 -->
+    <!-- 主要内容区 -->
     <div class="main-content">
       <!-- 左侧：创建闪卡表单 -->
       <div class="content-section left-section" v-if="!showCards">
@@ -2608,7 +2586,7 @@ onMounted(() => {
 .home-container {
   width: 100%;
   min-height: 100vh;
-  padding: 40px 20px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2620,11 +2598,12 @@ onMounted(() => {
 /* 主内容区域布局 */
 .main-content {
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   display: flex;
-  gap: 40px;
+  gap: 20px;
   position: relative;
   z-index: 1;
+  flex-direction: column;
 }
 
 .content-section {
@@ -2633,71 +2612,17 @@ onMounted(() => {
 
 /* 左侧区域样式 */
 .left-section {
-  flex: 1.5;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* 右侧区域样式 */
 .right-section {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-/* 波浪装饰 */
-.wave-decoration {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 40px;
-  background: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1' gradientTransform='rotate(-45 0.5 0.5)'%3E%3Cstop offset='0' stop-color='%23ffffff' stop-opacity='0.1'/%3E%3Cstop offset='1' stop-color='%23ffffff' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23a)' d='M0 0h100v100H0z'/%3E%3C/svg%3E");
-  background-size: cover;
-  background-position: center;
+  max-width: 800px;
+  margin: 0 auto;
 }
-
-/* 头部样式 */
-.header {
-  text-align: center;
-  margin-bottom: 15px;
-  color: white;
-  position: relative;
-  z-index: 1;
-}
-
-
-
-.header h1 {
-  font-size: 48px;
-  margin-bottom: 16px;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  font-weight: 700;
-}
-
-.header p {
-  font-size: 20px;
-}
-
-.header-actions {
-  position: fixed;
-  top: 10px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 1000;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 8px 16px;
-  border-radius: 20px;
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
@@ -3008,8 +2933,9 @@ onMounted(() => {
 /* 卡片容器样式 */
 .card-container {
   perspective: 1000px;
-  margin-bottom: 50px;
-  height: 900px;
+  margin-bottom: 30px;
+  height: 80vh;
+  min-height: 600px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3170,21 +3096,20 @@ onMounted(() => {
 }
 
 .card-text {
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: clamp(18px, 4vw, 36px);
+  line-height: 1.6;
   margin-bottom: 10px;
   font-weight: 500;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  overflow-y: auto;
-  padding: 15px 10px;
-  max-height: 150px;
+  padding: 20px;
   word-wrap: break-word;
   word-break: normal;
   white-space: normal;
   overflow-wrap: break-word;
   hyphens: auto;
+  flex: 1;
 }
 
 .card-image {

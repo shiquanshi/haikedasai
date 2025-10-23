@@ -1708,10 +1708,12 @@ const loadUserBanks = async () => {
   try {
     const response = await questionBankApi.getUserCustomBanks(1, 1000)
     if (response.code === 200) {
-      userBanks.value = response.data
+      // 修复：正确处理API返回的数据结构，与PC端保持一致
+      userBanks.value = response.data?.data || []
     }
   } catch (error) {
     console.error('加载用户题库列表失败:', error)
+    ElMessage.error('加载用户题库失败')
   }
 }
 
@@ -2510,14 +2512,14 @@ initPage()
 
 .generate-button {
   width: 100%;
-  padding: 14px 0;
-  font-size: 16px;
+  padding: 12px 0;
+  font-size: 14px;
   font-weight: bold;
   border-radius: 8px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3);
 }
 
 /* 题库模块样式 */
@@ -2692,18 +2694,18 @@ initPage()
   padding: 0;
 }
 
-/* 功能按钮区域 */
+/* 功能按钮区域 - 缩小按钮和间距 */
 .bank-functions {
   display: flex;
-  gap: 8px;
-  margin: 20px 0;
+  gap: 6px;
+  margin: 15px 0;
 }
 
 .function-button {
   flex: 1;
-  height: 38px;
-  font-size: 12px;
-  padding: 0 8px;
+  height: 34px;
+  font-size: 11px;
+  padding: 0 6px;
 }
 
 .feature-buttons {
@@ -2780,11 +2782,17 @@ initPage()
   width: 100%;
 }
 
-/* 卡片头部样式 - 左上角布局 */
+/* 卡片头部样式 - 排成一排并放大外部宽度 */
+.cards-section {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 5px;
+}
+
 .cards-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 20px;
   color: #333;
   width: 100%;
@@ -2792,26 +2800,31 @@ initPage()
 
 .header-left {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: nowrap;
 }
 
 .cards-header h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: bold;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-progress {
   background: rgba(255, 255, 255, 0.9);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 
 .header-actions {
@@ -2821,14 +2834,14 @@ initPage()
 }
 
 .header-operation-button {
-  min-width: 40px;
-  height: 40px;
+  min-width: 34px;
+  height: 34px;
   padding: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
@@ -2842,8 +2855,8 @@ initPage()
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  padding: 8px 16px;
-  font-size: 14px;
+  padding: 6px 12px;
+  font-size: 12px;
   border-radius: 20px;
   color: #333;
   transition: all 0.3s ease;
@@ -2855,17 +2868,19 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 */
+/* 卡片容器样式 - 优化高度减少滑动并放大外部宽度 */
 .card-container {
   width: 100%;
-  min-height: 550px;
+  min-height: 480px;
+  max-height: 500px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  margin-bottom: 20px;
-  margin-top: 10px;
+  margin-bottom: 15px;
+  margin-top: 8px;
   perspective: 1000px;
+  padding: 0;
 }
 
 
@@ -2878,13 +2893,15 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 */
+/* 翻转卡片样式 - 适配高度调整 */
 .flip-card {
   width: 100%;
-  height: 550px;
+  height: 480px;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .flip-card:active {
@@ -2985,15 +3002,16 @@ initPage()
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 卡片内容样式 */
+/* 卡片内容样式 - 增加左右内边距 */
 .card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 40px 30px;
+  padding: 40px 20px 30px;
   overflow-y: auto;
+  width: 100%;
 }
 
 /* 加载状态内容 */
@@ -3049,25 +3067,30 @@ initPage()
   word-break: break-word;
 }
 
-/* 卡片文本 */
+/* 卡片文本 - 放宽宽度并增加文字边框 */
 .card-text {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.6;
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
   max-width: 100%;
-  max-height: 260px;
+  width: 100%;
+  max-height: 280px;
   overflow-y: auto;
-  padding: 0 8px;
+  padding: 0 16px;
   margin: 0 auto;
+  /* 增加文字边框 */
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.1);
 }
 
 /* 问题文本特别强调 */
 .question-text {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.7;
+  /* 增加问题文字边框 */
+  -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.15);
 }
 
 /* 自定义滚动条样式 */
@@ -3124,13 +3147,13 @@ initPage()
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   color: white !important;
-  font-size: 11px !important;
-  padding: 6px 14px !important;
+  font-size: 10px !important;
+  padding: 5px 12px !important;
   border-radius: 20px !important;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   transition: all 0.3s ease;
 }
 
@@ -3180,24 +3203,25 @@ initPage()
   transform: scale(1.2);
 }
 
-/* 底部按钮区域 */
+/* 底部按钮区域 - 缩小按钮和间距 */
 .card-actions {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 15px;
 }
 
 .nav-button {
   flex: 1;
-  padding: 14px 0 !important;
-  font-size: 15px !important;
+  padding: 12px 0 !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   border-radius: 16px !important;
   border: none !important;
   color: white !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
   height: auto !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
 }
