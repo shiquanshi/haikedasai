@@ -16,6 +16,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true
       },
+      '/share': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
       '/minio': {
         target: 'https://nohavebug.preview.huawei-zeabur.cn',
         changeOrigin: true,

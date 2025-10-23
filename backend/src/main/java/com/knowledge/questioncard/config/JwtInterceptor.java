@@ -18,6 +18,12 @@ public class JwtInterceptor implements HandlerInterceptor {
     
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 记录请求路径用于调试
+        String requestURI = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        String servletPath = request.getServletPath();
+        log.info("JwtInterceptor拦截到请求: {} {}, contextPath={}, servletPath={}", request.getMethod(), requestURI, contextPath, servletPath);
+        
         // OPTIONS请求直接放行
         if ("OPTIONS".equals(request.getMethod())) {
             return true;
@@ -49,6 +55,7 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
         
         // 未认证或token无效
+        log.warn("JWT验证失败 - 请求路径: {}, Token: {}", requestURI, token != null ? "存在但无效" : "不存在");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return false;
     }

@@ -21,5 +21,6 @@ public class QuestionBankDTO {
     private Integer favoriteCount; // 收藏次数
     private Long userId; // 创建者ID
     private String shareCode; // 分享码
+    private Boolean favorited; // 是否已收藏
     private List<QuestionCardDTO> cards; // 卡片列表
 }

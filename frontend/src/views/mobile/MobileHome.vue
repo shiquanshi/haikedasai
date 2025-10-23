@@ -3,14 +3,25 @@
     <!-- 头部区域 -->
     <div class="mobile-header">
       <h1 class="header-title">智能闪卡生成系统</h1>
-      <el-button 
-        type="danger" 
-        size="small" 
-        @click="handleLogout"
-        class="logout-button"
-      >
-        登出
-      </el-button>
+      <div class="header-actions">
+        <el-button 
+          type="primary" 
+          size="small" 
+          @click="$router.push('/share-plaza')"
+          class="plaza-button"
+        >
+          <el-icon><Share /></el-icon>
+          大厅
+        </el-button>
+        <el-button 
+          type="danger" 
+          size="small" 
+          @click="handleLogout"
+          class="logout-button"
+        >
+          登出
+        </el-button>
+      </div>
     </div>
 
     <!-- 主要内容区 -->
@@ -647,6 +658,12 @@
               <el-option label="永久有效" :value="null" />
             </el-select>
           </el-form-item>
+          <el-form-item label="分享到大厅">
+            <el-switch v-model="shareToPlaza" />
+            <div style="margin-top: 8px; color: #909399; font-size: 12px">
+              开启后,其他用户可以在分享大厅查看并访问此题库
+            </div>
+          </el-form-item>
         </el-form>
         <div style="text-align: center; margin-top: 20px">
           <el-button type="primary" @click="confirmGenerateShare" size="large">生成分享码</el-button>
@@ -1025,10 +1042,10 @@
       <el-form label-width="80px">
         <el-form-item label="分享码">
           <el-input
-            v-model="accessShareCode"
-            placeholder="请输入6位分享码"
-            maxlength="6"
-            size="large"
+             v-model="accessShareCode"
+             placeholder="请输入8位分享码"
+             maxlength="8"
+             size="large"
             clearable
           />
         </el-form-item>
@@ -1049,6 +1066,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { Search, VideoPlay, Star, Edit, Share, Delete, Upload, Plus, Document, Box, Loading, Clock, Download, DocumentCopy } from '@element-plus/icons-vue'
 import { questionBankApi } from '../../api/questionBank'
+import * as shareApi from '../../api/share'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 用户状态
@@ -1084,6 +1102,7 @@ const showShareDialog = ref(false)
 const shareCode = ref('')
 const shareExpireHours = ref<number | null>(null)
 const currentSharingBankId = ref<number | null>(null)
+const shareToPlaza = ref(false) // 是否分享到大厅
 const accessShareCode = ref('')
 
 // 创建题库相关
@@ -1605,6 +1624,7 @@ const handleShareBank = (bankId: number) => {
   currentSharingBankId.value = bankId
   shareCode.value = ''
   shareExpireHours.value = null
+  shareToPlaza.value = false // 重置分享到大厅选项
   showShareDialog.value = true
 }
 
@@ -1616,12 +1636,22 @@ const confirmGenerateShare = async () => {
   }
 
   try {
+    // 调用新的分享API
     const response = await questionBankApi.generateShareCode(
       currentSharingBankId.value,
-      shareExpireHours.value || undefined
+      shareToPlaza.value, // isPublic参数
+      undefined, // shareTitle
+      undefined  // shareDescription
     )
-    shareCode.value = response.data
-    ElMessage.success('分享码生成成功！')
+    
+    // 从返回的SharedBank对象中获取shareCode
+    shareCode.value = response.data.shareCode
+    
+    if (shareToPlaza.value) {
+      ElMessage.success('分享码生成成功，并已发布到分享大厅！')
+    } else {
+      ElMessage.success('分享码生成成功！')
+    }
   } catch (error: any) {
     console.error('生成分享码失败:', error)
     ElMessage.error(error.response?.data?.message || '生成分享码失败')
@@ -1839,8 +1869,8 @@ const accessSharedBank = async () => {
   }
   
   // 验证分享码格式
-  if (code.length < 6) {
-    ElMessage.warning('分享码格式不正确')
+  if (code.length !== 8) {
+    ElMessage.warning('请输入正确的8位分享码')
     return
   }
   
@@ -2485,6 +2515,29 @@ const initPage = async () => {
       loadSharedBanks()
     ])
   }
+  
+  // 处理从分享详情页跳转过来的情况
+  const route = router.currentRoute.value
+  const bankId = route.query.bankId
+  const cardId = route.query.cardId
+  
+  if (bankId && cardId) {
+    try {
+      // 加载指定题库的卡片
+      await viewBankCards(Number(bankId), '', '')
+      
+      // 等待卡片加载完成后定位到指定卡片
+      setTimeout(() => {
+        const targetIndex = cards.value.findIndex(card => card.id === Number(cardId))
+        if (targetIndex !== -1) {
+          currentCardIndex.value = targetIndex
+          ElMessage.success('已定位到指定卡片')
+        }
+      }, 500)
+    } catch (error) {
+      console.error('加载指定卡片失败:', error)
+    }
+  }
 }
 
 // 复制分享码到剪贴板
@@ -2577,8 +2630,24 @@ initPage()
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.mobile-header .header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .mobile-header .el-button {
   flex-shrink: 0;
+}
+
+.mobile-header .plaza-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .app-title {

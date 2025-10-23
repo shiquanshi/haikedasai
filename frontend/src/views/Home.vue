@@ -8,6 +8,16 @@
           <span class="app-subtitle">AI-Powered Flashcard Generator</span>
         </div>
         <div class="header-right">
+          <el-button
+            type="primary"
+            plain
+            @click="$router.push('/share-plaza')"
+            class="plaza-button"
+            round
+          >
+            <el-icon><Share /></el-icon>
+            分享大厅
+          </el-button>
           <div v-if="userStore.isLoggedIn" class="user-info-section">
             <el-avatar :size="40" class="user-avatar">
               <el-icon><User /></el-icon>
@@ -297,14 +307,29 @@
                     <span>{{ bank.name }}</span>
                     <div class="card-header-actions">
                       <el-tag size="small">{{ bank.cardCount }}张卡片</el-tag>
-                      <el-tag size="small" type="success">分享码: {{ bank.shareCode }}</el-tag>
+                      <el-button
+                        type="warning"
+                        size="small"
+                        :icon="Edit"
+                        @click.stop="showEditShareDialogFunc(bank)"
+                        circle
+                        title="编辑分享"
+                      />
                       <el-button
                         type="success"
                         size="small"
-                        :icon="Star"
+                        :icon="Share"
                         @click.stop="bank.shareCode && copyShareCodeDirect(bank.shareCode)"
                         circle
-                        title="复制分享码"
+                        title="点击复制分享码"
+                      />
+                      <el-button
+                        type="danger"
+                        size="small"
+                        :icon="Delete"
+                        @click.stop="handleDeleteShare(bank.id)"
+                        circle
+                        title="删除分享"
                       />
                     </div>
                   </div>
@@ -315,6 +340,8 @@
                 <div class="bank-meta">
                   <span class="bank-difficulty">{{ bank.difficulty }}</span>
                   <span class="bank-language">{{ bank.language }}</span>
+                  <span>分享码: {{ bank.shareCode }}</span>
+                  <span v-if="bank.expireAt">到期: {{ formatDate(new Date(bank.expireAt), 'YYYY-MM-DD HH:mm') }}</span>
                 </div>
               </el-card>
               
@@ -510,7 +537,9 @@
                 circle
                 class="nav-button nav-prev"
               >
-                <el-icon><ArrowLeft /></el-icon>
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
               </el-button>
               
               <!-- 卡片 -->
@@ -602,7 +631,9 @@
                 circle
                 class="nav-button nav-next"
               >
-                <el-icon><ArrowRight /></el-icon>
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
               </el-button>
             </div>
             
@@ -901,6 +932,60 @@
       </template>
     </el-dialog>
 
+    <!-- 编辑分享对话框 -->
+    <el-dialog
+      v-model="showEditShareDialog"
+      title="编辑分享信息"
+      width="500px"
+      @close="handleEditShareDialogClose"
+    >
+      <el-form :model="editShareForm" label-width="100px">
+        <el-form-item label="分享标题">
+          <el-input
+            v-model="editShareForm.shareTitle"
+            placeholder="请输入分享标题（可选）"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="分享描述">
+          <el-input
+            v-model="editShareForm.shareDescription"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入分享描述（可选）"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="分享到大厅">
+          <el-switch v-model="editShareForm.isPublic" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+            开启后其他用户可在大厅看到此分享
+          </span>
+        </el-form-item>
+        <el-form-item label="到期时间">
+          <el-date-picker
+            v-model="editShareForm.expireAt"
+            type="datetime"
+            placeholder="选择到期时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="x"
+            :disabled-date="(time) => time.getTime() < Date.now()"
+            :clearable="true"
+            style="width: 100%"
+          />
+          <div style="color: #999; font-size: 12px; margin-top: 4px">留空表示永久有效</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showEditShareDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleUpdateShare">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 新增卡片对话框 -->
     <el-dialog
       v-model="showAddCardDialog"
@@ -1060,6 +1145,12 @@
               <el-option label="永久有效" :value="null" />
             </el-select>
           </el-form-item>
+          <el-form-item label="分享到大厅">
+            <el-switch v-model="shareToPlaza" size="large" />
+            <div style="margin-top: 8px; color: #909399; font-size: 12px">
+              开启后,其他用户可以在分享大厅查看并访问此题库
+            </div>
+          </el-form-item>
         </el-form>
         <div style="text-align: center; margin-top: 20px">
           <el-button type="primary" @click="confirmGenerateShare" size="large">生成分享码</el-button>
@@ -1095,10 +1186,10 @@
       <el-form label-width="100px">
         <el-form-item label="分享码">
           <el-input
-            v-model="accessShareCode"
-            placeholder="请输入6位分享码"
-            maxlength="6"
-            size="large"
+             v-model="accessShareCode"
+             placeholder="请输入8位分享码"
+             maxlength="8"
+             size="large"
             clearable
           />
         </el-form-item>
@@ -1117,8 +1208,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton } from '@element-plus/icons-vue'
+import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton, Share } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
+import * as shareApi from '../api/share'
 import { useUserStore } from '../stores/user'
 import { formatDate } from '../utils/date'
 
@@ -1324,6 +1416,23 @@ const showAccessDialog = ref(false)
 const accessShareCode = ref('')
 const shareExpireHours = ref<number | null>(null) // 分享有效期（小时）
 const currentSharingBankId = ref<number | null>(null) // 当前正在分享的题库ID
+const shareToPlaza = ref(false) // 是否分享到大厅
+const showEditShareDialog = ref(false) // 显示编辑分享对话框
+const editShareForm = ref<{
+  id: number
+  bankId: number
+  shareTitle: string
+  shareDescription: string
+  isPublic: boolean
+  expireAt: string | null // 到期时间字段，可以为null
+}>({
+  id: 0,
+  bankId: 0,
+  shareTitle: '',
+  shareDescription: '',
+  isPublic: false,
+  expireAt: null // 初始化为null而不是空字符串
+})
 
 const currentCard = computed(() => cards.value[currentCardIndex.value] || { question: '', answer: '' })
 const _isCurrentCardSelected = computed({
@@ -1760,6 +1869,7 @@ const loadSharedBanks = async () => {
   try {
     isLoadingShared.value = true
     const response = await questionBankApi.getSharedRecords()
+    console.log('从后端获取的分享列表数据:', response.data)
     sharedBanks.value = response.data || []
   } catch (error) {
     console.error('加载分享记录失败:', error)
@@ -2603,7 +2713,77 @@ const handleShareBank = (bankId: number) => {
   currentSharingBankId.value = bankId
   shareCode.value = ''
   shareExpireHours.value = null // 默认永久有效
+  shareToPlaza.value = false // 默认不分享到大厅
   showShareDialog.value = true
+}
+
+// 删除分享
+const handleDeleteShare = async (shareId: number) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除此分享吗？删除后分享码将失效。',
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    await questionBankApi.cancelShare(shareId)
+    ElMessage.success('分享已删除')
+    
+    // 重新加载分享列表
+    await loadSharedBanks()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除分享失败:', error)
+      ElMessage.error('删除分享失败，请稍后重试')
+    }
+  }
+}
+
+// 显示编辑分享对话框
+const showEditShareDialogFunc = (share: any) => {
+  console.log('打开编辑对话框，分享数据:', share)
+  editShareForm.value = {
+    id: share.id,
+    bankId: share.bankId,
+    shareTitle: share.shareTitle || '',
+    shareDescription: share.shareDescription || '',
+    isPublic: share.isPublic,
+    expireAt: share.expireAt ? new Date(share.expireAt) : null // 后端返回时间戳，转为Date对象
+  }
+  console.log('编辑表单数据:', editShareForm.value)
+  showEditShareDialog.value = true
+}
+
+// 更新分享信息
+const handleUpdateShare = async () => {
+  try {
+    console.log('准备更新分享，表单数据:', editShareForm.value)
+    await questionBankApi.updateShare(editShareForm.value)
+    ElMessage.success('分享信息已更新')
+    showEditShareDialog.value = false
+    // 重新加载分享列表
+    await loadSharedBanks()
+  } catch (error) {
+    console.error('更新分享失败:', error)
+    ElMessage.error('更新分享失败，请稍后重试')
+  }
+}
+
+// 处理编辑分享对话框关闭
+const handleEditShareDialogClose = () => {
+  // 重置表单为初始状态
+  editShareForm.value = {
+    id: 0,
+    bankId: 0,
+    shareTitle: '',
+    shareDescription: '',
+    isPublic: false,
+    expireAt: null
+  }
 }
 
 // 确认生成分享码
@@ -2611,12 +2791,22 @@ const confirmGenerateShare = async () => {
   if (!currentSharingBankId.value) return
   
   try {
+    // 调用新的分享API
     const response = await questionBankApi.generateShareCode(
       currentSharingBankId.value,
-      shareExpireHours.value || undefined
+      shareToPlaza.value, // isPublic参数
+      undefined, // shareTitle
+      undefined  // shareDescription
     )
-    shareCode.value = response.data
-    ElMessage.success('分享码生成成功')
+    
+    // 从返回的SharedBank对象中获取shareCode
+    shareCode.value = response.data.shareCode
+    
+    if (shareToPlaza.value) {
+      ElMessage.success('分享码生成成功，已分享到大厅')
+    } else {
+      ElMessage.success('分享码生成成功')
+    }
   } catch (error) {
     console.error('生成分享码失败:', error)
     ElMessage.error('生成分享码失败，请稍后重试')
@@ -2668,8 +2858,8 @@ const copyShareCodeDirect = async (code: string) => {
 
 // 通过分享码访问题库
 const handleAccessSharedBank = async () => {
-  if (!accessShareCode.value || accessShareCode.value.trim().length !== 6) {
-    ElMessage.warning('请输入正确的6位分享码')
+  if (!accessShareCode.value || accessShareCode.value.trim().length !== 8) {
+    ElMessage.warning('请输入正确的8位分享码')
     return
   }
   
@@ -3046,6 +3236,22 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.bank-share-code {
+  margin-bottom: 15px;
+  padding: 12px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bank-share-code .el-tag {
+  font-size: 16px;
+  padding: 10px 20px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  border-radius: 8px;
 }
 
 .bank-description {
@@ -3608,42 +3814,82 @@ onMounted(() => {
 
 /* 导航按钮样式 - 优化交互效果 */
 .nav-button {
-  width: 70px !important;
-  height: 70px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 2px solid rgba(59, 130, 246, 0.3) !important;
-  color: #3b82f6 !important;
+  width: 80px !important;
+  height: 80px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
   backdrop-filter: blur(15px) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
-  transition: all 0.3s ease !important;
+  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 按钮光泽效果 */
+.nav-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: rotate(45deg);
+  transition: all 0.5s;
+}
+
+.nav-button:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .nav-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
-  color: white !important;
-  transform: translateY(-2px) scale(1.1) !important;
-  box-shadow: 0 15px 50px rgba(59, 130, 246, 0.5) !important;
-  border-color: transparent !important;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+  transform: translateY(-5px) scale(1.15) !important;
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.6) !important;
 }
 
 .nav-button:active:not(:disabled) {
-  transform: translateY(0) scale(1.05) !important;
+  transform: translateY(-2px) scale(1.1) !important;
+  box-shadow: 0 15px 50px rgba(102, 126, 234, 0.5) !important;
 }
 
 .nav-button:disabled {
-  opacity: 0.5 !important;
+  opacity: 0.4 !important;
   cursor: not-allowed !important;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%) !important;
-  border: 2px solid rgba(165, 180, 252, 0.4) !important;
-  color: #a5b4fc !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%) !important;
+  color: #9ca3af !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
 }
 
-.nav-button .el-icon {
-  font-size: 24px !important;
+.nav-button .nav-icon {
   color: white;
-  font-weight: bold;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.nav-button:hover:not(:disabled) .nav-icon {
+  transform: scale(1.2);
+}
+
+/* 左右按钮特定样式 */
+.nav-prev:hover:not(:disabled) .nav-icon {
+  animation: slideLeft 0.6s ease infinite;
+}
+
+.nav-next:hover:not(:disabled) .nav-icon {
+  animation: slideRight 0.6s ease infinite;
+}
+
+@keyframes slideLeft {
+  0%, 100% { transform: translateX(0) scale(1.2); }
+  50% { transform: translateX(-4px) scale(1.2); }
+}
+
+@keyframes slideRight {
+  0%, 100% { transform: translateX(0) scale(1.2); }
+  50% { transform: translateX(4px) scale(1.2); }
 }
 
 /* 卡片计数器样式 */

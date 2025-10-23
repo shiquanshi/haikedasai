@@ -3,8 +3,10 @@ package com.knowledge.questioncard.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.questioncard.common.Result;
 import com.knowledge.questioncard.dto.*;
+import com.knowledge.questioncard.entity.SharedBank;
 import com.knowledge.questioncard.service.BankFavoriteService;
 import com.knowledge.questioncard.service.QuestionBankService;
+import com.knowledge.questioncard.service.SharedBankService;
 import com.knowledge.questioncard.service.VolcEngineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +32,7 @@ import java.util.concurrent.RejectedExecutionException;
 public class QuestionBankController {
     private final QuestionBankService questionBankService;
     private final BankFavoriteService bankFavoriteService;
+    private final SharedBankService sharedBankService;
     private final VolcEngineService volcEngineService;
     private final Executor sseTaskExecutor;
 
@@ -425,7 +429,8 @@ public class QuestionBankController {
             List<QuestionCardDTO> cards = questionBankService.addCardsToBank(
                 request.getTargetBankId(), 
                 request.getCardIds(), 
-                userId
+                userId,
+                request.getSourceBankId()
             );
             return Result.success(cards);
         } catch (Exception e) {
@@ -563,67 +568,103 @@ public class QuestionBankController {
         }
     }
     
-    /**
-     * 生成题库分享码
-     */
-    @PostMapping("/{bankId}/share")
-    public Result<String> generateShareCode(
-            @PathVariable Long bankId,
-            @RequestParam(required = false) Integer expireHours,
-            HttpServletRequest httpRequest) {
-        try {
-            Long userId = (Long) httpRequest.getAttribute("userId");
-            String shareCode = questionBankService.generateShareCode(bankId, userId, expireHours);
-            return Result.success(shareCode);
-        } catch (Exception e) {
-            log.error("生成分享码失败: {}", e.getMessage(), e);
-            return Result.error("生成分享码失败: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * 取消题库分享
-     */
-    @DeleteMapping("/{bankId}/share")
-    public Result<Void> cancelShare(
-            @PathVariable Long bankId,
-            HttpServletRequest httpRequest) {
-        try {
-            Long userId = (Long) httpRequest.getAttribute("userId");
-            questionBankService.cancelShare(bankId, userId);
-            return Result.success(null);
-        } catch (Exception e) {
-            log.error("取消分享失败: {}", e.getMessage(), e);
-            return Result.error("取消分享失败: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * 通过分享码获取题库
-     */
-    @GetMapping("/shared/{shareCode}")
-    public Result<QuestionBankDTO> getByShareCode(@PathVariable String shareCode) {
-        try {
-            QuestionBankDTO bank = questionBankService.getByShareCode(shareCode);
-            return Result.success(bank);
-        } catch (Exception e) {
-            log.error("获取分享题库失败: {}", e.getMessage(), e);
-            return Result.error("获取失败: " + e.getMessage());
-        }
-    }
+
     
     /**
      * 获取用户的分享记录
      */
     @GetMapping("/shared-records")
-    public Result<List<QuestionBankDTO>> getSharedRecords(HttpServletRequest httpRequest) {
+    public Result<List<Map<String, Object>>> getSharedRecords(HttpServletRequest httpRequest) {
         try {
             Long userId = (Long) httpRequest.getAttribute("userId");
-            List<QuestionBankDTO> sharedBanks = questionBankService.getSharedBanks(userId);
+            List<Map<String, Object>> sharedBanks = sharedBankService.getUserShares(userId);
             return Result.success(sharedBanks);
         } catch (Exception e) {
             log.error("获取分享记录失败: {}", e.getMessage(), e);
             return Result.error("获取失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 通过分享码获取题库
+     */
+    @GetMapping("/shared/{shareCode}")
+    public Result<QuestionBankDTO> getByShareCode(
+            @PathVariable String shareCode,
+            HttpServletRequest httpRequest) {
+        try {
+            log.info("通过分享码获取题库: shareCode={}", shareCode);
+            
+            // 先获取分享信息
+            SharedBank sharedBank = sharedBankService.getByShareCode(shareCode);
+            
+            if (sharedBank == null) {
+                return Result.error("分享码不存在或已失效");
+            }
+            
+            // 记录浏览
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String clientIp = getClientIp(httpRequest);
+            String userAgent = httpRequest.getHeader("User-Agent");
+            String deviceType = getDeviceType(userAgent);
+            
+            try {
+                sharedBankService.recordView(sharedBank.getId(), userId, clientIp, userAgent, deviceType);
+            } catch (Exception e) {
+                // 记录浏览失败不影响返回结果
+                log.warn("记录浏览失败: {}", e.getMessage());
+            }
+            
+            // 获取完整题库信息
+            QuestionBankDTO bankDTO = questionBankService.getBankById(sharedBank.getBankId(), userId);
+            if (bankDTO == null) {
+                return Result.error("题库不存在");
+            }
+            
+            return Result.success(bankDTO);
+        } catch (Exception e) {
+            log.error("通过分享码获取题库失败: shareCode={}, error={}", shareCode, e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取设备类型
+     */
+    private String getDeviceType(String userAgent) {
+        if (userAgent == null) {
+            return "Unknown";
+        }
+        userAgent = userAgent.toLowerCase();
+        if (userAgent.contains("mobile") || userAgent.contains("android") || userAgent.contains("iphone")) {
+            return "Mobile";
+        } else if (userAgent.contains("tablet") || userAgent.contains("ipad")) {
+            return "Tablet";
+        } else {
+            return "Desktop";
+        }
+    }
+
+    /**
+     * 获取客户端IP地址
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
     }
 }

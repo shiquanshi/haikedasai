@@ -22,7 +22,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                     "/user/register",  // 排除注册
                     "/user/login",     // 排除登录
-                    "/user/validate-token" // 排除token验证
+                    "/user/validate-token", // 排除token验证
+                    "/share/plaza",  // 排除分享广场(公开访问)
+                    "/share/detail/**"  // 排除分享详情(公开访问)
                 );
     }
     
@@ -43,6 +45,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         objectMapper.registerModule(new JavaTimeModule());
         // 设置时区为东八区（Asia/Shanghai），解决日期时间序列化时的时区问题
         objectMapper.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Shanghai"));
+        // 设置序列化时包含null值（默认行为，显式设置以确保一致性）
+        objectMapper.setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS);
         return objectMapper;
     }
 }

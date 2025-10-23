@@ -1,8 +1,10 @@
 package com.knowledge.questioncard.service;
 
 import com.knowledge.questioncard.entity.BankFavorite;
+import com.knowledge.questioncard.entity.SharedBank;
 import com.knowledge.questioncard.mapper.BankFavoriteMapper;
 import com.knowledge.questioncard.mapper.QuestionBankMapper;
+import com.knowledge.questioncard.mapper.SharedBankMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import java.util.List;
 public class BankFavoriteService {
     private final BankFavoriteMapper bankFavoriteMapper;
     private final QuestionBankMapper questionBankMapper;
+    private final SharedBankMapper sharedBankMapper;
     
     /**
      * 收藏题库
@@ -37,6 +40,12 @@ public class BankFavoriteService {
         // 更新题库收藏数
         Long favoriteCount = bankFavoriteMapper.countByBank(bankId);
         questionBankMapper.updateStatistics(bankId, null);
+        
+        // 更新分享统计中的收藏数（如果该题库有分享）
+        List<SharedBank> sharedBanks = sharedBankMapper.selectByBankId(bankId);
+        for (SharedBank sharedBank : sharedBanks) {
+            sharedBankMapper.incrementFavoriteCount(sharedBank.getId());
+        }
     }
     
     /**
@@ -52,6 +61,12 @@ public class BankFavoriteService {
         // 更新题库收藏数
         Long favoriteCount = bankFavoriteMapper.countByBank(bankId);
         questionBankMapper.updateStatistics(bankId, null);
+        
+        // 更新分享统计中的收藏数（如果该题库有分享）
+        List<SharedBank> sharedBanks = sharedBankMapper.selectByBankId(bankId);
+        for (SharedBank sharedBank : sharedBanks) {
+            sharedBankMapper.decrementFavoriteCount(sharedBank.getId());
+        }
     }
     
     /**

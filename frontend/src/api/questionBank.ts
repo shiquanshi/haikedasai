@@ -351,18 +351,32 @@ export const questionBankApi = {
   },
 
   // 生成题库分享码
-  generateShareCode(bankId: number, expireHours?: number) {
+  generateShareCode(bankId: number, isPublic: boolean = true, shareTitle?: string, shareDescription?: string) {
     return request({
-      url: `/api/question-bank/${bankId}/share`,
+      url: '/api/share/create',
       method: 'post',
-      params: { expireHours }
+      data: {
+        bankId,
+        isPublic,
+        shareTitle,
+        shareDescription
+      }
+    })
+  },
+
+  // 更新分享信息
+  updateShare(params: { id: number; bankId: number; shareTitle?: string; shareDescription?: string; isPublic: boolean; expireAt?: string }) {
+    return request({
+      url: '/api/share/create',
+      method: 'post',
+      data: params
     })
   },
 
   // 取消题库分享
-  cancelShare(bankId: number) {
+  cancelShare(shareId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/share`,
+      url: `/api/share/delete/${shareId}`,
       method: 'delete'
     })
   },
@@ -378,7 +392,7 @@ export const questionBankApi = {
   // 获取用户的分享记录
   getSharedRecords() {
     return request({
-      url: '/api/question-bank/shared-records',
+      url: '/api/share/my-shares',
       method: 'get'
     })
   }

@@ -13,7 +13,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/image")
+@RequestMapping("/image")
 public class ImageGenerationController {
     
     @Autowired

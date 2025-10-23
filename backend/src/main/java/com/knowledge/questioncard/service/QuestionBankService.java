@@ -38,6 +38,8 @@ public class QuestionBankService {
     private final VolcEngineService volcEngineService;
     private final QuestionBankCache questionBankCache;
     private final MinioService minioService;
+    private final BankFavoriteService bankFavoriteService;
+    private final SharedBankService sharedBankService;
 
     /**
      * 保存流式生成的卡片到数据库
@@ -485,6 +487,33 @@ public class QuestionBankService {
     }
     
     /**
+     * 根据题库ID获取题库详情
+     */
+    public QuestionBankDTO getBankById(Long bankId, Long userId) {
+        QuestionBank bank = questionBankMapper.selectById(bankId);
+        if (bank == null) {
+            return null;
+        }
+        
+        QuestionBankDTO dto = convertToBankDTO(bank);
+        
+        // 获取题库的卡片列表
+        List<QuestionCard> cards = questionCardMapper.selectByBankId(bankId);
+        List<QuestionCardDTO> cardDTOs = cards.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        dto.setCards(cardDTOs);
+        
+        // 检查是否已收藏
+        if (userId != null) {
+            boolean isFavorited = bankFavoriteService.isFavorited(userId, bankId);
+            dto.setFavorited(isFavorited);
+        }
+        
+        return dto;
+    }
+    
+    /**
      * 高级搜索题库（分页）
      */
     public com.knowledge.questioncard.dto.PageResponse<QuestionBankDTO> searchBanks(
@@ -544,7 +573,7 @@ public class QuestionBankService {
      * 批量添加卡片到指定题库
      */
     @Transactional
-    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds, Long userId) {
+    public List<QuestionCardDTO> addCardsToBank(Long targetBankId, List<Long> cardIds, Long userId, Long sourceBankId) {
         // 验证目标题库是否存在
         QuestionBank targetBank = questionBankMapper.selectById(targetBankId);
         if (targetBank == null) {
@@ -589,6 +618,15 @@ public class QuestionBankService {
         
         // 更新题库统计信息
         updateBankStatistics(targetBankId);
+        
+        // 如果有来源题库ID，更新对应分享的导入次数统计
+        if (sourceBankId != null) {
+            try {
+                sharedBankService.incrementCopyCountByBankId(sourceBankId);
+            } catch (Exception e) {
+                log.error("更新分享导入次数失败: {}", e.getMessage());
+            }
+        }
         
         return newCards.stream()
                 .map(this::convertToDTO)
@@ -1366,189 +1404,5 @@ public class QuestionBankService {
         log.info("卡片更新成功: cardId={}", cardId);
         
         return convertToDTO(card);
-    }
-    
-    /**
-     * 为题库生成分享码
-     */
-    @Transactional
-    public String generateShareCode(Long bankId, Long userId, Integer expireHours) {
-        // 查询题库
-        QuestionBank bank = questionBankMapper.selectById(bankId);
-        if (bank == null) {
-            throw new RuntimeException("题库不存在");
-        }
-        
-        // 系统题库不允许生成分享码
-        if ("system".equals(bank.getType())) {
-            throw new RuntimeException("系统题库不支持分享功能");
-        }
-        
-        // 检查权限（只有题库创建者可以生成分享码）
-        if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
-            throw new RuntimeException("无权限分享此题库");
-        }
-        
-        // 生成6位随机码（字母+数字）
-        String shareCode = generateRandomCode(6);
-        
-        // 确保分享码唯一
-        while (questionBankMapper.selectByShareCode(shareCode) != null) {
-            shareCode = generateRandomCode(6);
-        }
-        
-        // 计算过期时间
-        Date expireTime = null;
-        if (expireHours != null && expireHours > 0) {
-            Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.HOUR, expireHours);
-            expireTime = calendar.getTime();
-        }
-        
-        // 更新题库分享码和过期时间
-        bank.setShareCode(shareCode);
-        bank.setExpireTime(expireTime);
-        questionBankMapper.updateShareCode(bankId, shareCode, expireTime);
-        
-        // 清除缓存
-        questionBankCache.clear();
-        
-        log.info("为题库 {} 生成分享码: {}, 过期时间: {}", bankId, shareCode, expireTime);
-        return shareCode;
-    }
-    
-    /**
-     * 取消题库分享
-     */
-    @Transactional
-    public void cancelShare(Long bankId, Long userId) {
-        // 查询题库
-        QuestionBank bank = questionBankMapper.selectById(bankId);
-        if (bank == null) {
-            throw new RuntimeException("题库不存在");
-        }
-        
-        // 检查权限（只有题库创建者可以取消分享）
-        if (bank.getUserId() == null || !bank.getUserId().equals(String.valueOf(userId))) {
-            throw new RuntimeException("无权限操作此题库");
-        }
-        
-        // 将过期时间设置为当前时间，使分享立即失效
-        Date now = new Date();
-        questionBankMapper.updateShareCode(bankId, bank.getShareCode(), now);
-        
-        // 清除缓存
-        questionBankCache.clear();
-        
-        log.info("取消题库 {} 的分享，设置过期时间为: {}", bankId, now);
-    }
-    
-    /**
-     * 通过分享码获取题库
-     */
-    public QuestionBankDTO getByShareCode(String shareCode) {
-        // 查询题库
-        QuestionBank bank = questionBankMapper.selectByShareCode(shareCode);
-        if (bank == null) {
-            throw new RuntimeException("无效的分享码");
-        }
-        
-        // 检查分享是否过期
-        if (bank.getExpireTime() != null && bank.getExpireTime().before(new Date())) {
-            throw new RuntimeException("分享链接已过期");
-        }
-        
-        // 增加浏览次数
-        questionBankMapper.incrementViewCount(bank.getId());
-        
-        // 转换为DTO
-        QuestionBankDTO dto = new QuestionBankDTO();
-        dto.setId(bank.getId());
-        dto.setName(bank.getName());
-        dto.setDescription(bank.getDescription());
-        dto.setTopic(bank.getTopic());
-        dto.setType(bank.getType());
-        dto.setCreatedAt(bank.getCreatedAt());
-        dto.setCardCount(bank.getCardCount());
-        dto.setViewCount(bank.getViewCount() + 1); // 返回新的浏览次数
-        dto.setFavoriteCount(bank.getFavoriteCount());
-        dto.setTags(bank.getTags());
-        dto.setDifficulty(bank.getDifficulty());
-        dto.setLanguage(bank.getLanguage());
-        dto.setUserId(bank.getUserId() != null ? Long.parseLong(bank.getUserId()) : null);
-        dto.setShareCode(bank.getShareCode());
-        
-        // 获取题库中的卡片
-        List<QuestionCard> cards = questionCardMapper.selectByBankId(bank.getId());
-        dto.setCards(cards.stream().map(this::convertToDTO).collect(Collectors.toList()));
-        
-        log.info("通过分享码 {} 获取题库: {}", shareCode, bank.getName());
-        return dto;
-    }
-    
-    /**
-     * 查询用户的分享记录（已生成分享码的题库）
-     */
-    public List<QuestionBankDTO> getSharedBanks(Long userId) {
-        List<QuestionBank> banks = questionBankMapper.selectSharedBanksByUser(String.valueOf(userId));
-        
-        return banks.stream().map(bank -> {
-            QuestionBankDTO dto = new QuestionBankDTO();
-            dto.setId(bank.getId());
-            dto.setName(bank.getName());
-            dto.setDescription(bank.getDescription());
-            dto.setTopic(bank.getTopic());
-            dto.setType(bank.getType());
-            dto.setCreatedAt(bank.getCreatedAt());
-            dto.setUpdatedAt(bank.getUpdatedAt());
-            dto.setCardCount(bank.getCardCount());
-            dto.setViewCount(bank.getViewCount());
-            dto.setFavoriteCount(bank.getFavoriteCount());
-            dto.setTags(bank.getTags());
-            dto.setDifficulty(bank.getDifficulty());
-            dto.setLanguage(bank.getLanguage());
-            dto.setUserId(bank.getUserId() != null ? Long.parseLong(bank.getUserId()) : null);
-            dto.setShareCode(bank.getShareCode());
-            return dto;
-        }).collect(Collectors.toList());
-    }
-    
-    /**
-     * 生成唯一短码（基于雪花算法 + Base62编码）
-     */
-    private String generateRandomCode(int length) {
-        // 使用雪花算法生成唯一ID
-        cn.hutool.core.lang.Snowflake snowflake = cn.hutool.core.util.IdUtil.getSnowflake(1, 1);
-        long id = snowflake.nextId();
-        
-        // 转换为Base62（0-9, a-z, A-Z）
-        String code = toBase62(id);
-        
-        // 如果生成的码长度小于要求，补充随机字符（理论上不会发生）
-        if (code.length() < length) {
-            String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            Random random = new Random();
-            while (code.length() < length) {
-                code += chars.charAt(random.nextInt(chars.length()));
-            }
-        }
-        
-        // 返回指定长度的码（从末尾截取，保留最新的时间戳信息）
-        return code.length() > length ? code.substring(code.length() - length) : code;
-    }
-    
-    /**
-     * 将长整型转换为Base62字符串
-     */
-    private String toBase62(long num) {
-        String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        StringBuilder sb = new StringBuilder();
-        
-        while (num > 0) {
-            sb.append(chars.charAt((int)(num % 62)));
-            num /= 62;
-        }
-        
-        return sb.reverse().toString();
     }
 }

@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import ImageGenerator from '../views/ImageGenerator.vue'
+import SharePlaza from '../views/SharePlaza.vue'
+import ShareDetail from '../views/ShareDetail.vue'
 import MobileHome from '../views/mobile/MobileHome.vue'
 import MobileLogin from '../views/mobile/MobileLogin.vue'
 import MobileImageGenerator from '../views/mobile/MobileImageGenerator.vue'
@@ -26,6 +28,18 @@ const router = createRouter({
       path: '/image-generator',
       name: 'imageGenerator',
       component: ImageGenerator,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/share-plaza',
+      name: 'sharePlaza',
+      component: SharePlaza,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/share-detail',
+      name: 'shareDetail',
+      component: ShareDetail,
       meta: { requiresAuth: true }
     },
     // 手机端路由

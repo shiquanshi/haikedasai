@@ -161,25 +161,5 @@
     <delete id="delete">
         DELETE FROM question_banks WHERE id = #{id}
     </delete>
-    
-    <select id="selectByShareCode" resultMap="BaseResultMap">
-        SELECT * FROM question_banks WHERE share_code = #{shareCode}
-    </select>
- <!-- 更新题库分享码 -->
-    <update id="updateShareCode">
-        UPDATE question_banks 
-        SET share_code = #{shareCode},
-            expire_time = #{expireTime},
-            updated_at = NOW()
-        WHERE id = #{id}
-    </update>
-    
-    <select id="selectSharedBanksByUser" resultMap="BaseResultMap">
-        SELECT * FROM question_banks 
-        WHERE user_id = #{userId} 
-        AND share_code IS NOT NULL 
-        AND share_code != ''
-        ORDER BY updated_at DESC
-    </select>
 
 </mapper>
