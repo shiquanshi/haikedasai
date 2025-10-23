@@ -546,7 +546,6 @@
                 <template v-else>
                   <div class="card-badge">问题</div>
                   <div class="card-content">
-                      <div class="bank-name-small">{{ currentBankName || '我的闪卡' }}</div>
                       <div class="card-text question-text">{{ currentCard?.question }}</div>
                       <div v-if="currentCard?.questionImage" class="card-image">
                         <el-image :src="currentCard.questionImage" fit="contain" class="card-img">
@@ -576,7 +575,6 @@
               <div class="flip-card-back">
                 <div class="card-badge">答案</div>
                 <div class="card-content">
-                  <div class="bank-name-small">{{ currentBankName || '我的闪卡' }}</div>
                   <div class="card-text">{{ currentCard?.answer }}</div>
                   <div v-if="currentCard?.answerImage" class="card-image">
                     <el-image :src="currentCard.answerImage" fit="contain" class="card-img">
@@ -2938,7 +2936,7 @@ initPage()
 .flip-card {
   width: 100%;
   min-height: 350px;
-  max-height: 500px; /* 设置卡片最大高度，防止内容过多时占用过多空间 */
+  max-height: 650px; /* 增加卡片最大高度，让内容有更多展示空间 */
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -2999,7 +2997,7 @@ initPage()
 
 .card-img {
   width: 100%;
-  height: 180px; /* 增加图片高度，使其更大 */
+  height: 280px; /* 显著增加图片高度，优先展示图片 */
   border-radius: 7px;
   object-fit: contain; /* 确保图片完全显示且不变形 */
 }
@@ -3009,7 +3007,7 @@ initPage()
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 180px; /* 同步增加占位区域高度 */
+  height: 280px; /* 同步增加占位区域高度 */
   background: rgba(255, 255, 255, 0.2);
   border-radius: 7px;
   color: #fff;
@@ -3060,8 +3058,8 @@ initPage()
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 16px 30px;
+  justify-content: flex-start; /* 改为从上到下排列，优先显示图片 */
+  padding: 30px 16px 20px; /* 减少padding，为图片留出更多空间 */
   overflow-y: auto;
   width: 100%;
 }
@@ -3145,7 +3143,7 @@ initPage()
   text-align: center;
   max-width: 100%;
   width: 100%;
-  max-height: 220px;
+  max-height: 350px; /* 增加文本区域最大高度 */
   overflow-y: auto;
   padding: 0 12px;
   margin: 0 auto;
