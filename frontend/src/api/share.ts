@@ -63,8 +63,6 @@ export const createShare = (params: CreateShareParams) => {
 
 // 获取分享大厅列表
 export const getPlaza = (params: {
-  topic?: string
-  difficulty?: string
   keyword?: string
   orderBy?: string
   page?: number

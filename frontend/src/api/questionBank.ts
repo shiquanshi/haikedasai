@@ -239,38 +239,34 @@ export const questionBankApi = {
   },
 
   // 收藏题库
-  addFavorite(bankId: number, userId: number) {
+  addFavorite(bankId: number) {
     return request({
       url: `/api/question-bank/${bankId}/favorite`,
-      method: 'post',
-      params: { userId }
+      method: 'post'
     })
   },
 
   // 取消收藏
-  removeFavorite(bankId: number, userId: number) {
+  removeFavorite(bankId: number) {
     return request({
       url: `/api/question-bank/${bankId}/favorite`,
-      method: 'delete',
-      params: { userId }
+      method: 'delete'
     })
   },
 
   // 检查是否已收藏
-  checkFavorite(bankId: number, userId: number) {
+  checkFavorite(bankId: number) {
     return request({
       url: `/api/question-bank/${bankId}/favorite/check`,
-      method: 'get',
-      params: { userId }
+      method: 'get'
     })
   },
 
   // 获取用户收藏的题库ID列表
-  getUserFavorites(userId: number) {
+  getUserFavorites() {
     return request({
       url: '/api/question-bank/favorites',
-      method: 'get',
-      params: { userId }
+      method: 'get'
     })
   },
 
@@ -394,6 +390,15 @@ export const questionBankApi = {
     return request({
       url: '/api/share/my-shares',
       method: 'get'
+    })
+  },
+
+  // 增加分享题库的导入次数
+  incrementCopyCount(shareCode: string) {
+    return request({
+      url: '/api/share/increment-copy',
+      method: 'post',
+      params: { shareCode }
     })
   }
 }

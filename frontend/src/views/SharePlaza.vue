@@ -1,66 +1,48 @@
 <template>
   <div class="share-plaza">
     <div class="plaza-header">
-      <h1>题库分享大厅</h1>
-      <p class="subtitle">发现和学习社区分享的优质题库</p>
+      <div class="header-content">
+        <el-button class="back-btn" @click="goBack" circle>
+          <el-icon><ArrowLeft /></el-icon>
+        </el-button>
+        <div class="header-text">
+          <h1>题库分享大厅</h1>
+          <p class="subtitle">发现和学习社区分享的优质题库</p>
+        </div>
+      </div>
     </div>
 
-    <!-- 筛选和搜索 -->
-    <div class="filter-bar">
-      <el-input
-        v-model="searchParams.keyword"
-        placeholder="搜索题库名称或描述"
-        class="search-input"
-        clearable
-        @keyup.enter="handleSearch"
-      >
-        <template #prefix>
+    <!-- 搜索和筛选区域 -->
+    <div class="search-filter-area">
+      <div class="search-row">
+        <el-input
+          v-model="searchParams.keyword"
+          placeholder="搜索题库标题、描述、用户名..."
+          class="search-input"
+          clearable
+          @keyup.enter="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        
+        <el-select
+          v-model="searchParams.orderBy"
+          placeholder="排序方式"
+          class="filter-select"
+        >
+          <el-option label="最新发布" value="newest" />
+          <el-option label="浏览最多" value="most_viewed" />
+          <el-option label="收藏最多" value="most_favorited" />
+          <el-option label="导入最多" value="most_copied" />
+        </el-select>
+        
+        <el-button type="primary" @click="handleSearch">
           <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-
-      <el-select
-        v-model="searchParams.topic"
-        placeholder="选择主题"
-        clearable
-        @change="handleSearch"
-      >
-        <el-option label="全部主题" value="" />
-        <el-option label="编程" value="编程" />
-        <el-option label="数学" value="数学" />
-        <el-option label="英语" value="英语" />
-        <el-option label="历史" value="历史" />
-        <el-option label="地理" value="地理" />
-        <el-option label="其他" value="其他" />
-      </el-select>
-
-      <el-select
-        v-model="searchParams.difficulty"
-        placeholder="选择难度"
-        clearable
-        @change="handleSearch"
-      >
-        <el-option label="全部难度" value="" />
-        <el-option label="简单" value="简单" />
-        <el-option label="中等" value="中等" />
-        <el-option label="困难" value="困难" />
-      </el-select>
-
-      <el-select
-        v-model="searchParams.orderBy"
-        placeholder="排序方式"
-        @change="handleSearch"
-      >
-        <el-option label="最新发布" value="created_at" />
-        <el-option label="浏览最多" value="view_count" />
-        <el-option label="收藏最多" value="favorite_count" />
-        <el-option label="复制最多" value="copy_count" />
-      </el-select>
-
-      <el-button type="primary" @click="handleSearch">
-        <el-icon><Search /></el-icon>
-        搜索
-      </el-button>
+          搜索
+        </el-button>
+      </div>
     </div>
 
     <!-- 题库列表 -->
@@ -88,7 +70,6 @@
           </div>
 
           <div class="card-meta">
-            <el-tag size="small" effect="plain">{{ item.topic || '其他' }}</el-tag>
             <span class="card-count">{{ item.cardCount }} 张卡片</span>
           </div>
 
@@ -143,18 +124,21 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, View, User, Star, DocumentCopy } from '@element-plus/icons-vue'
+import { Search, View, User, Star, DocumentCopy, ArrowLeft } from '@element-plus/icons-vue'
 import { getPlaza, type PlazaItem } from '@/api/share'
 
 const router = useRouter()
+
+// 返回主页
+const goBack = () => {
+  router.push('/')
+}
 const loading = ref(false)
 const plazaList = ref<PlazaItem[]>([])
 
 const searchParams = reactive({
   keyword: '',
-  topic: '',
-  difficulty: '',
-  orderBy: 'created_at'
+  orderBy: 'newest'
 })
 
 const pagination = reactive({
@@ -253,19 +237,33 @@ onMounted(() => {
   padding: 40px 20px;
 
   .plaza-header {
-    text-align: center;
     margin-bottom: 40px;
 
-    h1 {
-      font-size: 36px;
-      font-weight: 700;
-      color: #303133;
-      margin-bottom: 12px;
-    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 20px;
 
-    .subtitle {
-      font-size: 16px;
-      color: #909399;
+      .back-btn {
+        flex-shrink: 0;
+      }
+
+      .header-text {
+        flex: 1;
+        text-align: center;
+
+        h1 {
+          font-size: 36px;
+          font-weight: 700;
+          color: #303133;
+          margin-bottom: 12px;
+        }
+
+        .subtitle {
+          font-size: 16px;
+          color: #909399;
+        }
+      }
     }
   }
 

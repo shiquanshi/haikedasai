@@ -191,6 +191,12 @@ public class SharedBankService {
             // 将expireAt转换为时间戳（毫秒），方便前端el-date-picker处理
             map.put("expireAt", sb.getExpireAt() != null ? sb.getExpireAt().getTime() : null);
             
+            // 添加统计数据
+            map.put("viewCount", sb.getViewCount());
+            map.put("uniqueViewCount", sb.getUniqueViewCount());
+            map.put("favoriteCount", sb.getFavoriteCount());
+            map.put("copyCount", sb.getCopyCount());
+            
             // 获取题库信息
             var bank = questionBankMapper.findById(sb.getBankId());
             if (bank != null) {

@@ -362,6 +362,74 @@
             </template>
           </template>
           
+          <!-- 我的收藏 -->
+          <template v-if="userStore.isLoggedIn">
+            <h3>我的收藏</h3>
+            <template v-if="isLoadingFavorites">
+              <div class="loading-state">
+                <el-icon class="is-loading"><Loading /></el-icon>
+                <span>加载中...</span>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-for="bank in favoriteBanks"
+                :key="bank.id"
+                class="bank-card"
+                @click="loadBankCards(bank.id, bank.name, bank.type)"
+              >
+                <div class="bank-name">{{ bank.name }}</div>
+                <div class="bank-description" v-if="bank.description">{{ bank.description }}</div>
+                <div class="bank-info">
+                  <span class="bank-count">
+                    <el-icon><Document /></el-icon>
+                    {{ bank.cardCount || 0 }}张
+                  </span>
+                </div>
+                <div class="bank-meta">
+                  <el-tag v-if="bank.difficulty" size="small" type="warning">{{ bank.difficulty }}</el-tag>
+                  <el-tag v-if="bank.language" size="small" type="info">{{ bank.language }}</el-tag>
+                  <span v-if="bank.topic" class="bank-topic">{{ bank.topic }}</span>
+                </div>
+                <div class="bank-actions" @click.stop>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :icon="Download"
+                    @click="exportBank(bank.id, bank.name)"
+                    circle
+                    title="导出Excel"
+                  />
+                  <el-button
+                    type="danger"
+                    size="small"
+                    :icon="Delete"
+                    @click="removeFavorite(bank.id)"
+                    circle
+                    title="取消收藏"
+                  />
+                </div>
+              </div>
+
+              <div v-if="favoriteBanks.length === 0" class="empty-state">
+                <el-icon><Box /></el-icon>
+                <p>暂无收藏记录</p>
+              </div>
+              
+              <!-- 收藏记录分页 -->
+              <div v-if="favoriteBanks.length > 0" class="pagination-container">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :total="favoriteTotal"
+                  :page-size="favoritePageSize"
+                  :current-page="favoritePage"
+                  @current-change="handleFavoritePageChange"
+                />
+              </div>
+            </template>
+          </template>
+          
           <!-- 历史生成记录 -->
           <template v-if="userStore.isLoggedIn">
             <h3>历史生成记录</h3>
@@ -1166,6 +1234,7 @@ const systemBanks = ref<any[]>([])
 const customBanks = ref<any[]>([])
 const historyRecords = ref<any[]>([])
 const sharedBanks = ref<any[]>([])
+const favoriteBanks = ref<any[]>([])
 
 // 分页状态
 const systemPage = ref(1)
@@ -1180,6 +1249,10 @@ const historyTotal = ref(0)
 const sharedPage = ref(1)
 const sharedPageSize = ref(10)
 const sharedTotal = ref(0)
+const favoritePage = ref(1)
+const favoritePageSize = ref(10)
+const favoriteTotal = ref(0)
+const isLoadingFavorites = ref(false)
 
 // 卡片相关状态
 const currentBankId = ref<number | null>(null)
@@ -1644,11 +1717,28 @@ const showEditBankDialogFunc = (bank: any) => {
 // 分享题库
 const handleShareBank = (bankId: number) => {
   currentSharingBankId.value = bankId
-  shareCode.value = ''
-  shareExpireHours.value = null
-  shareToPlaza.value = false // 重置分享到大厅选项
-  shareTitle.value = '' // 重置分享标题
-  shareDescription.value = '' // 重置分享描述
+  
+  // 检查该题库是否已经分享过
+  const existingShare = sharedBanks.value.find(bank => bank.bankId === bankId)
+  
+  if (existingShare) {
+    // 如果已经分享过，显示现有的分享码和设置
+    shareCode.value = existingShare.shareCode
+    shareToPlaza.value = existingShare.isPublic
+    shareTitle.value = existingShare.shareTitle || ''
+    shareDescription.value = existingShare.shareDescription || ''
+    shareExpireHours.value = null
+    
+    ElMessage.info('该题库已分享，可直接复制分享码或修改分享设置')
+  } else {
+    // 如果未分享过，重置表单
+    shareCode.value = ''
+    shareExpireHours.value = null
+    shareToPlaza.value = false
+    shareTitle.value = ''
+    shareDescription.value = ''
+  }
+  
   showShareDialog.value = true
 }
 
@@ -1676,6 +1766,9 @@ const confirmGenerateShare = async () => {
     } else {
       ElMessage.success('分享码生成成功！')
     }
+    
+    // 刷新"我的分享"列表
+    await loadSharedBanks()
   } catch (error: any) {
     console.error('生成分享码失败:', error)
     ElMessage.error(error.response?.data?.message || '生成分享码失败')
@@ -2066,6 +2159,79 @@ const loadSharedBanks = async (page: number = 1) => {
 const handleSharedPageChange = async (page: number) => {
   sharedPage.value = page
   await loadSharedBanks(page)
+}
+
+// 加载收藏题库
+const loadFavoriteBanks = async (page: number = 1) => {
+  if (!userStore.isLoggedIn || !userStore.userInfo?.id) return
+  
+  isLoadingFavorites.value = true
+  try {
+    const response = await questionBankApi.getUserFavorites(userStore.userInfo.id)
+    const favoriteIds = response.data || []
+    
+    if (favoriteIds.length === 0) {
+      favoriteBanks.value = []
+      favoriteTotal.value = 0
+      return
+    }
+    
+    // 获取所有收藏题库的详细信息
+    const allFavoriteBanks = []
+    for (const bankId of favoriteIds) {
+      try {
+        const bankResponse = await questionBankApi.getBankById(bankId)
+        if (bankResponse.data) {
+          allFavoriteBanks.push(bankResponse.data)
+        } else {
+          // 题库不存在或已被删除，静默跳过
+          console.warn(`题库 ${bankId} 不存在或已被删除，已自动过滤`)
+        }
+      } catch (error) {
+        // 请求失败（如网络错误、题库已删除等），跳过该题库
+        console.warn(`获取题库 ${bankId} 详情失败，已自动过滤:`, error)
+      }
+    }
+    
+    // 设置总数
+    favoriteTotal.value = allFavoriteBanks.length
+    
+    // 前端分页
+    const startIndex = (page - 1) * favoritePageSize.value
+    const endIndex = startIndex + favoritePageSize.value
+    favoriteBanks.value = allFavoriteBanks.slice(startIndex, endIndex)
+    
+    console.log('收藏题库数据:', favoriteBanks.value)
+  } catch (error) {
+    console.error('加载收藏题库失败:', error)
+    ElMessage.error('加载收藏题库失败')
+  } finally {
+    isLoadingFavorites.value = false
+  }
+}
+
+// 处理收藏分页变化
+const handleFavoritePageChange = async (page: number) => {
+  favoritePage.value = page
+  await loadFavoriteBanks(page)
+}
+
+// 取消收藏
+const removeFavorite = async (bankId: number) => {
+  if (!userStore.isLoggedIn || !userStore.userInfo?.id) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  try {
+    await questionBankApi.removeFavorite(bankId, userStore.userInfo.id)
+    ElMessage.success('已取消收藏')
+    // 重新加载收藏列表
+    await loadFavoriteBanks(favoritePage.value)
+  } catch (error) {
+    console.error('取消收藏失败:', error)
+    ElMessage.error('取消收藏失败')
+  }
 }
 
 // 直接复制分享码
@@ -2536,7 +2702,8 @@ const initPage = async () => {
     await Promise.all([
       loadCustomBanks(),
       loadHistoryRecords(),
-      loadSharedBanks()
+      loadSharedBanks(),
+      loadFavoriteBanks()
     ])
   }
   

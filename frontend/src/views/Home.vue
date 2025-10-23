@@ -350,6 +350,48 @@
               </div>
             </el-loading>
 
+          <!-- 我的收藏 -->
+          <el-divider v-if="userStore.isLoggedIn" content-position="left">我的收藏</el-divider>
+          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingFavorites" element-loading-text="加载中...">
+            <el-card
+              v-for="bank in favoriteBanks"
+              :key="bank.id"
+              class="bank-card"
+              @click="loadBankCards(bank.id)"
+            >
+              <template #header>
+                <div class="card-header">
+                  <span>{{ bank.name }}</span>
+                  <div class="card-header-actions">
+                    <el-tag size="small">{{ bank.cardCount }}张卡片</el-tag>
+                  </div>
+                </div>
+              </template>
+              <div class="bank-description">
+                {{ bank.description }}
+              </div>
+              <div class="bank-meta">
+                <span class="bank-difficulty">{{ bank.difficulty }}</span>
+                <span class="bank-language">{{ bank.language }}</span>
+              </div>
+            </el-card>
+            
+            <!-- 收藏分页器 -->
+            <el-pagination
+              v-if="favoriteBanks.length > 0"
+              v-model:current-page="favoritePage"
+              :page-size="favoritePageSize"
+              :total="favoriteTotal"
+              layout="prev, pager, next"
+              @current-change="handleFavoritePageChange"
+              style="margin-top: 20px; text-align: center;"
+            />
+            
+            <div v-if="userStore.isLoggedIn && !isLoadingFavorites && favoriteBanks.length === 0" class="no-data">
+              暂无收藏记录
+            </div>
+          </el-loading>
+
           <!-- 历史生成记录 -->
           <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
           <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
@@ -1406,6 +1448,13 @@ const historyTotal = ref(0)
 const sharedBanks = ref<QuestionBank[]>([])
 const isLoadingShared = ref(false)
 
+// 收藏记录相关
+const favoriteBanks = ref<QuestionBank[]>([])
+const isLoadingFavorites = ref(false)
+const favoritePage = ref(1)
+const favoritePageSize = ref(10)
+const favoriteTotal = ref(0)
+
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
 
@@ -1877,6 +1926,56 @@ const loadSharedBanks = async () => {
   } finally {
     isLoadingShared.value = false
   }
+}
+
+// 加载收藏记录
+const loadFavoriteBanks = async (page: number = 1) => {
+  try {
+    isLoadingFavorites.value = true
+    // 先获取收藏的题库ID列表
+    const favResponse = await questionBankApi.getUserFavorites(userStore.userId)
+    const favoriteBankIds = favResponse.data || []
+    
+    if (favoriteBankIds.length === 0) {
+      favoriteBanks.value = []
+      favoriteTotal.value = 0
+      return
+    }
+    
+    // 然后获取这些题库的详细信息
+    const allBanks: QuestionBank[] = []
+    for (const bankId of favoriteBankIds) {
+      try {
+        const response = await questionBankApi.getBankById(bankId)
+        if (response.data) {
+          allBanks.push(response.data)
+        } else {
+          // 题库不存在或已被删除，静默跳过
+          console.warn(`题库 ${bankId} 不存在或已被删除，已自动过滤`)
+        }
+      } catch (err) {
+        // 请求失败（如网络错误、题库已删除等），跳过该题库
+        console.warn(`获取题库 ${bankId} 详情失败，已自动过滤:`, err)
+      }
+    }
+    
+    // 分页处理
+    favoriteTotal.value = allBanks.length
+    const start = (page - 1) * favoritePageSize.value
+    const end = start + favoritePageSize.value
+    favoriteBanks.value = allBanks.slice(start, end)
+  } catch (error) {
+    console.error('加载收藏记录失败:', error)
+    ElMessage.error('加载收藏记录失败')
+  } finally {
+    isLoadingFavorites.value = false
+  }
+}
+
+// 处理收藏分页变化
+const handleFavoritePageChange = (page: number) => {
+  favoritePage.value = page
+  loadFavoriteBanks(page)
 }
 
 // 加载指定题库的卡片
@@ -2711,9 +2810,24 @@ watch(bankSearchText, () => {
 // 分享题库 - 打开分享对话框
 const handleShareBank = (bankId: number) => {
   currentSharingBankId.value = bankId
-  shareCode.value = ''
-  shareExpireHours.value = null // 默认永久有效
-  shareToPlaza.value = false // 默认不分享到大厅
+  
+  // 检查该题库是否已经分享过
+  const existingShare = sharedBanks.value.find(bank => bank.bankId === bankId)
+  
+  if (existingShare) {
+    // 如果已经分享过，显示现有的分享码和设置
+    shareCode.value = existingShare.shareCode
+    shareToPlaza.value = existingShare.isPublic
+    shareExpireHours.value = null // 到期时间在编辑对话框中处理
+    
+    ElMessage.info('该题库已分享，可直接复制分享码或修改分享设置')
+  } else {
+    // 如果未分享过，重置表单
+    shareCode.value = ''
+    shareExpireHours.value = null
+    shareToPlaza.value = false
+  }
+  
   showShareDialog.value = true
 }
 
@@ -2897,6 +3011,7 @@ onMounted(() => {
     userStore.fetchUserInfo().then(() => {
       loadHistoryRecords()
       loadSharedBanks()
+      loadFavoriteBanks()
     })
   }
 })

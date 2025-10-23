@@ -242,6 +242,26 @@ public class QuestionBankController {
     }
 
     /**
+     * 根据ID获取题库详情
+     */
+    @GetMapping("/{bankId}")
+    public Result<QuestionBankDTO> getBankById(
+            @PathVariable Long bankId,
+            HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            QuestionBankDTO bank = questionBankService.getBankById(bankId, userId);
+            if (bank == null) {
+                return Result.error("题库不存在或已被删除");
+            }
+            return Result.success(bank);
+        } catch (Exception e) {
+            log.error("获取题库详情失败: bankId={}", bankId, e);
+            return Result.error("获取题库详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 获取指定题库的卡片
      */
     @GetMapping("/{bankId}/cards")

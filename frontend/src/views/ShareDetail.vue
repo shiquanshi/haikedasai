@@ -318,13 +318,16 @@ const loadShareDetail = async () => {
       }
       
       // 检查收藏状态
-      try {
-        const favoriteRes = await questionBankApi.checkFavorite(res.data.id)
-        if (favoriteRes.code === 200) {
-          isFavorited.value = favoriteRes.data
+      if (res.data.id) {
+        try {
+          const favoriteRes = await questionBankApi.checkFavorite(res.data.id)
+          if (favoriteRes.code === 200) {
+            isFavorited.value = favoriteRes.data
+          }
+        } catch (error) {
+          console.error('检查收藏状态失败:', error)
+          isFavorited.value = false
         }
-      } catch (error) {
-        console.error('检查收藏状态失败:', error)
       }
     } else {
       ElMessage.error(res.message || '加载失败')
@@ -381,6 +384,11 @@ const confirmImport = async () => {
       cardIds: cardIds,
       sourceBankId: shareInfo.value?.bankId
     })
+    
+    // 增加导入次数统计
+    if (shareCode.value) {
+      await questionBankApi.incrementCopyCount(shareCode.value)
+    }
     
     ElMessage.success(`成功导入 ${cardIds.length} 张卡片到题库`)
     
@@ -457,18 +465,16 @@ const handleFavorite = async () => {
       await questionBankApi.removeFavorite(bankInfo.value.id)
       isFavorited.value = false
       ElMessage.success('取消收藏成功')
-      // 更新收藏数
-      if (shareInfo.value) {
-        shareInfo.value.favoriteCount = Math.max(0, shareInfo.value.favoriteCount - 1)
-      }
     } else {
       await questionBankApi.addFavorite(bankInfo.value.id)
       isFavorited.value = true
       ElMessage.success('收藏成功')
-      // 更新收藏数
-      if (shareInfo.value) {
-        shareInfo.value.favoriteCount += 1
-      }
+    }
+    
+    // 重新加载分享详情以获取最新的收藏数
+    const shareRes = await getShareDetail(shareCode.value)
+    if (shareRes.code === 200 && shareRes.data) {
+      shareInfo.value = shareRes.data
     }
   } catch (error: any) {
     ElMessage.error(error.message || '操作失败')

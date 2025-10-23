@@ -70,15 +70,13 @@ public class SharedBankController {
      */
     @GetMapping("/plaza")
     public Result<Map<String, Object>> getPlaza(
-            @RequestParam(required = false) String topic,
-            @RequestParam(required = false) String difficulty,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "created_at") String orderBy,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         try {
             Map<String, Object> result = sharedBankService.getPublicShares(
-                topic, difficulty, keyword, orderBy, page, pageSize
+                null, null, keyword, orderBy, page, pageSize
             );
             return Result.success(result);
         } catch (Exception e) {

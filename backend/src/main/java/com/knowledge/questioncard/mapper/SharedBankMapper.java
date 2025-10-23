@@ -63,10 +63,11 @@ public interface SharedBankMapper {
             "WHERE sb.is_public=1 AND sb.status=1 " +
             "<if test='topic != null and topic != \"\"'>AND qb.topic=#{topic}</if> " +
             "<if test='difficulty != null and difficulty != \"\"'>AND qb.difficulty=#{difficulty}</if> " +
-            "<if test='keyword != null and keyword != \"\"'>" +
-            "AND (qb.name LIKE CONCAT('%', #{keyword}, '%') OR qb.description LIKE CONCAT('%', #{keyword}, '%') " +
-            "OR sb.share_title LIKE CONCAT('%', #{keyword}, '%') OR sb.share_description LIKE CONCAT('%', #{keyword}, '%'))" +
-            "</if> " +
+            "<if test='keyword != null and keyword != \"\"'>"+
+            "AND (qb.name LIKE CONCAT('%', #{keyword}, '%') OR qb.description LIKE CONCAT('%', #{keyword}, '%') "+
+            "OR sb.share_title LIKE CONCAT('%', #{keyword}, '%') OR sb.share_description LIKE CONCAT('%', #{keyword}, '%') "+
+            "OR u.username LIKE CONCAT('%', #{keyword}, '%'))"+
+            "</if> "+
             "ORDER BY " +
             "<choose>" +
             "<when test='orderBy == \"view_count\"'>sb.view_count DESC</when>" +
@@ -89,9 +90,10 @@ public interface SharedBankMapper {
             "WHERE sb.is_public=1 AND sb.status=1 " +
             "<if test='topic != null and topic != \"\"'>AND qb.topic=#{topic}</if> " +
             "<if test='difficulty != null and difficulty != \"\"'>AND qb.difficulty=#{difficulty}</if> " +
-            "<if test='keyword != null and keyword != \"\"'>" +
-            "AND (qb.name LIKE CONCAT('%', #{keyword}, '%') OR qb.description LIKE CONCAT('%', #{keyword}, '%') " +
-            "OR sb.share_title LIKE CONCAT('%', #{keyword}, '%') OR sb.share_description LIKE CONCAT('%', #{keyword}, '%'))" +
+            "<if test='keyword != null and keyword != \"\"'>"+
+            "AND (qb.name LIKE CONCAT('%', #{keyword}, '%') OR qb.description LIKE CONCAT('%', #{keyword}, '%') "+
+            "OR sb.share_title LIKE CONCAT('%', #{keyword}, '%') OR sb.share_description LIKE CONCAT('%', #{keyword}, '%') "+
+            "OR u.username LIKE CONCAT('%', #{keyword}, '%'))"+
             "</if>" +
             "</script>")
     int countPublicShares(@Param("topic") String topic, 

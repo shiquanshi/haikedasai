@@ -15,36 +15,18 @@
         <input 
           v-model="searchParams.keyword" 
           type="text" 
-          placeholder="搜索题库..."
+          placeholder="搜索题库标题、描述、用户名..."
           @input="handleSearch"
+          @keyup.enter="handleSearch"
         />
-      </div>
-      
-      <div class="filter-chips">
-        <div class="chip-group">
-          <button 
-            v-for="topic in topics" 
-            :key="topic.value"
-            :class="['chip', { active: searchParams.topic === topic.value }]"
-            @click="selectTopic(topic.value)"
-          >
-            {{ topic.label }}
-          </button>
-        </div>
       </div>
 
       <div class="filter-row">
-        <select v-model="searchParams.difficulty" @change="handleSearch">
-          <option value="">全部难度</option>
-          <option value="easy">简单</option>
-          <option value="medium">中等</option>
-          <option value="hard">困难</option>
-        </select>
-        
         <select v-model="searchParams.orderBy" @change="handleSearch">
-          <option value="latest">最新发布</option>
-          <option value="popular">最受欢迎</option>
-          <option value="views">浏览最多</option>
+          <option value="newest">最新发布</option>
+          <option value="most_viewed">浏览最多</option>
+          <option value="most_favorited">收藏最多</option>
+          <option value="most_copied">导入最多</option>
         </select>
       </div>
     </div>
@@ -70,7 +52,6 @@
           <p class="bank-description">{{ bank.shareDescription || bank.bankDescription || '暂无描述' }}</p>
           
           <div class="bank-meta">
-            <span class="topic-tag">{{ bank.topic }}</span>
             <span class="card-count">{{ bank.cardCount || 0 }} 张卡片</span>
           </div>
           
@@ -123,21 +104,9 @@ const router = useRouter()
 const loading = ref(false)
 const plazaList = ref<any[]>([])
 
-const topics = [
-  { label: '全部', value: '' },
-  { label: '编程', value: 'programming' },
-  { label: '数学', value: 'math' },
-  { label: '英语', value: 'english' },
-  { label: '历史', value: 'history' },
-  { label: '科学', value: 'science' },
-  { label: '其他', value: 'other' }
-]
-
 const searchParams = reactive({
-  topic: '',
-  difficulty: '',
   keyword: '',
-  orderBy: 'latest'
+  orderBy: 'newest'
 })
 
 const pagination = reactive({
@@ -147,14 +116,12 @@ const pagination = reactive({
   totalPages: 0
 })
 
+// 返回主页
 const goBack = () => {
-  router.back()
+  router.push('/')
 }
 
-const selectTopic = (topic: string) => {
-  searchParams.topic = topic
-  handleSearch()
-}
+
 
 const handleSearch = () => {
   pagination.currentPage = 1
@@ -170,8 +137,6 @@ const loadPlaza = async () => {
   loading.value = true
   try {
     const response = await getPlaza({
-      topic: searchParams.topic,
-      difficulty: searchParams.difficulty,
       keyword: searchParams.keyword,
       orderBy: searchParams.orderBy,
       page: pagination.currentPage,
@@ -193,7 +158,7 @@ const viewBankDetail = (bank: any) => {
   // 跳转到题库详情页面，传递分享码
   router.push({
     path: '/share-detail',
-    query: { shareCode: bank.shareCode }
+    query: { code: bank.shareCode }
   })
 }
 
@@ -265,35 +230,7 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.filter-chips {
-  margin-bottom: 15px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
 
-.chip-group {
-  display: flex;
-  gap: 10px;
-  padding: 5px 0;
-}
-
-.chip {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.chip.active {
-  background: white;
-  color: #667eea;
-  font-weight: 600;
-}
 
 .filter-row {
   display: flex;
@@ -397,13 +334,7 @@ onMounted(() => {
   margin: 12px 0;
 }
 
-.topic-tag {
-  padding: 4px 12px;
-  background: #f0f0f0;
-  color: #666;
-  border-radius: 12px;
-  font-size: 12px;
-}
+
 
 .card-count {
   color: #999;
