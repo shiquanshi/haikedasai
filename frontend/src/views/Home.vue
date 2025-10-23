@@ -2583,30 +2583,30 @@ onMounted(() => {
 /* 主内容区域布局 */
 .main-content {
   width: 100%;
-  max-width: 100%;
+  max-width: 1600px;
   display: flex;
-  gap: 20px;
+  gap: 30px;
   position: relative;
   z-index: 1;
-  flex-direction: column;
+  flex-direction: row;
+  margin: 0 auto;
 }
 
 .content-section {
   flex: 1;
+  min-width: 0;
 }
 
 /* 左侧区域样式 */
 .left-section {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  flex: 1;
+  max-width: 50%;
 }
 
 /* 右侧区域样式 */
 .right-section {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  flex: 1;
+  max-width: 50%;
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
@@ -3289,12 +3289,18 @@ onMounted(() => {
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .main-content {
-    flex-direction: column;
-    gap: 30px;
+    flex-direction: row;
+    gap: 20px;
   }
   
   .content-section {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .left-section,
+  .right-section {
+    max-width: 50%;
   }
   
   .cards-section.full-width {

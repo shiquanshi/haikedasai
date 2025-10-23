@@ -512,12 +512,18 @@
         </div>
 
         <!-- 卡片容器 -->
-        <div class="card-container">
+        <div 
+          class="card-container"
+          @touchstart="handleTouchStart"
+          @touchmove="handleTouchMove"
+          @touchend="handleTouchEnd"
+        >
           <!-- 卡片（包含加载状态） -->
           <div 
             v-if="currentCard || (isGenerating && cards.length === 0)" 
             class="flip-card" 
             :class="{ 'flipped': isFlipped }"
+            :style="{ transform: `translateX(${touchOffset}px)` }"
             @click="flipCard"
           >
             <div class="flip-card-inner">
@@ -609,29 +615,6 @@
 
       </div>
 
-      <!-- 卡片导航按钮 - 与卡片区域同级 -->
-      <div v-if="showCards" class="card-actions">
-        <el-button 
-          @click="prevCard"
-          :disabled="currentCardIndex === 0"
-          class="nav-button"
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;">
-            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-          </svg>
-          上一张
-        </el-button>
-        <el-button 
-          @click="nextCard"
-          :disabled="currentCardIndex === totalCards - 1"
-          class="nav-button"
-        >
-          下一张
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left: 4px;">
-            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-          </svg>
-        </el-button>
-      </div>
     </div>
 
     <!-- 分享题库对话框 -->
@@ -1165,6 +1148,11 @@ const currentCardIndex = ref(0)
 const isFlipped = ref(false)
 const isPlayingQuestion = ref(false)
 const isPlayingAnswer = ref(false)
+
+// 触摸滑动相关
+const touchStartX = ref(0)
+const touchOffset = ref(0)
+const isSwiping = ref(false)
 
 // 新增卡片相关
 const showAddCardDialog = ref(false)
@@ -2070,6 +2058,44 @@ const goToCard = (index: number) => {
   }
 }
 
+// 触摸开始
+const handleTouchStart = (e: TouchEvent) => {
+  touchStartX.value = e.touches[0].clientX
+  isSwiping.value = true
+}
+
+// 触摸移动
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isSwiping.value) return
+  
+  const currentX = e.touches[0].clientX
+  const diff = currentX - touchStartX.value
+  
+  // 限制滑动范围，避免过度拖拽
+  if (Math.abs(diff) < 200) {
+    touchOffset.value = diff
+  }
+}
+
+// 触摸结束
+const handleTouchEnd = (e: TouchEvent) => {
+  if (!isSwiping.value) return
+  
+  const threshold = 80 // 滑动阈值
+  
+  if (touchOffset.value > threshold) {
+    // 向右滑动，显示上一张
+    prevCard()
+  } else if (touchOffset.value < -threshold) {
+    // 向左滑动，显示下一张
+    nextCard()
+  }
+  
+  // 重置状态
+  touchOffset.value = 0
+  isSwiping.value = false
+}
+
 // 音频元素变量
 let audioElement: HTMLAudioElement | null = null
 
@@ -2911,7 +2937,7 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 扩展到底部 */
+/* 卡片容器样式 - 扩展到底部并移除左右padding */
 .card-container {
   width: 100%;
   min-height: 350px;
@@ -2927,7 +2953,7 @@ initPage()
   overflow: visible;
   background: transparent;
   box-shadow: none;
-  padding: 0 16px 20px;
+  padding: 0 8px 20px; /* 减小左右padding */
 }
 
 
@@ -2947,11 +2973,11 @@ initPage()
   max-height: calc(100vh - 100px); /* 减少顶部预留,让卡片更大 */
   cursor: pointer;
   position: relative;
-  transition: transform 0.2s ease;
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  transition: height 0.3s ease;
+  transition: transform 0.3s ease, height 0.3s ease;
+  will-change: transform;
 }
 
 .flip-card:active {
@@ -2999,7 +3025,7 @@ initPage()
   background: rgba(255, 255, 255, 0.1);
   padding: 3px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: 90%;
+  width: 100%; /* 改为100%宽度 */
   display: flex;
   justify-content: center;
 }
@@ -3028,7 +3054,7 @@ initPage()
 .flip-card-back .card-image {
   background: rgba(255, 255, 255, 0.9);
   padding: 6px;
-  width: 90%;
+  width: 100%; /* 改为100%宽度 */
   display: flex;
   justify-content: center;
 }
@@ -3074,9 +3100,9 @@ initPage()
   flex-direction: column;
   align-items: center;
   justify-content: flex-start; /* 改为从上到下排列，优先显示图片 */
-  padding: 25px 16px 20px; /* 减小底部padding，缩短内容区域 */
+  padding: 25px 8px 20px; /* 减小左右padding */
   overflow-y: auto;
-  width: 90%;
+  width: 100%; /* 改为100%宽度 */
   margin: 0 auto;
 }
 
@@ -3157,11 +3183,11 @@ initPage()
   font-weight: 500;
   word-wrap: break-word;
   text-align: center;
-  max-width: 90%;
+  max-width: 100%; /* 改为100%宽度 */
   width: 100%;
   max-height: none; /* 移除最大高度限制，让文本完全显示 */
   overflow-y: auto;
-  padding: 0 12px;
+  padding: 0 8px; /* 减小左右padding */
   margin: 0 auto;
   /* 增加文字边框 */
   -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.1);

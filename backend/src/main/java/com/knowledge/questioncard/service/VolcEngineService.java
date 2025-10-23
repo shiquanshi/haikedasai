@@ -434,7 +434,7 @@ public class VolcEngineService {
                                     String questionImage = null;
                                     String answerImage = null;
                                     try {
-                                        questionImage = questionImageFuture.orTimeout(2, TimeUnit.MINUTES).join();
+                                        questionImage = questionImageFuture.orTimeout(360, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
                                         log.warn("问题图片生成超时或失败，跳过", e);
                                     }
@@ -455,33 +455,24 @@ public class VolcEngineService {
                                         return null;
                                     }
                                     
-                                    // 🔥 立即发送单张卡片的图片数据（包含索引信息）
+                                    // 发送进度通知
                                     try {
-                                        // 添加卡片索引信息
-                                        card.put("index", cardIndex - 1); // 使用0-based索引
-                                        
-                                        // 包装数据格式以匹配前端期望: {type: 'image_single', data: cardData}
-                                        Map<String, Object> eventData = new HashMap<>();
-                                        eventData.put("type", "image_single");
-                                        eventData.put("data", card);
-                                        
-                                        String singleCardJson = objectMapper.writeValueAsString(eventData);
-                                        emitter.send(SseEmitter.event().name("message").data(singleCardJson));
-                                        log.info("📤 已发送第 {}/{} 张卡片图片数据（索引: {}）", cardIndex, totalCards, cardIndex - 1);
+                                        emitter.send(SseEmitter.event().name("status")
+                                            .data(String.format("第 %d/%d 张卡片图片生成完成", cardIndex, totalCards)));
                                     } catch (IOException e) {
-                                        log.error("发送单张卡片图片数据失败", e);
+                                        log.error("发送进度通知失败", e);
                                     }
-                                    
+
                                     return card;
                                 } catch (Exception e) {
                                     log.error("处理卡片异常", e);
                                     return null;
                                 }
                             }, sseTaskExecutor);
-                            
+
                             futures.add(future);
                         }
-                        
+
                         // 等待所有卡片处理完成，但设置超时机制(5分钟)
                         try {
                             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -493,24 +484,24 @@ public class VolcEngineService {
                         }
                         long parallelEndTime = System.currentTimeMillis();
                         log.info("⏱️ [计时] 所有卡片图片并行生成完成 - 耗时:{}ms", parallelEndTime - parallelStartTime);
-                        
-                        // 收集结果（用于返回完整数据）
+
+                        // 收集结果
                         for (CompletableFuture<Map<String, Object>> future : futures) {
                             Map<String, Object> card = future.join();
                             if (card != null) {
                                 updatedCards.add(card);
                             }
                         }
-                        
+
                         // 检查连接是否仍然活跃
                         if (!connectionActive.get()) {
                             log.warn("连接已断开，停止发送图片数据");
                             return accumulatedContent.toString();
                         }
-                        
-                        // 🔥 不再发送批量images事件，因为已经通过image_single逐张发送了
+
+                        // 发送更新后的完整JSON（包含图片URL）
                         String updatedJson = objectMapper.writeValueAsString(updatedCards);
-                        log.info("✅ 所有图片数据已通过image_single事件逐张发送完成");
+                        emitter.send(SseEmitter.event().name("images").data(updatedJson));
                         
                         // 🔑 关键修改：返回包含图片URL的完整JSON，而不是原始JSON
                         long imageEndTime = System.currentTimeMillis();
