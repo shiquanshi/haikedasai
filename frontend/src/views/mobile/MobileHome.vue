@@ -605,43 +605,43 @@
           <div v-else class="no-cards">
             <el-empty description="暂无卡片内容" />
           </div>
-        </div>
-
-        <!-- 卡片进度指示器 -->
-        <div class="card-progress-bar" v-if="totalCards > 0">
-          <div class="progress-dots">
-            <span 
-              v-for="(card, index) in cards" 
-              :key="index"
-              class="progress-dot"
-              :class="{ 'active': index === currentCardIndex }"
-              @click="goToCard(index)"
-            ></span>
+           
+          <!-- 卡片进度指示器 -->
+          <div class="card-progress-bar" v-if="totalCards > 0">
+            <div class="progress-dots">
+              <span 
+                v-for="(card, index) in cards" 
+                :key="index"
+                class="progress-dot"
+                :class="{ 'active': index === currentCardIndex }"
+                @click="goToCard(index)"
+              ></span>
+            </div>
           </div>
-        </div>
-
-        <!-- 卡片导航按钮 -->
-        <div class="card-actions">
-          <el-button 
-            @click="prevCard"
-            :disabled="currentCardIndex === 0"
-            class="nav-button"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;">
-              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-            </svg>
-            上一张
-          </el-button>
-          <el-button 
-            @click="nextCard"
-            :disabled="currentCardIndex === totalCards - 1"
-            class="nav-button"
-          >
-            下一张
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left: 4px;">
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-            </svg>
-          </el-button>
+          
+          <!-- 卡片导航按钮 - 已合并到卡片容器中 -->
+          <div class="card-actions">
+            <el-button 
+              @click="prevCard"
+              :disabled="currentCardIndex === 0"
+              class="nav-button"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 4px;">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+              </svg>
+              上一张
+            </el-button>
+            <el-button 
+              @click="nextCard"
+              :disabled="currentCardIndex === totalCards - 1"
+              class="nav-button"
+            >
+              下一张
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left: 4px;">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+              </svg>
+            </el-button>
+          </div>
         </div>
 
 
@@ -769,9 +769,14 @@
             <el-option
               v-for="bank in userBanks"
               :key="bank.id"
-              :label="`${bank.name}`"
+              :label="bank.name"
               :value="bank.id"
-            />
+            >
+              <span>{{ bank.name }}</span>
+              <span style="float: right; color: var(--el-text-color-secondary); font-size: 13px">
+                {{ bank.cardCount }} 张卡片
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
         
@@ -1729,17 +1734,30 @@ const handleDeleteBank = async (bankId: number) => {
 
 // 加载用户题库列表(用于导入时选择)
 const loadUserBanks = async () => {
-  if (!userStore.isLoggedIn || !userStore.userInfo) return
+  if (!userStore.isLoggedIn || !userStore.userInfo) {
+    console.log('用户未登录，无法加载题库列表')
+    return
+  }
   
   try {
+    console.log('正在加载用户题库列表...')
     const response = await questionBankApi.getUserCustomBanks(1, 1000)
+    console.log('getUserCustomBanks API响应:', response)
+    
     if (response.status === 200) {
       // 修复：正确处理API返回的数据结构，与PC端保持一致
       userBanks.value = response.data?.data || []
+      console.log('成功加载用户题库列表，数量:', userBanks.value.length)
+      console.log('题库列表数据:', userBanks.value)
+      
+      if (userBanks.value.length === 0) {
+        console.log('用户暂无自定义题库')
+      }
     }
   } catch (error) {
     console.error('加载用户题库列表失败:', error)
     ElMessage.error('加载用户题库失败')
+    userBanks.value = []
   }
 }
 
@@ -2997,7 +3015,8 @@ initPage()
 
 .card-img {
   width: 100%;
-  height: 280px; /* 显著增加图片高度，优先展示图片 */
+  height: auto; /* 改为自适应高度，确保图片完全显示 */
+  max-height: 280px; /* 增加最大高度限制 */
   border-radius: 7px;
   object-fit: contain; /* 确保图片完全显示且不变形 */
 }
@@ -3021,6 +3040,8 @@ initPage()
 }
 
 .flip-card-back .card-img {
+  height: auto;
+  max-height: 280px;
   object-fit: contain; /* 确保答案面图片也完全显示且不变形 */
 }
 
@@ -3239,7 +3260,9 @@ initPage()
 .card-progress-bar {
   display: flex;
   justify-content: center;
-  margin: 16px 0;
+  padding: 16px 0;
+  background: white;
+  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.03);
 }
 
 .progress-dots {
@@ -3272,25 +3295,30 @@ initPage()
   transform: scale(1.2);
 }
 
-/* 底部按钮区域 - 固定在底部且不会被遮挡 */
+/* 卡片导航按钮区域 */
 .card-actions {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   padding: 16px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background: white;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
   box-sizing: border-box;
 }
 
-/* 调整卡片展示区域底部边距，避免被固定按钮遮挡 */
+/* 卡片容器 - 调整整体样式 */
+.card-container {
+  border-radius: 15px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin: 0 16px;
+}
+
+/* 调整卡片展示区域底部边距 */
 .cards-section {
-  padding-bottom: 100px;
+  padding-bottom: 20px;
+  padding-top: 16px;
 }
 
 /* 调整根容器的高度，确保内容完整显示 */
