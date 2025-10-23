@@ -542,6 +542,7 @@
                 <template v-else>
                   <div class="card-badge">问题</div>
                   <div class="card-content">
+                      <div class="bank-name-small">{{ currentBankName || '我的闪卡' }}</div>
                       <div class="card-text question-text">{{ currentCard?.question }}</div>
                       <div v-if="currentCard?.questionImage" class="card-image">
                         <el-image :src="currentCard.questionImage" fit="contain" class="card-img">
@@ -571,6 +572,7 @@
               <div class="flip-card-back">
                 <div class="card-badge">答案</div>
                 <div class="card-content">
+                  <div class="bank-name-small">{{ currentBankName || '我的闪卡' }}</div>
                   <div class="card-text">{{ currentCard?.answer }}</div>
                   <div v-if="currentCard?.answerImage" class="card-image">
                     <el-image :src="currentCard.answerImage" fit="contain" class="card-img">
@@ -3011,6 +3013,23 @@ initPage()
   padding: 60px 20px 50px;
   overflow-y: auto;
   width: 100%;
+}
+
+/* 紧凑的题库名称样式 */
+.bank-name-small {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 12px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  display: inline-block;
+  max-width: 80%;
 }
 
 /* 加载状态内容 */
