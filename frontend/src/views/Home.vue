@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <!-- 顶部导航栏 -->
-    <div class="app-header">
+    <div class="app-header" v-if="!showCards">
       <div class="header-content">
         <div class="header-left">
           <h1 class="app-title">智能闪卡生成系统</h1>
@@ -500,19 +500,6 @@
           
           <!-- 单卡片展示 -->
           <div v-else-if="cards.length > 0" class="single-card-container">
-            <!-- 返回首页按钮 -->
-            <div class="card-top-controls">
-              <el-button 
-                @click="backToHome" 
-                type="primary" 
-                size="default"
-                class="back-home-button"
-              >
-                <el-icon><HomeFilled /></el-icon>
-                返回首页
-              </el-button>
-            </div>
-            
             <!-- 卡片和导航按钮的容器 -->
             <div class="card-with-navigation">
               <!-- 上一张按钮 -->
@@ -544,8 +531,8 @@
                       </div>
                       <div class="card-actions">
                         <el-button 
-                          @click.stop="playQuestion(currentCardIndex)" 
-                          :loading="isPlayingQuestion && playingQuestionIndex === currentCardIndex"
+                          @click.stop="playAnswer(currentCardIndex)" 
+                          :loading="isPlayingAnswer && playingAnswerIndex === currentCardIndex"
                           circle
                           size="small"
                           class="play-button"
@@ -1160,6 +1147,8 @@ const isFlipped = ref(false)
 const flippedCards = ref<boolean[]>([])
 const isPlayingQuestion = ref(false)
 const playingQuestionIndex = ref<number | null>(null)
+const isPlayingAnswer = ref(false)
+const playingAnswerIndex = ref<number | null>(null)
 let audioElement: HTMLAudioElement | null = null
 
 // 题库相关
@@ -2161,14 +2150,13 @@ const handleDeleteCurrentCard = () => {
   ElMessage.warning('在田字格模式下，请先选择卡片再进行删除操作')
 }
 
-// 播放问题/答案语音
+// 播放问题语音
 const playQuestion = async (index: number) => {
   // 如果没有卡片，直接返回
   if (!cards.value || index >= cards.value.length) return
   
   const card = cards.value[index]
-  // 获取要播放的文本（根据卡片翻转状态决定播放问题还是答案）
-  const textToPlay = flippedCards.value[index] ? card.answer : card.question
+  const textToPlay = card.question
   
   // 如果没有文本，不进行播放
   if (!textToPlay || textToPlay.trim() === '') {
@@ -2220,6 +2208,67 @@ const playQuestion = async (index: number) => {
     ElMessage.error('播放失败')
     isPlayingQuestion.value = false
     playingQuestionIndex.value = -1
+  }
+}
+
+// 播放答案语音
+const playAnswer = async (index: number) => {
+  // 如果没有卡片，直接返回
+  if (!cards.value || index >= cards.value.length) return
+  
+  const card = cards.value[index]
+  const textToPlay = card.answer
+  
+  // 如果没有文本，不进行播放
+  if (!textToPlay || textToPlay.trim() === '') {
+    ElMessage.warning('没有可播放的内容')
+    return
+  }
+  
+  try {
+    // 设置播放状态
+    isPlayingAnswer.value = true
+    playingAnswerIndex.value = index
+    
+    // 使用浏览器的语音合成API
+    if ('speechSynthesis' in window) {
+      // 停止任何正在播放的语音
+      window.speechSynthesis.cancel()
+      
+      // 创建语音实例
+      const utterance = new SpeechSynthesisUtterance(textToPlay)
+      
+      // 设置语音属性
+      utterance.lang = 'zh-CN' // 使用中文语音
+      utterance.rate = 1.0 // 语速
+      utterance.pitch = 1.0 // 音高
+      
+      // 播放结束时的回调
+      utterance.onend = () => {
+        isPlayingAnswer.value = false
+        playingAnswerIndex.value = -1
+      }
+      
+      // 播放出错时的回调
+      utterance.onerror = () => {
+        isPlayingAnswer.value = false
+        playingAnswerIndex.value = -1
+        ElMessage.error('播放失败')
+      }
+      
+      // 开始播放
+      window.speechSynthesis.speak(utterance)
+    } else {
+      // 浏览器不支持语音合成
+      ElMessage.error('您的浏览器不支持语音播放功能')
+      isPlayingAnswer.value = false
+      playingAnswerIndex.value = -1
+    }
+  } catch (error) {
+    console.error('播放语音失败:', error)
+    ElMessage.error('播放失败')
+    isPlayingAnswer.value = false
+    playingAnswerIndex.value = -1
   }
 }
 
@@ -2755,6 +2804,7 @@ onMounted(() => {
 
 .home-container {
   width: 100%;
+  height: 100vh;
   min-height: 100vh;
   padding: 0;
   display: flex;
@@ -3055,7 +3105,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   color: white;
   width: 100%;
 }
@@ -3212,17 +3262,23 @@ onMounted(() => {
   font-family: 'Courier New', monospace;
 }
 
-/* 卡片容器 - 固定最小高度 */
+/* 卡片容器 - 响应式高度 + 横向布局优化 */
 .flip-card {
   position: relative;
   width: 100%;
-  height: 600px;
+  max-width: 1400px;
+  height: calc(100vh - 40px);
   cursor: pointer;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .flip-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-4px);
+}
+
+.flip-card:active {
+  transform: scale(0.98);
 }
 
 /* 卡片翻转容器 */
@@ -3231,7 +3287,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   text-align: center;
-  transition: transform 0.8s cubic-bezier(0.2, 0.85, 0.4, 1.275);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
@@ -3250,68 +3306,80 @@ onMounted(() => {
   backface-visibility: hidden;
   border-radius: 30px;
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
+/* 问题面 - 深蓝色渐变（移动端风格）*/
 .flip-card-front {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
   color: white;
 }
 
+/* 答案面 - 绿色渐变（移动端风格）*/
 .flip-card-back {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-  color: #333;
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: white;
   transform: rotateY(180deg);
 }
 
-/* 新的卡片内容包装器 */
+/* 新的卡片内容包装器 - 左右布局 */
 .card-content-wrapper {
   width: 100%;
   min-height: 100%;
-  padding: 30px;
+  padding: 60px 30px 30px 30px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: 30px;
+  align-items: stretch;
 }
 
-/* 标签区域 */
+/* 标签区域 - 添加毛玻璃效果 */
 .card-label-section {
-  width: 100%;
-  height: 40px;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-align: center;
-  opacity: 0.9;
+  opacity: 0.95;
   margin-bottom: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 8px 20px;
+  border-radius: 12px;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
 }
 
-/* 文本区域容器 - 自适应高度 */
+/* 文本区域容器 - 固定高度以显示滚动条 */
 .card-text-section {
-  width: 100%;
-  min-height: 100px;
-  max-height: 250px;
-  margin-bottom: 20px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin-bottom: 0;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 15px;
   padding: 5px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 可滚动的文本内容 */
 .card-text-scrollable {
   width: 100%;
   height: 100%;
-  padding: 15px;
+  padding: 20px;
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
-  font-size: 24px;
+  font-size: 15px;
   font-weight: 500;
   line-height: 1.6;
   text-align: center;
@@ -3338,30 +3406,39 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.6);
 }
 
-/* 图片容器 - 自适应高度 */
+/* 图片容器 - 增强毛玻璃效果 */
 .card-image-section {
-  width: 100%;
-  max-width: 520px;
+  flex: 1;
+  min-width: 0;
   min-height: 200px;
-  max-height: 500px;
-  margin: 0 auto 20px;
-  padding: 8px;
+  margin: 0;
+  padding: 10px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .card-img {
-  max-width: 100%;
-  max-height: 480px;
-  width: auto;
+  width: 100%;
   height: auto;
-  border-radius: 10px;
+  max-height: 430px;
+  border-radius: 12px;
   object-fit: contain;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 答案面图片容器特殊样式 */
+.flip-card-back .card-image-section {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.flip-card-back .card-img {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .image-slot {
@@ -3411,35 +3488,52 @@ onMounted(() => {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+/* 播放按钮样式 - 参考移动端透明度设计 */
 .play-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  border: none !important;
-  width: 50px !important;
-  height: 50px !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: white !important;
+  width: 55px !important;
+  height: 55px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
 .play-button:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
-  transform: scale(1.15) rotate(5deg) !important;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  transform: translateY(-2px) scale(1.1) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.play-button:active {
+  transform: translateY(0) scale(1.05) !important;
 }
 
 .play-button svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+/* 翻转提示文本 - 添加图标 */
 .flip-hint {
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.85;
   margin-top: auto;
   padding-top: 10px;
   font-weight: 400;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.flip-hint::before {
+  content: '👆';
+  font-size: 16px;
 }
 
 /* 单卡片容器样式 */
@@ -3447,9 +3541,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 0;
   width: 100%;
-  padding: 20px;
+  height: 100vh;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* 顶部控制按钮区域 */
@@ -3479,31 +3576,36 @@ onMounted(() => {
   align-items: center;
   gap: 40px;
   width: 100%;
-  max-width: 1400px;
+  height: 100vh;
+  max-width: 95%;
   justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
-/* 导航按钮样式 */
+/* 导航按钮样式 - 优化交互效果 */
 .nav-button {
-  width: 60px !important;
-  height: 60px !important;
-  background: rgba(255, 255, 255, 0.15) !important;
-  border: 2px solid rgba(255, 255, 255, 0.3) !important;
-  backdrop-filter: blur(10px) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  width: 70px !important;
+  height: 70px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(59, 130, 246, 0.3) !important;
+  color: #3b82f6 !important;
+  backdrop-filter: blur(15px) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease !important;
   flex-shrink: 0;
 }
 
 .nav-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.15) !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+  color: white !important;
+  transform: translateY(-2px) scale(1.1) !important;
+  box-shadow: 0 15px 50px rgba(59, 130, 246, 0.5) !important;
+  border-color: transparent !important;
 }
 
 .nav-button:active:not(:disabled) {
-  transform: scale(1.05) !important;
+  transform: translateY(0) scale(1.05) !important;
 }
 
 .nav-button:disabled {
