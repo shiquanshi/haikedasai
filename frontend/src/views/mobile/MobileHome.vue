@@ -1307,34 +1307,77 @@ const generateCards = async () => {
       },
       (content) => {
         // 检查是否是特殊事件数据
-        try {
-          const parsed = JSON.parse(content)
-          
-          // 处理单张卡片图片数据
-          if (parsed.type === 'image_single' && parsed.data) {
-            console.log('🖼️ 接收到单张卡片图片数据')
-            const cardData = parsed.data
-            // 根据索引更新对应卡片的图片
-            if (cardData.index !== undefined && cards.value[cardData.index]) {
-              cards.value[cardData.index].questionImage = cardData.questionImage
-              cards.value[cardData.index].answerImage = cardData.answerImage
-              console.log(`已更新第${cardData.index + 1}张卡片的图片`)
-            } else {
-              // 如果没有index，尝试通过question匹配
-              const matchingCardIndex = cards.value.findIndex(
-                card => card.question === cardData.question
-              )
-              if (matchingCardIndex >= 0) {
-                cards.value[matchingCardIndex].questionImage = cardData.questionImage
-                cards.value[matchingCardIndex].answerImage = cardData.answerImage
-                console.log(`通过问题匹配，已更新第${matchingCardIndex + 1}张卡片的图片`)
+          try {
+            const parsed = JSON.parse(content)
+            
+            // 处理保存事件：用真实ID的卡片替换临时ID的卡片
+            if (parsed.type === 'saved' && parsed.data) {
+              console.log('💾 接收到saved事件，用真实ID替换临时ID')
+              if (Array.isArray(parsed.data)) {
+                // 建立临时ID到真实ID的映射
+                const oldToNewIdMap = new Map()
+                cards.value.forEach((oldCard, index) => {
+                  if (parsed.data[index]) {
+                    oldToNewIdMap.set(oldCard.id, parsed.data[index].id)
+                  }
+                })
+                
+                // 🔥 关键修复：合并图片数据，不直接覆盖
+                cards.value = parsed.data.map((newCard: any, index: number) => {
+                  const oldCard = cards.value[index]
+                  return {
+                    ...newCard,
+                    // 保留旧卡片的图片数据（如果有）
+                    questionImage: oldCard?.questionImage || newCard.questionImage,
+                    answerImage: oldCard?.answerImage || newCard.answerImage
+                  }
+                })
+                console.log(`✅ 已更新为${cards.value.length}张真实ID的卡片，同时保留图片数据`)
               }
+              return
             }
-            return
+            
+            // 处理单张卡片图片数据
+            if (parsed.type === 'image_single' && parsed.data) {
+              console.log('🖼️ 接收到单张卡片图片数据')
+              const cardData = parsed.data
+              // 根据索引更新对应卡片的图片
+              if (cardData.index !== undefined && cards.value[cardData.index]) {
+                cards.value[cardData.index].questionImage = cardData.questionImage
+                cards.value[cardData.index].answerImage = cardData.answerImage
+                console.log(`已更新第${cardData.index + 1}张卡片的图片`)
+              } else {
+                // 如果没有index，尝试通过question匹配
+                const matchingCardIndex = cards.value.findIndex(
+                  card => card.question === cardData.question
+                )
+                if (matchingCardIndex >= 0) {
+                  cards.value[matchingCardIndex].questionImage = cardData.questionImage
+                  cards.value[matchingCardIndex].answerImage = cardData.answerImage
+                  console.log(`通过问题匹配，已更新第${matchingCardIndex + 1}张卡片的图片`)
+                }
+              }
+              return
+            }
+            
+            // 处理图片描述数据
+            if (parsed.type === 'images' && parsed.data) {
+              console.log('📸 接收到图片描述数据，更新卡片')
+              // 更新现有卡片的图片描述
+              if (Array.isArray(parsed.data)) {
+                parsed.data.forEach((cardWithImage: any, index: number) => {
+                  if (cards.value[index]) {
+                    cards.value[index].questionImage = cardWithImage.questionImage
+                    cards.value[index].answerImage = cardWithImage.answerImage
+                  }
+                })
+                console.log(`已更新${parsed.data.length}张卡片的图片描述`)
+              }
+              return
+            }
+          } catch (e) {
+            // 不是JSON格式，继续按普通流式内容处理
           }
-        } catch (e) {
-          // 不是JSON格式，继续按普通流式内容处理
-        }
         
         // 累积内容
         allContent += content
@@ -1447,53 +1490,19 @@ const generateCards = async () => {
         ElMessage.error(error)
         isGenerating.value = false
       },
-      async () => {
+      () => {
         // 生成完成
         isGenerating.value = false
         if (cards.value.length > 0) {
           ElMessage.success(`闪卡生成成功！共生成${cards.value.length}张卡片`)
-          
-          // 保存卡片到题库
-          try {
-            const bankName = `${topic.value}${scenario.value ? '-' + scenario.value : ''}-${new Date().getTime()}`
-            const saveResponse = await questionBankApi.createAIBank({
-              name: bankName,
-              description: `主题: ${topic.value}${scenario.value ? ', 场景: ' + scenario.value : ''}`,
-              topic: topic.value,
-              scenario: scenario.value || '',
-              difficulty: difficulty.value,
-              language: language.value,
-              cardCount: cards.value.length,
-              cards: cards.value.map((card: any) => ({
-                question: card.question,
-                answer: card.answer,
-                questionImage: card.questionImage || '',
-                answerImage: card.answerImage || '',
-                difficulty: card.difficulty || difficulty.value
-              }))
-            })
-            
-            if (saveResponse.code === 200 && saveResponse.data) {
-              // 保存成功后,加载题库卡片并切换到展示界面
-              const bankId = saveResponse.data.id
-              currentBankId.value = bankId
-              currentBankName.value = bankName
-              currentBankType.value = 'ai'
-              
-              // 重新加载题库卡片(确保ID正确)
-              await loadBankCards(bankId, bankName, 'ai')
-              
-              // 刷新历史记录
-              loadHistoryRecords()
-            }
-          } catch (error) {
-            console.error('保存题库失败:', error)
-            ElMessage.error('保存题库失败，但卡片已生成')
-            // 即使保存失败，也显示已生成的卡片
-            showCards.value = true
-            currentCardIndex.value = 0
-            isFlipped.value = false
+          // 刷新历史记录
+          if (userStore.isLoggedIn && userStore.userInfo) {
+            loadHistoryRecords()
           }
+          // 显示生成的卡片
+          showCards.value = true
+          currentCardIndex.value = 0
+          isFlipped.value = false
         } else {
           ElMessage.warning('未生成任何卡片')
         }
