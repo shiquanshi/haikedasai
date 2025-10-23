@@ -3254,16 +3254,32 @@ initPage()
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 16px;
-  margin-bottom: 30px; /* 增加底部边距，确保在小屏幕设备上不被遮挡 */
-  position: relative;
-  z-index: 10;
+  padding: 16px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+/* 调整卡片展示区域底部边距，避免被固定按钮遮挡 */
+.cards-section {
+  padding-bottom: 100px;
+}
+
+/* 调整根容器的高度，确保内容完整显示 */
+.mobile-home-container {
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .nav-button {
   flex: 1;
-  padding: 12px 0 !important;
-  font-size: 13px !important;
+  padding: 14px 0 !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   border-radius: 16px !important;
   border: none !important;
