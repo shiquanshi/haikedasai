@@ -2415,48 +2415,6 @@ const handleSubmitEditCard = async () => {
   }
 }
 
-const playQuestion = async () => {
-  if (isPlayingQuestion.value) {
-    stopAudio()
-    return
-  }
-
-  try {
-    isPlayingQuestion.value = true
-    // 根据卡片当前显示的面来决定播放问题还是答案
-    const textToPlay = isFlipped.value ? currentCard.value.answer : currentCard.value.question
-    const response = await questionBankApi.textToSpeech(textToPlay)
-    
-    if (response.success && response.audioData) {
-      // 创建音频元素并播放
-      const audioData = response.audioData
-      const audioBlob = base64ToBlob(audioData, 'audio/mpeg')
-      const audioUrl = URL.createObjectURL(audioBlob)
-      
-      stopAudio() // 停止之前的播放
-      audioElement = new Audio(audioUrl)
-      
-      audioElement.onended = () => {
-        isPlayingQuestion.value = false
-        URL.revokeObjectURL(audioUrl)
-      }
-      
-      audioElement.onerror = () => {
-        isPlayingQuestion.value = false
-        ElMessage.error('音频播放失败')
-        URL.revokeObjectURL(audioUrl)
-      }
-      
-      await audioElement.play()
-    } else {
-      throw new Error('获取音频数据失败')
-    }
-  } catch (error) {
-    isPlayingQuestion.value = false
-    ElMessage.error('播放失败')
-  }
-}
-
 const stopAudio = () => {
   if (audioElement) {
     audioElement.pause()
@@ -3144,7 +3102,7 @@ onMounted(() => {
   backdrop-filter: blur(5px);
   width: 100%;
   max-width: 600px;
-  aspect-ratio: 1 / 1;
+  /* 移除固定宽高比限制，让图片能够完整显示 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -3153,18 +3111,18 @@ onMounted(() => {
 
 .card-img {
   max-width: 100%;
-  max-height: 100%;
+  max-height: 400px; /* 增加最大高度，确保图片能够完整显示 */
   width: auto;
   height: auto;
   border-radius: 10px;
-  object-fit: contain;
+  object-fit: contain; /* 保持图片比例，确保完全显示 */
 }
 
 .image-slot {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100px;
+  height: 200px; /* 增加占位区域高度 */
   color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
