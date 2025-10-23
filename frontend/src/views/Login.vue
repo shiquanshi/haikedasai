@@ -16,7 +16,7 @@
         <el-form-item prop="email" v-if="!isLogin">
           <el-input
             v-model="form.email"
-            placeholder="邮箱(可选)"
+            placeholder="邮箱"
             size="large"
             clearable
           />
@@ -89,6 +89,19 @@ const rules = reactive<FormRules>({
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
   ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { 
+      type: 'email', 
+      message: '请输入正确的邮箱格式', 
+      trigger: ['blur', 'change'] 
+    },
+    {
+      pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      message: '邮箱格式不正确',
+      trigger: 'blur'
+    }
+  ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度至少6个字符', trigger: 'blur' }
@@ -133,7 +146,7 @@ const handleSubmit = async () => {
         const success = await userStore.register({
           username: form.username,
           password: form.password,
-          email: form.email || undefined
+          email: form.email
         })
         if (success) {
           router.push('/')
