@@ -2868,19 +2868,18 @@ initPage()
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片容器样式 - 减小高度以给卡片留出更多空间 */
+/* 卡片容器样式 - 调整比例增加留白并让卡片顶到底部 */
 .card-container {
   width: 100%;
-  min-height: 380px;
-  max-height: 400px;
+  min-height: 450px;
+  max-height: 480px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   position: relative;
-  margin-bottom: 15px;
+  margin-bottom: 0;
   margin-top: 8px;
   perspective: 1000px;
-  padding: 0;
+  padding: 0 10px;
 }
 
 
@@ -2893,10 +2892,10 @@ initPage()
   font-weight: 500;
 }
 
-/* 翻转卡片样式 - 减小高度以给卡片留出更多空间 */
+/* 翻转卡片样式 - 调整比例增加留白并让卡片顶到底部 */
 .flip-card {
   width: 100%;
-  height: 380px;
+  height: 450px;
   cursor: pointer;
   position: relative;
   transition: transform 0.2s ease;
@@ -3002,14 +3001,14 @@ initPage()
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 卡片内容样式 - 增加左右内边距 */
+/* 卡片内容样式 - 增加留白边框并确保内容居中 */
 .card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px 30px;
+  padding: 60px 20px 50px;
   overflow-y: auto;
   width: 100%;
 }
