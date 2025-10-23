@@ -7,7 +7,7 @@
         <el-button 
           type="primary" 
           size="small" 
-          @click="$router.push('/share-plaza')"
+          @click="$router.push('/mobile/share-plaza')"
           class="plaza-button"
         >
           <el-icon><Share /></el-icon>
@@ -649,8 +649,28 @@
     >
       <div v-if="!shareCode">
         <el-form label-width="80px">
+          <el-form-item label="分享标题">
+            <el-input
+              v-model="shareTitle"
+              placeholder="请输入分享标题（可选）"
+              maxlength="50"
+              show-word-limit
+              size="large"
+            />
+          </el-form-item>
+          <el-form-item label="分享描述">
+            <el-input
+              v-model="shareDescription"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入分享描述（可选）"
+              maxlength="200"
+              show-word-limit
+              size="large"
+            />
+          </el-form-item>
           <el-form-item label="有效期">
-            <el-select v-model="shareExpireHours" placeholder="永久有效" style="width: 100%">
+            <el-select v-model="shareExpireHours" placeholder="永久有效" style="width: 100%" size="large">
               <el-option label="24小时" :value="24" />
               <el-option label="3天" :value="72" />
               <el-option label="7天" :value="168" />
@@ -1103,6 +1123,8 @@ const shareCode = ref('')
 const shareExpireHours = ref<number | null>(null)
 const currentSharingBankId = ref<number | null>(null)
 const shareToPlaza = ref(false) // 是否分享到大厅
+const shareTitle = ref('') // 分享标题
+const shareDescription = ref('') // 分享描述
 const accessShareCode = ref('')
 
 // 创建题库相关
@@ -1625,6 +1647,8 @@ const handleShareBank = (bankId: number) => {
   shareCode.value = ''
   shareExpireHours.value = null
   shareToPlaza.value = false // 重置分享到大厅选项
+  shareTitle.value = '' // 重置分享标题
+  shareDescription.value = '' // 重置分享描述
   showShareDialog.value = true
 }
 
@@ -1640,8 +1664,8 @@ const confirmGenerateShare = async () => {
     const response = await questionBankApi.generateShareCode(
       currentSharingBankId.value,
       shareToPlaza.value, // isPublic参数
-      undefined, // shareTitle
-      undefined  // shareDescription
+      shareTitle.value || undefined, // shareTitle
+      shareDescription.value || undefined  // shareDescription
     )
     
     // 从返回的SharedBank对象中获取shareCode

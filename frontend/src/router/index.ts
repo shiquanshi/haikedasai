@@ -7,6 +7,7 @@ import ShareDetail from '../views/ShareDetail.vue'
 import MobileHome from '../views/mobile/MobileHome.vue'
 import MobileLogin from '../views/mobile/MobileLogin.vue'
 import MobileImageGenerator from '../views/mobile/MobileImageGenerator.vue'
+import MobileSharePlaza from '../views/mobile/MobileSharePlaza.vue'
 import { useUserStore } from '../stores/user'
 import { isMobileDevice } from '../utils/device'
 
@@ -59,6 +60,12 @@ const router = createRouter({
       name: 'mobileImageGenerator',
       component: MobileImageGenerator,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/mobile/share-plaza',
+      name: 'mobileSharePlaza',
+      component: MobileSharePlaza,
+      meta: { requiresAuth: true }
     }
   ]
 })
@@ -92,6 +99,8 @@ router.beforeEach((to, from, next) => {
       return next('/mobile/login')
     } else if (to.path === '/image-generator') {
       return next('/mobile/image-generator')
+    } else if (to.path === '/share-plaza') {
+      return next('/mobile/share-plaza')
     }
   }
   
