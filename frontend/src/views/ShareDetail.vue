@@ -484,9 +484,12 @@ const handleFavorite = async () => {
 // 跳转到卡片详情
 const goToCard = (cardId: number) => {
   if (!bankInfo.value?.id) return
-  // 跳转到对应题库的卡片页面
+  // 根据设备类型跳转到对应的页面
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  const targetPath = isMobile ? '/mobile' : '/'
+  
   router.push({
-    path: '/mobile',
+    path: targetPath,
     query: {
       bankId: bankInfo.value.id,
       cardId: cardId

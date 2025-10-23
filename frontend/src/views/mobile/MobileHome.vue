@@ -2715,7 +2715,7 @@ const initPage = async () => {
   if (bankId && cardId) {
     try {
       // 加载指定题库的卡片
-      await viewBankCards(Number(bankId), '', '')
+      await loadBankCards(Number(bankId), '', '')
       
       // 等待卡片加载完成后定位到指定卡片
       setTimeout(() => {

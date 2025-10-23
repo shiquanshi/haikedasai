@@ -1248,7 +1248,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton, Share } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
@@ -1257,6 +1257,7 @@ import { useUserStore } from '../stores/user'
 import { formatDate } from '../utils/date'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 interface Card {
@@ -3001,7 +3002,7 @@ const handleAccessSharedBank = async () => {
 }
 
 // 页面加载时获取题库列表
-onMounted(() => {
+onMounted(async () => {
   loadSystemBanks()
   loadCustomBanks()
   
@@ -3013,6 +3014,31 @@ onMounted(() => {
       loadSharedBanks()
       loadFavoriteBanks()
     })
+  }
+  
+  // 处理从分享详情页跳转过来的参数
+  const bankId = route.query.bankId
+  const cardId = route.query.cardId
+  
+  if (bankId && cardId) {
+    console.log('检测到路由参数 - bankId:', bankId, 'cardId:', cardId)
+    try {
+      // 加载指定题库的卡片
+      await loadBankCards(Number(bankId))
+      
+      // 延迟定位到指定卡片，确保卡片列表已渲染
+      setTimeout(() => {
+        const targetIndex = cards.value.findIndex(card => card.id === Number(cardId))
+        if (targetIndex !== -1) {
+          currentCardIndex.value = targetIndex
+          ElMessage.success('已定位到指定卡片')
+        } else {
+          ElMessage.warning('未找到指定卡片')
+        }
+      }, 500)
+    } catch (error) {
+      console.error('跳转到指定卡片失败:', error)
+    }
   }
 })
 </script>
