@@ -30,6 +30,7 @@ public class BattleRoomService {
         room.setMaxPlayers(request.getMaxPlayers());
         room.setTotalRounds(request.getTotalRounds());
         room.setTopic(request.getTopic());
+        room.setScenario(request.getScenario());
         room.setDifficulty(request.getDifficulty());
         room.setCreateTime(LocalDateTime.now());
         
@@ -198,14 +199,14 @@ public class BattleRoomService {
             player.saveRoundScore(room.getCurrentRound())
         );
         
-        // 增加当前轮次
-        room.setCurrentRound(room.getCurrentRound() + 1);
-        
         // 判断是否还有下一轮
-        if (room.getCurrentRound() <= room.getTotalRounds()) {
+        if (room.getCurrentRound() < room.getTotalRounds()) {
+            // 还有下一轮，递增轮次
+            room.setCurrentRound(room.getCurrentRound() + 1);
             room.setStatus(BattleRoom.RoomStatus.PLAYING);
             log.info("进入下一轮: roomId={}, round={}/{}", roomId, room.getCurrentRound(), room.getTotalRounds());
         } else {
+            // 已完成所有轮次
             room.setStatus(BattleRoom.RoomStatus.FINISHED);
             log.info("游戏结束: roomId={}, 完成轮次: {}/{}", roomId, room.getTotalRounds(), room.getTotalRounds());
         }

@@ -293,7 +293,8 @@ public class BattleController {
             BattleQuestion question = questionService.generateQuestion(
                 room.getTopic(), 
                 room.getDifficulty(), 
-                room.getCurrentRound()
+                room.getCurrentRound(),
+                room.getScenario()
             );
             
             roomService.setCurrentQuestion(room.getRoomId(), question);

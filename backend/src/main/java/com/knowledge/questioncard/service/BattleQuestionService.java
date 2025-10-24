@@ -31,10 +31,10 @@ public class BattleQuestionService {
     /**
      * 生成对战题目
      */
-    public BattleQuestion generateQuestion(String topic, String difficulty, int round) {
-        log.info("开始生成题目: topic={}, difficulty={}, round={}", topic, difficulty, round);
+    public BattleQuestion generateQuestion(String topic, String difficulty, int round, String scenario) {
+        log.info("开始生成题目: topic={}, difficulty={}, round={}, scenario={}", topic, difficulty, round, scenario);
         
-        String prompt = buildQuestionPrompt(topic, difficulty, round);
+        String prompt = buildQuestionPrompt(topic, difficulty, round, scenario);
         
         try {
             List<ChatMessage> messages = new ArrayList<>();
@@ -105,7 +105,7 @@ public class BattleQuestionService {
             List<ChatMessage> messages = new ArrayList<>();
             messages.add(ChatMessage.builder()
                 .role(ChatMessageRole.SYSTEM)
-                .content("你是一个公正严格的评分专家，需要根据题目要求和评分标准，对答案进行客观评分。")
+                .content("你是一个友善宽容的评分专家，鼓励学习者积极思考。只要答案有一定道理和相关性，就应该给予较高的分数。评分时应该注重答案的思考过程和努力，而不是过分苛求完美。")
                 .build());
             messages.add(ChatMessage.builder()
                 .role(ChatMessageRole.USER)
@@ -135,7 +135,7 @@ public class BattleQuestionService {
     /**
      * 构建题目生成提示词
      */
-    private String buildQuestionPrompt(String topic, String difficulty, int round) {
+    private String buildQuestionPrompt(String topic, String difficulty, int round, String scenario) {
         String difficultyDesc = switch (difficulty.toLowerCase()) {
             case "easy" -> "简单";
             case "medium" -> "中等";
@@ -143,9 +143,14 @@ public class BattleQuestionService {
             default -> "中等";
         };
         
+        String scenarioContext = (scenario != null && !scenario.trim().isEmpty()) 
+                ? "学习场景：" + scenario + "\n" 
+                : "";
+        
         return String.format(
             "请根据以下要求生成一道开放性问题：\n\n" +
             "主题：%s\n" +
+            scenarioContext +
             "难度：%s\n" +
             "轮次：第%d轮\n\n" +
             "要求：\n" +
@@ -174,10 +179,12 @@ public class BattleQuestionService {
             "参考答案要点：\n%s\n\n" +
             "学生答案：\n%s\n\n" +
             "要求：\n" +
-            "1. 满分100分\n" +
-            "2. 根据答案的完整性、准确性、深度进行评分\n" +
-            "3. 提供简短的评语（50字以内）\n" +
-            "4. 如果答案完全不相关或为空，给0分\n\n" +
+            "1. 满分100分，评分要宽松友好\n" +
+            "2. 只要答案与题目相关且有思考，至少给60分\n" +
+            "3. 答案较完整且有一定深度的，给80-90分\n" +
+            "4. 答案非常出色的，给90-100分\n" +
+            "5. 只有完全不相关或为空时才给低于60分\n" +
+            "6. 提供鼓励性的简短评语（50字以内）\n\n" +
             "请以JSON格式返回：\n" +
             "{\n" +
             "    \"score\": 分数(0-100),\n" +

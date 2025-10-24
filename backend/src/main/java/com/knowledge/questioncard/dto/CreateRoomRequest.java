@@ -28,6 +28,9 @@ public class CreateRoomRequest {
     @Size(max = 100, message = "主题不能超过100个字符")
     private String topic;
     
+    @Size(max = 100, message = "学习场景不能超过100个字符")
+    private String scenario;
+    
     @NotBlank(message = "难度等级不能为空")
     @Pattern(regexp = "^(easy|medium|hard)$", message = "难度只能是easy、medium或hard")
     private String difficulty;

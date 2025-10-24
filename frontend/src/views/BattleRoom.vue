@@ -52,6 +52,9 @@
         <el-form-item label="答题主题">
           <el-input v-model="createForm.topic" placeholder="例如: 编程、历史、科学等" />
         </el-form-item>
+        <el-form-item label="学习场景">
+          <el-input v-model="createForm.scenario" placeholder="学习场景（可选）" />
+        </el-form-item>
         <el-form-item label="难度">
           <el-select v-model="createForm.difficulty" placeholder="选择难度">
             <el-option label="简单" value="easy" />
@@ -78,7 +81,7 @@
 import { ref, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, HomeFilled } from '@element-plus/icons-vue'
 import SockJS from 'sockjs-client'
 import { Client } from '@stomp/stompjs'
 import { useUserStore } from '../stores/user'
@@ -101,6 +104,7 @@ const showCreateDialog = ref(false)
 const createForm = ref({
   roomName: '',
   topic: '',
+  scenario: '',
   difficulty: 'medium',
   maxPlayers: 4,
   totalRounds: 3
@@ -240,6 +244,7 @@ const createRoom = async () => {
   createForm.value = {
     roomName: '',
     topic: '',
+    scenario: '',
     difficulty: 'medium',
     maxPlayers: 4,
     totalRounds: 3
@@ -362,6 +367,11 @@ onActivated(() => {
 .lobby-header h1 {
   margin: 0;
   font-size: 32px;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 12px;
 }
 
 .room-list {

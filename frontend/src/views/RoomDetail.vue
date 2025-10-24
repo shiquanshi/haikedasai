@@ -471,7 +471,8 @@ const handleQuestion = (data: any) => {
   isGenerating.value = false
   
   currentRound.value = data.round
-  countdown.value = data.timeLimit
+  // 移除前端初始化倒计时，完全依赖后端WebSocket推送的倒计时
+  // countdown.value = data.timeLimit
   myAnswer.value = ''
   hasSubmitted.value = false
   submittedPlayers.value = []

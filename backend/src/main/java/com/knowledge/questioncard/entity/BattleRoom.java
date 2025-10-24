@@ -18,6 +18,7 @@ public class BattleRoom {
     private Integer currentRound; // 当前轮次
     private Integer totalRounds; // 总轮次数
     private String topic; // 答题主题
+    private String scenario; // 学习场景
     private String difficulty; // 难度等级
     private LocalDateTime createTime; // 创建时间
     
