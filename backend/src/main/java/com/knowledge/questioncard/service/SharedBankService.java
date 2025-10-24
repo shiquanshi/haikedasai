@@ -208,6 +208,7 @@ public class SharedBankService {
                 map.put("difficulty", bank.getDifficulty());
                 map.put("language", bank.getLanguage());
                 map.put("cardCount", bank.getCardCount());
+                map.put("type", bank.getType());
             }
             
             result.add(map);
