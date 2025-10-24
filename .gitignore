@@ -26,7 +26,6 @@ yarn-debug.log*
 yarn-error.log*
 dist/
 .vite/
-.npm-cache/
 
 # IDE
 .idea/
