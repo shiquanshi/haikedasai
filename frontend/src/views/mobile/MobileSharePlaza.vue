@@ -53,6 +53,10 @@
           
           <div class="bank-meta">
             <span class="card-count">{{ bank.cardCount || 0 }} 张卡片</span>
+            <span class="creator-info" v-if="bank.creatorName">
+              <span class="creator-avatar">👤</span>
+              <span class="creator-name">{{ bank.creatorName }}</span>
+            </span>
           </div>
           
           <div class="bank-stats">
@@ -330,15 +334,31 @@ onMounted(() => {
 .bank-meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin: 12px 0;
 }
 
-
-
 .card-count {
   color: #999;
   font-size: 13px;
+}
+
+.creator-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #666;
+}
+
+.creator-avatar {
+  font-size: 14px;
+}
+
+.creator-name {
+  color: #666;
+  font-weight: 500;
 }
 
 .bank-stats {
