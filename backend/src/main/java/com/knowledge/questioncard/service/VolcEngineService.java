@@ -445,18 +445,18 @@ public class VolcEngineService {
                                         }
                                     }, sseTaskExecutor);
                                     
-                                    // 等待两个图片都生成完成，设置统一超时机制(3分钟)
+                                    // 等待两个图片都生成完成，设置统一超时机制(5分钟)
                                     String questionImage = null;
                                     String answerImage = null;
                                     try {
-                                        questionImage = questionImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
+                                        questionImage = questionImageFuture.orTimeout(300, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("问题图片生成超时或失败（180秒），跳过", e);
+                                        log.warn("问题图片生成超时或失败（300秒），跳过", e);
                                     }
                                     try {
-                                        answerImage = answerImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
+                                        answerImage = answerImageFuture.orTimeout(300, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("答案图片生成超时或失败（180秒），跳过", e);
+                                        log.warn("答案图片生成超时或失败（300秒），跳过", e);
                                     }
                                     
                                     log.info("✅ 第 {}/{} 张卡片图片处理完成", cardIndex, totalCards);
