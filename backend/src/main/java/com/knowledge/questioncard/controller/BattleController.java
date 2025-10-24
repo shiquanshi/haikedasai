@@ -9,6 +9,7 @@ import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Controller
+@RequestMapping("/battle")
 public class BattleController {
     
     @Autowired
@@ -29,6 +31,35 @@ public class BattleController {
     private SimpMessagingTemplate messagingTemplate;
     
     /**
+     * 获取房间信息 (REST API)
+     */
+    @GetMapping("/room/{roomId}")
+    @ResponseBody
+    public Map<String, Object> getRoomInfo(@PathVariable String roomId) {
+        try {
+            log.info("REST API: 获取房间信息: roomId={}", roomId);
+            BattleRoom room = roomService.getRoomById(roomId);
+            if (room == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "房间不存在");
+                return error;
+            }
+            BattleRoomDTO dto = roomService.convertToDTO(room);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("room", dto);
+            return result;
+        } catch (Exception e) {
+            log.error("获取房间信息失败", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return error;
+        }
+    }
+    
+    /**
      * 创建房间
      */
     @MessageMapping("/battle/createRoom")
@@ -39,13 +70,57 @@ public class BattleController {
             BattleRoom room = roomService.createRoom(request, userId, username);
             BattleRoomDTO dto = roomService.convertToDTO(room);
             
-            // 发送房间创建成功消息
+            // 发送房间创建成功消息到房间主题
             BattleMessage message = new BattleMessage(BattleMessage.MessageType.ROOM_CREATED, room.getRoomId(), dto);
             messagingTemplate.convertAndSend("/topic/battle/" + room.getRoomId(), message);
             
+            // 广播房间列表更新消息到全局主题
+            BattleMessage listUpdateMessage = new BattleMessage(BattleMessage.MessageType.ROOM_LIST_UPDATED, null, null);
+            messagingTemplate.convertAndSend("/topic/battle/roomlist", listUpdateMessage);
+            log.info("已广播房间列表更新消息: 房间创建");
+            
+            // 发送创建成功响应给创建者
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("room", dto);
+            String destination = "/queue/create";
+            log.info("发送创建房间响应: userId={}, username={}, destination={}, result={}", userId, username, destination, result);
+            messagingTemplate.convertAndSendToUser(username, destination, result);
+            log.info("创建房间响应已发送");
+            
         } catch (Exception e) {
             log.error("创建房间失败", e);
-            sendError(null, e.getMessage());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            String destination = "/queue/create";
+            log.info("发送创建房间失败响应: userId={}, username={}, destination={}, result={}", userId, username, destination, result);
+            messagingTemplate.convertAndSendToUser(username, destination, result);
+            log.info("创建房间失败响应已发送");
+        }
+    }
+    
+    /**
+     * 获取房间列表
+     */
+    @MessageMapping("/battle/rooms")
+    public void getRooms(Principal principal) {
+        try {
+            String userId = principal != null ? principal.getName() : "0";
+            log.info("收到获取房间列表请求: userId={}", userId);
+            
+            List<BattleRoom> allRooms = roomService.getAllRooms();
+            List<BattleRoomDTO> roomDTOs = allRooms.stream()
+                .filter(room -> room.getStatus() == BattleRoom.RoomStatus.WAITING)
+                .map(roomService::convertToDTO)
+                .collect(Collectors.toList());
+            
+            messagingTemplate.convertAndSendToUser(userId, "/queue/rooms", roomDTOs);
+            log.info("返回房间列表: userId={}, count={}", userId, roomDTOs.size());
+        } catch (Exception e) {
+            log.error("获取房间列表失败", e);
+            String userId = principal != null ? principal.getName() : "0";
+            messagingTemplate.convertAndSendToUser(userId, "/queue/rooms", new ArrayList<>());
         }
     }
     
@@ -65,9 +140,19 @@ public class BattleController {
             BattleMessage message = new BattleMessage(BattleMessage.MessageType.PLAYER_JOINED, roomId, dto);
             messagingTemplate.convertAndSend("/topic/battle/" + roomId, message);
             
+            // 发送加入成功响应给加入者
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("roomId", roomId);
+            result.put("room", dto);
+            messagingTemplate.convertAndSendToUser(username, "/queue/join", result);
+            
         } catch (Exception e) {
             log.error("加入房间失败", e);
-            sendError(roomId, e.getMessage());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            messagingTemplate.convertAndSendToUser(username, "/queue/join", result);
         }
     }
     
@@ -75,18 +160,43 @@ public class BattleController {
      * 离开房间
      */
     @MessageMapping("/battle/leaveRoom")
-    public void leaveRoom(@Payload Map<String, String> payload, @Header("userId") Long userId) {
+    public void leaveRoom(@Payload Map<String, String> payload) {
         String roomId = payload.get("roomId");
+        Long userId = Long.parseLong(payload.get("userId"));
         try {
             log.info("收到离开房间请求: roomId={}, userId={}", roomId, userId);
             
             roomService.leaveRoom(roomId, userId);
             
-            // 广播玩家离开消息
+            // 广播玩家离开消息，包含更新后的完整房间信息
             Map<String, Object> data = new HashMap<>();
             data.put("userId", userId);
+            
+            // 获取更新后的房间信息
+            boolean roomDeleted = false;
+            try {
+                BattleRoom room = roomService.getRoomById(roomId);
+                if (room != null) {
+                    BattleRoomDTO roomDTO = roomService.convertToDTO(room);
+                    data.put("room", roomDTO);
+                } else {
+                    roomDeleted = true;
+                }
+            } catch (Exception e) {
+                // 如果房间已被删除（房主离开或房间为空），只发送userId
+                log.warn("获取房间信息失败，房间可能已被删除: roomId={}", roomId);
+                roomDeleted = true;
+            }
+            
             BattleMessage message = new BattleMessage(BattleMessage.MessageType.PLAYER_LEFT, roomId, data);
             messagingTemplate.convertAndSend("/topic/battle/" + roomId, message);
+            
+            // 如果房间被删除，广播房间列表更新消息
+            if (roomDeleted) {
+                BattleMessage listUpdateMessage = new BattleMessage(BattleMessage.MessageType.ROOM_LIST_UPDATED, null, null);
+                messagingTemplate.convertAndSend("/topic/battle/roomlist", listUpdateMessage);
+                log.info("已广播房间列表更新消息: 房间销毁");
+            }
             
         } catch (Exception e) {
             log.error("离开房间失败", e);
@@ -97,8 +207,9 @@ public class BattleController {
      * 切换准备状态
      */
     @MessageMapping("/battle/toggleReady")
-    public void toggleReady(@Payload Map<String, String> payload, @Header("userId") Long userId) {
+    public void toggleReady(@Payload Map<String, String> payload) {
         String roomId = payload.get("roomId");
+        Long userId = Long.parseLong(payload.get("userId"));
         try {
             log.info("收到切换准备请求: roomId={}, userId={}", roomId, userId);
             
@@ -119,8 +230,9 @@ public class BattleController {
      * 开始游戏
      */
     @MessageMapping("/battle/startGame")
-    public void startGame(@Payload Map<String, String> payload, @Header("userId") Long userId) {
+    public void startGame(@Payload Map<String, String> payload) {
         String roomId = payload.get("roomId");
+        Long userId = Long.parseLong(payload.get("userId"));
         try {
             log.info("收到开始游戏请求: roomId={}, userId={}", roomId, userId);
             
@@ -193,7 +305,7 @@ public class BattleController {
             data.put("timeLimit", question.getTimeLimit());
             
             BattleMessage message = new BattleMessage(BattleMessage.MessageType.QUESTION_GENERATED, room.getRoomId(), data);
-            messagingTemplate.convertAndSend("/topic/battle/" + room.getRoomId(), message);
+            messagingTemplate.convertAndSend("/topic/battle/" + room.getRoomId() + "/question", message);
             
             // 启动倒计时
             startCountdown(room.getRoomId(), question.getTimeLimit());
@@ -320,7 +432,7 @@ public class BattleController {
             
             // 广播得分结果
             BattleMessage scoreMessage = new BattleMessage(BattleMessage.MessageType.SCORES_UPDATED, room.getRoomId(), resultDTO);
-            messagingTemplate.convertAndSend("/topic/battle/" + room.getRoomId(), scoreMessage);
+            messagingTemplate.convertAndSend("/topic/battle/" + room.getRoomId() + "/score", scoreMessage);
             
             // 等待3秒后继续
             Thread.sleep(3000);

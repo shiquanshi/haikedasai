@@ -27,7 +27,6 @@ import java.util.concurrent.RejectedExecutionException;
 @RestController
 @RequestMapping("/question-bank")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class QuestionBankController {
     private final QuestionBankService questionBankService;

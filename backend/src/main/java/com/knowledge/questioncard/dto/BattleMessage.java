@@ -30,6 +30,7 @@ public class BattleMessage {
     public enum MessageType {
         // 房间相关
         ROOM_CREATED,       // 房间已创建
+        ROOM_LIST_UPDATED,  // 房间列表更新（创建或销毁）
         PLAYER_JOINED,      // 玩家加入
         PLAYER_LEFT,        // 玩家离开
         PLAYER_READY,       // 玩家准备

@@ -13,7 +13,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/study-record")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class StudyRecordController {
     private final StudyRecordService studyRecordService;
 

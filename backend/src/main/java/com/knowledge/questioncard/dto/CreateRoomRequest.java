@@ -1,5 +1,6 @@
 package com.knowledge.questioncard.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import jakarta.validation.constraints.*;
 
@@ -7,6 +8,7 @@ import jakarta.validation.constraints.*;
  * 创建房间请求DTO
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateRoomRequest {
     @NotBlank(message = "房间名称不能为空")
     @Size(max = 50, message = "房间名称不能超过50个字符")

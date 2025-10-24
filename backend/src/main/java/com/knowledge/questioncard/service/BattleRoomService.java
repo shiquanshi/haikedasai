@@ -198,14 +198,16 @@ public class BattleRoomService {
             player.saveRoundScore(room.getCurrentRound())
         );
         
+        // 增加当前轮次
+        room.setCurrentRound(room.getCurrentRound() + 1);
+        
         // 判断是否还有下一轮
-        if (room.getCurrentRound() < room.getTotalRounds()) {
-            room.setCurrentRound(room.getCurrentRound() + 1);
+        if (room.getCurrentRound() <= room.getTotalRounds()) {
             room.setStatus(BattleRoom.RoomStatus.PLAYING);
-            log.info("进入下一轮: roomId={}, round={}", roomId, room.getCurrentRound());
+            log.info("进入下一轮: roomId={}, round={}/{}", roomId, room.getCurrentRound(), room.getTotalRounds());
         } else {
             room.setStatus(BattleRoom.RoomStatus.FINISHED);
-            log.info("游戏结束: roomId={}", roomId);
+            log.info("游戏结束: roomId={}, 完成轮次: {}/{}", roomId, room.getTotalRounds(), room.getTotalRounds());
         }
         
         return room;

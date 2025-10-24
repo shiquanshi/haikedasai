@@ -66,13 +66,15 @@ public class BattleRoom {
     }
     
     /**
-     * 检查是否所有玩家都已准备
+     * 检查是否所有玩家都已准备（房主除外）
      */
     public boolean isAllPlayersReady() {
         if (players.isEmpty()) {
             return false;
         }
+        // 排除房主，只检查其他玩家的准备状态
         return players.values().stream()
+                .filter(player -> !player.getUserId().equals(hostUserId))
                 .allMatch(BattlePlayer::isReady);
     }
     

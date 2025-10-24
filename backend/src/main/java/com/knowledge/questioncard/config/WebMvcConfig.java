@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -18,14 +19,25 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtInterceptor)
-                .addPathPatterns("/**") // 拦截所有请求
+                .addPathPatterns("/api/**") // 只拦截/api路径
                 .excludePathPatterns(
-                    "/user/register",  // 排除注册
-                    "/user/login",     // 排除登录
-                    "/user/validate-token", // 排除token验证
-                    "/share/plaza",  // 排除分享广场(公开访问)
-                    "/share/detail/**"  // 排除分享详情(公开访问)
+                    "/api/user/register",  // 排除注册
+                    "/api/user/login",     // 排除登录
+                    "/api/user/validate-token", // 排除token验证
+                    "/api/share/plaza",  // 排除分享广场(公开访问)
+                    "/api/share/detail/**",  // 排除分享详情(公开访问)
+                    "/api/battle/**"  // 排除对战相关API
                 );
+    }
+    
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOriginPatterns("http://localhost:3000", "http://localhost:3001")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
     
     /**
