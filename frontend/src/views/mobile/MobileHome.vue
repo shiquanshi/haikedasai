@@ -567,9 +567,9 @@
             <el-button 
               type="primary"
               size="small"
-              @click="handleAddNewCard"
-              v-if="currentBankType === 'custom'"
+              @click="handleQuickAddCard"
               class="header-operation-button"
+              :disabled="!currentCard"
             >
               <el-icon><Plus /></el-icon>
             </el-button>
@@ -976,6 +976,25 @@
       :close-on-click-modal="false"
     >
       <el-form :model="addCardForm" label-width="80px">
+        <el-form-item label="目标题库" required>
+          <el-select 
+            v-model="addCardForm.bankId" 
+            placeholder="请选择要添加到的题库"
+            style="width: 100%"
+            size="large"
+            filterable
+          >
+            <el-option 
+              v-for="bank in customBanks" 
+              :key="bank.id" 
+              :label="bank.name" 
+              :value="bank.id"
+            >
+              <span>{{ bank.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">{{ bank.cardCount || 0 }}张</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="问题" required>
           <el-input
             v-model="addCardForm.question"
@@ -1035,6 +1054,50 @@
         <div class="dialog-footer">
           <el-button @click="showAddCardDialog = false" size="large">取消</el-button>
           <el-button type="primary" @click="handleSubmitNewCard" size="large">创建</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 快速添加卡片到题库对话框 -->
+    <el-dialog
+      v-model="showQuickAddDialog"
+      title="将卡片添加到题库"
+      width="90%"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="80px">
+        <el-form-item label="目标题库" required>
+          <el-select 
+            v-model="quickAddBankId" 
+            placeholder="请选择要添加到的题库"
+            style="width: 100%"
+            size="large"
+            filterable
+          >
+            <el-option 
+              v-for="bank in customBanks" 
+              :key="bank.id" 
+              :label="bank.name" 
+              :value="bank.id"
+            >
+              <span>{{ bank.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">{{ bank.cardCount || 0 }}张</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="当前卡片">
+          <div class="quick-add-preview">
+            <div class="preview-label">问题：</div>
+            <div class="preview-content">{{ currentCard?.question }}</div>
+            <div class="preview-label" style="margin-top: 10px">答案：</div>
+            <div class="preview-content">{{ currentCard?.answer }}</div>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showQuickAddDialog = false" size="large">取消</el-button>
+          <el-button type="primary" @click="handleSubmitQuickAdd" size="large">添加</el-button>
         </div>
       </template>
     </el-dialog>
@@ -1287,6 +1350,7 @@ const touchMoved = ref(false)
 // 新增卡片相关
 const showAddCardDialog = ref(false)
 const addCardForm = ref({
+  bankId: null as number | null,
   question: '',
   answer: '',
   questionImage: null as File | null,
@@ -1294,6 +1358,10 @@ const addCardForm = ref({
 })
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
+
+// 快速添加卡片相关
+const showQuickAddDialog = ref(false)
+const quickAddBankId = ref<number | null>(null)
 
 // 编辑卡片相关
 const showEditCardDialog = ref(false)
@@ -2472,14 +2540,26 @@ const playAnswerVoice = async () => {
 }
 
 // 新增卡片
-const handleAddNewCard = () => {
-  if (currentBankType.value !== 'custom') {
-    ElMessage.warning('只有自定义题库支持添加卡片')
+const handleAddNewCard = async () => {
+  // 检查用户登录状态
+  if (!userStore.token) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
     return
   }
   
-  // 重置表单
+  // 加载自定义题库列表
+  await loadCustomBanks()
+  
+  // 如果没有自定义题库，提示用户先创建
+  if (customBanks.value.length === 0) {
+    ElMessage.warning('请先创建自定义题库')
+    return
+  }
+  
+  // 重置表单，如果当前是自定义题库，默认选中当前题库
   addCardForm.value = {
+    bankId: (currentBankType.value === 'custom' && currentBankId.value) ? currentBankId.value : customBanks.value[0]?.id || null,
     question: '',
     answer: '',
     questionImage: null,
@@ -2488,6 +2568,81 @@ const handleAddNewCard = () => {
   questionImageFileList.value = []
   answerImageFileList.value = []
   showAddCardDialog.value = true
+}
+
+// 快速添加当前卡片到题库
+const handleQuickAddCard = async () => {
+  // 检查用户登录状态
+  if (!userStore.token) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  // 检查是否有当前卡片
+  if (!currentCard.value) {
+    ElMessage.warning('没有可添加的卡片')
+    return
+  }
+  
+  // 加载自定义题库列表
+  await loadCustomBanks()
+  
+  // 如果没有自定义题库，提示用户先创建
+  if (customBanks.value.length === 0) {
+    ElMessage.warning('请先创建自定义题库')
+    return
+  }
+  
+  // 如果当前是自定义题库，默认选中当前题库，否则选择第一个
+  quickAddBankId.value = (currentBankType.value === 'custom' && currentBankId.value) 
+    ? currentBankId.value 
+    : customBanks.value[0]?.id || null
+  
+  showQuickAddDialog.value = true
+}
+
+// 提交快速添加
+const handleSubmitQuickAdd = async () => {
+  // 验证题库选择
+  if (!quickAddBankId.value) {
+    ElMessage.warning('请选择目标题库')
+    return
+  }
+  
+  // 验证当前卡片
+  if (!currentCard.value) {
+    ElMessage.warning('没有可添加的卡片')
+    return
+  }
+  
+  try {
+    // 构建卡片数据
+    const cardData = {
+      bankId: quickAddBankId.value,
+      question: currentCard.value.question,
+      answer: currentCard.value.answer,
+      questionImage: currentCard.value.questionImage || '',
+      answerImage: currentCard.value.answerImage || ''
+    }
+    
+    // 调用API添加卡片
+    await questionBankApi.addCard(cardData)
+    
+    ElMessage.success('卡片添加成功')
+    showQuickAddDialog.value = false
+    
+    // 如果添加到的是当前题库，刷新卡片列表
+    if (quickAddBankId.value === currentBankId.value) {
+      await loadBankCards(currentBankId.value, currentBankType.value)
+    }
+    
+    // 刷新题库列表以更新卡片数量
+    await loadCustomBanks()
+  } catch (error) {
+    console.error('添加卡片失败:', error)
+    ElMessage.error('添加卡片失败，请重试')
+  }
 }
 
 // 处理问题图片变化
@@ -2510,6 +2665,10 @@ const handleAnswerImageChange = (file: any) => {
 
 // 提交新卡片
 const handleSubmitNewCard = async () => {
+  if (!addCardForm.value.bankId) {
+    ElMessage.warning('请选择目标题库')
+    return
+  }
   if (!addCardForm.value.question.trim()) {
     ElMessage.warning('请输入问题内容')
     return
@@ -2532,18 +2691,20 @@ const handleSubmitNewCard = async () => {
       params.answerImage = addCardForm.value.answerImage
     }
     
-    if (currentBankId.value !== null) {
-      await questionBankApi.addCard(currentBankId.value, params)
-    } else {
-      throw new Error('当前题库ID无效')
-    }
+    await questionBankApi.addCard(addCardForm.value.bankId, params)
     ElMessage.success('卡片添加成功')
     showAddCardDialog.value = false
     
-    // 重新加载卡片列表
-    if (currentBankId.value !== null) {
-      await loadBankCards(currentBankId.value, currentBankName.value)
+    // 如果添加到当前题库，重新加载卡片列表
+    if (addCardForm.value.bankId === currentBankId.value) {
+      const targetBank = customBanks.value.find(b => b.id === addCardForm.value.bankId)
+      if (targetBank) {
+        await loadBankCards(addCardForm.value.bankId, targetBank.name)
+      }
     }
+    
+    // 刷新题库列表以更新卡片数量
+    await loadCustomBanks()
   } catch (error) {
     console.error('添加卡片失败:', error)
     ElMessage.error('添加卡片失败，请重试')
@@ -3740,5 +3901,27 @@ initPage()
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
   font-weight: 600;
+}
+
+/* 快速添加预览样式 */
+.quick-add-preview {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.quick-add-preview .preview-label {
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+.quick-add-preview .preview-content {
+  color: #303133;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>
