@@ -1,9 +1,8 @@
 # 构建前端
 FROM node:18-alpine AS frontend-build
 WORKDIR /frontend
-COPY frontend/package*.json ./
-RUN npm install
 COPY frontend/ ./
+RUN npm install --force
 RUN npm run build
 
 # 构建后端
