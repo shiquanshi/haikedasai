@@ -222,23 +222,17 @@ public class VolcEngineService {
             // 添加连接状态检查
             final AtomicBoolean connectionActive = new AtomicBoolean(true);
             
-            // 添加连接关闭监听器
-            emitter.onCompletion(() -> {
-                connectionActive.set(false);
-                latch.countDown();
-                log.info("SSE连接已关闭，取消处理任务");
-            });
-            
+            // 添加连接超时和错误监听器（onCompletion监听器已移除，因为正常完成由Controller控制）
             emitter.onTimeout(() -> {
                 connectionActive.set(false);
                 latch.countDown();
-                log.info("SSE连接已超时，取消处理任务");
+                log.warn("⚠️ SSE连接已超时");
             });
             
             emitter.onError((ex) -> {
                 connectionActive.set(false);
                 latch.countDown();
-                log.error("SSE连接发生错误，取消处理任务", ex);
+                log.error("❌ SSE连接发生错误", ex);
             });
             
             service.streamChatCompletion(request)

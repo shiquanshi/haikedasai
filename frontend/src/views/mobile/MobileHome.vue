@@ -2,7 +2,7 @@
   <div class="mobile-home-container">
     <!-- 头部区域 -->
     <div class="mobile-header">
-      <h1 class="header-title">智能闪卡生成系统</h1>
+      <h1 class="header-title">FlashMind</h1>
       <div class="header-actions">
         <el-button 
           type="primary" 

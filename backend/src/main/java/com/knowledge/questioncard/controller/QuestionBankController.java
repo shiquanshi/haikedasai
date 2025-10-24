@@ -104,10 +104,9 @@ public class QuestionBankController {
             }
         });
         
-        try {
-            // 使用专用线程池异步执行生成任务
-            CompletableFuture.runAsync(() -> {
-                try {
+        // 使用异步任务执行生成操作，避免阻塞主线程
+        CompletableFuture.runAsync(() -> {
+            try {
                 // 流式生成卡片内容（此方法内部会等待所有图片生成完成后才返回）
                 String cardsJson = volcEngineService.generateCardsStream(topic, cardCount, difficulty, language, withImages, scenario, emitter);
                 
@@ -132,31 +131,29 @@ public class QuestionBankController {
                 emitter.complete();
                 log.info("✅ SSE连接已正常关闭");
                 
-                } catch (Exception e) {
-                    log.error("❌ 流式生成或保存失败", e);
-                    try {
-                        emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("生成或保存失败: " + e.getMessage()));
-                        emitter.completeWithError(e);
-                    } catch (IOException ex) {
-                        log.error("发送错误消息失败", ex);
-                    }
+            } catch (Exception e) {
+                log.error("❌ 流式生成或保存失败", e);
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("生成或保存失败: " + e.getMessage()));
+                    emitter.completeWithError(e);
+                } catch (IOException ex) {
+                    log.error("发送错误消息失败", ex);
                 }
-            }, sseTaskExecutor);
-        } catch (RejectedExecutionException e) {
-            // 处理线程池拒绝执行的情况
-            log.error("❌ 线程池拒绝执行流式生成任务: 服务器繁忙，请稍后再试", e);
+            }
+        }, sseTaskExecutor).exceptionally(ex -> {
+            log.error("❌ 执行生成任务时发生异常", ex);
             try {
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data("服务器当前繁忙，请稍后再试！\n(当前有太多用户正在生成内容，系统资源暂时不足)")
-                );
-                emitter.completeWithError(e);
-            } catch (IOException ex) {
-                log.error("发送拒绝执行错误消息失败", ex);
+                    .data("生成失败: " + ex.getMessage()));
+                emitter.completeWithError(ex);
+            } catch (IOException ioEx) {
+                log.error("发送错误消息失败", ioEx);
             }
-        }
+            return null;
+        });
         
         return emitter;
     }

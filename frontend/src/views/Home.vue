@@ -4,7 +4,7 @@
     <div class="app-header" v-if="!showCards">
       <div class="header-content">
         <div class="header-left">
-          <h1 class="app-title">智能闪卡生成系统</h1>
+          <h1 class="app-title">FlashMind</h1>
           <span class="app-subtitle">AI-Powered Flashcard Generator</span>
         </div>
         <div class="header-right">
