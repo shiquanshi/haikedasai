@@ -1,0 +1,2 @@
+
+090b18e0439888ac60224f0bdfd9acfbbff9e4dd	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/websocket-extensions","integrity":null,"time":1761278043421,"size":"262","metadata":{"time":1761278043421,"url":"http://registry.npm.taobao.org/websocket-extensions","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Fri, 24 Oct 2025 03:54:03 GMT","location":"https://registry.npmmirror.com/websocket-extensions"},"options":{"compress":true},"status":301}}

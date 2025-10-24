@@ -1,0 +1,2 @@
+
+f9bc01df26d9d9d8b6104be7e7a4f51e369cf4d5	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@stomp%2fstompjs","integrity":null,"time":1761278042660,"size":"262","metadata":{"time":1761278042659,"url":"http://registry.npm.taobao.org/@stomp%2fstompjs","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Fri, 24 Oct 2025 03:54:02 GMT","location":"https://registry.npmmirror.com/@stomp%2fstompjs"},"options":{"compress":true},"status":301}}

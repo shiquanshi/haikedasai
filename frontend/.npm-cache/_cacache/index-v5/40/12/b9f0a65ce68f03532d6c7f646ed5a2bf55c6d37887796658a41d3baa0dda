@@ -1,0 +1,2 @@
+
+07f84650cfb00a368baf0c6e246f0122bc4aa633	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/sockjs-client","integrity":null,"time":1761278042352,"size":"262","metadata":{"time":1761278042352,"url":"http://registry.npm.taobao.org/sockjs-client","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Fri, 24 Oct 2025 03:54:02 GMT","location":"https://registry.npmmirror.com/sockjs-client"},"options":{"compress":true},"status":301}}

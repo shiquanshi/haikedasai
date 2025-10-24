@@ -1,0 +1,2 @@
+
+6fb99f74582d878508f39e5a5be12b0988d4ecd2	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/faye-websocket","integrity":null,"time":1761278042994,"size":"262","metadata":{"time":1761278042994,"url":"http://registry.npm.taobao.org/faye-websocket","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Fri, 24 Oct 2025 03:54:02 GMT","location":"https://registry.npmmirror.com/faye-websocket"},"options":{"compress":true},"status":301}}
