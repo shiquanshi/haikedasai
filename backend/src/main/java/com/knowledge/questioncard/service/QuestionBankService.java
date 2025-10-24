@@ -1359,11 +1359,27 @@ public class QuestionBankService {
         // system类型题库允许所有用户添加卡片，无需检查权限
         
         // 处理图片上传到MinIO
-        if (questionImage != null && questionImage.startsWith("data:image")) {
-            questionImage = minioService.uploadBase64Image(questionImage);
+        if (questionImage != null && !questionImage.isEmpty()) {
+            if (questionImage.startsWith("data:image")) {
+                // Base64格式图片，直接上传
+                questionImage = minioService.uploadBase64Image(questionImage);
+            } else if (questionImage.startsWith("http")) {
+                // HTTP URL图片（如豆包返回的临时URL），异步下载并上传到MinIO
+                // 这里先保存原URL，后续通过异步任务处理
+                log.info("检测到HTTP图片URL，将通过异步任务上传到MinIO: {}", questionImage);
+            }
+            // 如果已经是MinIO的URL，则不处理
         }
-        if (answerImage != null && answerImage.startsWith("data:image")) {
-            answerImage = minioService.uploadBase64Image(answerImage);
+        if (answerImage != null && !answerImage.isEmpty()) {
+            if (answerImage.startsWith("data:image")) {
+                // Base64格式图片，直接上传
+                answerImage = minioService.uploadBase64Image(answerImage);
+            } else if (answerImage.startsWith("http")) {
+                // HTTP URL图片（如豆包返回的临时URL），异步下载并上传到MinIO
+                // 这里先保存原URL，后续通过异步任务处理
+                log.info("检测到HTTP图片URL，将通过异步任务上传到MinIO: {}", answerImage);
+            }
+            // 如果已经是MinIO的URL，则不处理
         }
         
         // 创建新卡片
@@ -1378,6 +1394,16 @@ public class QuestionBankService {
         
         // 保存卡片
         questionCardMapper.insert(card);
+        
+        // 异步上传HTTP图片到MinIO
+        if (questionImage != null && questionImage.startsWith("http") && !questionImage.contains("minio")) {
+            volcEngineService.uploadImageToMinioAndUpdateDb(card.getId(), questionImage, true);
+            log.info("已触发卡片{}的问题图片异步上传: {}", card.getId(), questionImage);
+        }
+        if (answerImage != null && answerImage.startsWith("http") && !answerImage.contains("minio")) {
+            volcEngineService.uploadImageToMinioAndUpdateDb(card.getId(), answerImage, false);
+            log.info("已触发卡片{}的答案图片异步上传: {}", card.getId(), answerImage);
+        }
         
         // 更新题库卡片数
         bank.setCardCount(bank.getCardCount() + 1);

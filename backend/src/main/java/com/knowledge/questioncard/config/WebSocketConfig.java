@@ -30,13 +30,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 注册STOMP端点,客户端通过此端点连接WebSocket
+        // 使用setAllowedOriginPatterns("*")支持所有域名（包括HTTPS生产环境）
         registry.addEndpoint("/ws-battle")
-                .setAllowedOriginPatterns("http://localhost:3000", "http://localhost:3001")
+                .setAllowedOriginPatterns("*")
                 .withSockJS(); // 支持SockJS回退选项
         
         // 添加/ws端点以兼容前端代码
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:3000", "http://localhost:3001")
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 

@@ -4,10 +4,16 @@
     <div class="lobby-view">
       <div class="lobby-header">
         <h1>对战大厅</h1>
-        <el-button type="primary" @click="showCreateDialog = true">
-          <el-icon><Plus /></el-icon>
-          创建房间
-        </el-button>
+        <div class="header-buttons">
+          <el-button @click="$router.push('/')">
+            <el-icon><HomeFilled /></el-icon>
+            返回首页
+          </el-button>
+          <el-button type="primary" @click="showCreateDialog = true">
+            <el-icon><Plus /></el-icon>
+            创建房间
+          </el-button>
+        </div>
       </div>
 
       <div class="room-list">
@@ -111,7 +117,11 @@ const connectWebSocket = () => {
     return
   }
   
-  const socket = new SockJS('http://localhost:8080/api/ws-battle')
+  // 动态获取WebSocket URL，生产环境使用wss协议
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  const host = window.location.host
+  const wsUrl = `${protocol}//${host}/api/ws-battle`
+  const socket = new SockJS(wsUrl)
   stompClient = new Client({
     webSocketFactory: () => socket,
     connectHeaders: {

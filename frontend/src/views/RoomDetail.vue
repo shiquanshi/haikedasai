@@ -232,7 +232,11 @@ const connectWebSocket = () => {
     return
   }
 
-  const socket = new SockJS('http://localhost:8080/api/ws')
+  // 动态获取WebSocket URL，生产环境使用wss协议
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  const host = window.location.host
+  const wsUrl = `${protocol}//${host}/api/ws`
+  const socket = new SockJS(wsUrl)
   stompClient.value = new Client({
     webSocketFactory: () => socket,
     connectHeaders: {
