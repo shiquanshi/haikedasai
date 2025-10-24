@@ -1,6 +1,8 @@
 package com.knowledge.questioncard.config;
 
+import com.volcengine.ark.runtime.service.ArkService;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import lombok.Data;
 
@@ -30,4 +32,15 @@ public class VolcEngineConfig {
      * 图片生成模型名称
      */
     private String imageModel;
+    
+    /**
+     * 创建ArkService bean
+     */
+    @Bean
+    public ArkService arkService() {
+        return ArkService.builder()
+                .apiKey(key)
+                .baseUrl(endpoint)
+                .build();
+    }
 }

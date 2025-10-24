@@ -4,6 +4,7 @@ import Login from '../views/Login.vue'
 import ImageGenerator from '../views/ImageGenerator.vue'
 import SharePlaza from '../views/SharePlaza.vue'
 import ShareDetail from '../views/ShareDetail.vue'
+import BattleRoom from '../views/BattleRoom.vue'
 import MobileHome from '../views/mobile/MobileHome.vue'
 import MobileLogin from '../views/mobile/MobileLogin.vue'
 import MobileImageGenerator from '../views/mobile/MobileImageGenerator.vue'
@@ -41,6 +42,12 @@ const router = createRouter({
       path: '/share-detail',
       name: 'shareDetail',
       component: ShareDetail,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/battle-room',
+      name: 'battleRoom',
+      component: BattleRoom,
       meta: { requiresAuth: true }
     },
     // 手机端路由
@@ -101,6 +108,9 @@ router.beforeEach((to, from, next) => {
       return next('/mobile/image-generator')
     } else if (to.path === '/share-plaza') {
       return next('/mobile/share-plaza')
+    } else if (to.path === '/battle-room') {
+      // 对战功能暂不支持移动端,保持在PC页面
+      // return next('/mobile/battle-room')
     }
   }
   

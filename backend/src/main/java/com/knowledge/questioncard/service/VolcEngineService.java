@@ -8,6 +8,7 @@ import com.volcengine.ark.runtime.service.ArkService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;                                              
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,8 +50,11 @@ public class VolcEngineService {
     @Autowired
     private MinioService minioService;
     
-    // 缓存ArkService实例,避免每次都创建
-    private volatile ArkService arkService;
+    @Autowired
+    private com.knowledge.questioncard.mapper.QuestionCardMapper questionCardMapper;
+    
+    @Autowired
+    private ArkService arkService;
     
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -101,8 +105,6 @@ public class VolcEngineService {
      */
     public String generateCards(String topic, Integer cardCount, String difficulty, String language, String scenario) {
         try {
-            // 获取或创建ArkService实例(单例模式)
-            ArkService service = getOrCreateArkService();
             
             // 构建提示词
             String prompt = buildPrompt(topic, cardCount, difficulty, language, scenario);
@@ -125,7 +127,7 @@ public class VolcEngineService {
                     .build();
             
             // 发送请求并获取响应
-            String response = service.createChatCompletion(request)
+            String response = arkService.createChatCompletion(request)
                     .getChoices()
                     .get(0)
                     .getMessage()
@@ -143,23 +145,7 @@ public class VolcEngineService {
         }
     }
     
-    /**
-     * 获取或创建ArkService实例(双重检查锁定单例模式)
-     */
-    private ArkService getOrCreateArkService() {
-        if (arkService == null) {
-            synchronized (this) {
-                if (arkService == null) {
-                    arkService = ArkService.builder()
-                            .apiKey(volcEngineConfig.getKey())
-                            .baseUrl(volcEngineConfig.getEndpoint())
-                            .build();
-                    log.info("ArkService实例已创建并缓存");
-                }
-            }
-        }
-        return arkService;
-    }
+
     
     /**
      * 流式生成问答卡片内容
@@ -179,10 +165,7 @@ public class VolcEngineService {
         log.info("⏱️ [计时开始] 卡片生成任务启动 - 主题:{}, 数量:{}, 难度:{}", topic, cardCount, difficulty);
         
         try {
-            // 获取或创建ArkService实例
-            long serviceStartTime = System.currentTimeMillis();
-            ArkService service = getOrCreateArkService();
-            log.info("⏱️ [计时] ArkService初始化耗时: {}ms", System.currentTimeMillis() - serviceStartTime);
+
             
             // 构建提示词
             long promptStartTime = System.currentTimeMillis();
@@ -235,7 +218,7 @@ public class VolcEngineService {
                 log.error("❌ SSE连接发生错误", ex);
             });
             
-            service.streamChatCompletion(request)
+            arkService.streamChatCompletion(request)
                     .subscribe(
                         response -> {
                             try {
@@ -445,18 +428,18 @@ public class VolcEngineService {
                                         }
                                     }, sseTaskExecutor);
                                     
-                                    // 等待两个图片都生成完成，设置统一超时机制(5分钟)
+                                    // 等待两个图片都生成完成，设置统一超时机制(3分钟)
                                     String questionImage = null;
                                     String answerImage = null;
                                     try {
-                                        questionImage = questionImageFuture.orTimeout(300, TimeUnit.SECONDS).join();
+                                        questionImage = questionImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("问题图片生成超时或失败（300秒），跳过", e);
+                                        log.warn("问题图片生成超时或失败（180秒），跳过", e);
                                     }
                                     try {
-                                        answerImage = answerImageFuture.orTimeout(300, TimeUnit.SECONDS).join();
+                                        answerImage = answerImageFuture.orTimeout(180, TimeUnit.SECONDS).join();
                                     } catch (CompletionException e) {
-                                        log.warn("答案图片生成超时或失败（300秒），跳过", e);
+                                        log.warn("答案图片生成超时或失败（180秒），跳过", e);
                                     }
                                     
                                     log.info("✅ 第 {}/{} 张卡片图片处理完成", cardIndex, totalCards);
@@ -778,22 +761,10 @@ public class VolcEngineService {
                 .asText();
             
             long apiEndTime = System.currentTimeMillis();
-            log.info("⏱️ [图片生成API] 火山引擎API调用完成 - 耗时:{}ms", apiEndTime - apiStartTime);
+            log.info("⏱️ [图片生成API] 火山引擎API调用完成 - 耗时:{}ms, URL: {}", apiEndTime - apiStartTime, volcImageUrl);
             
-            // 将火山引擎的图片下载并上传到MinIO
-            try {
-                long minioStartTime = System.currentTimeMillis();
-                String minioUrl = minioService.uploadFromUrl(volcImageUrl);
-                long minioEndTime = System.currentTimeMillis();
-                log.info("⏱️ [图片生成API] MinIO转存完成 - 耗时:{}ms, 总耗时:{}ms", 
-                    minioEndTime - minioStartTime, minioEndTime - startTime);
-                return minioUrl;
-            } catch (Exception e) {
-                long endTime = System.currentTimeMillis();
-                log.error("⏱️ [图片生成API] MinIO转存失败 - 耗时:{}ms", endTime - startTime, e);
-                // 如果转存失败，返回原始URL作为降级方案
-                return volcImageUrl;
-            }
+            // 直接返回豆包URL，不做MinIO转存
+            return volcImageUrl;
             
         } catch (HttpClientErrorException e) {
             long endTime = System.currentTimeMillis();
@@ -813,6 +784,59 @@ public class VolcEngineService {
             log.error("⏱️ [图片生成API] 未知异常 - 耗时:{}ms, 类型:{}, 消息:{}", 
                 endTime - startTime, e.getClass().getName(), e.getMessage(), e);
             return null;
+        }
+    }
+    
+    /**
+     * 异步将豆包URL的图片上传到MinIO并更新数据库
+     * 
+     * @param cardId 卡片ID
+     * @param volcImageUrl 豆包返回的图片URL
+     * @param isQuestionImage 是否为问题图片（true:questionImage, false:answerImage）
+     */
+    @Async
+    public void uploadImageToMinioAndUpdateDb(Long cardId, String volcImageUrl, boolean isQuestionImage) {
+        if (cardId == null || volcImageUrl == null || volcImageUrl.isEmpty()) {
+            log.warn("[异步图片上传] 参数无效 - cardId: {}, volcImageUrl: {}", cardId, volcImageUrl);
+            return;
+        }
+        
+        long startTime = System.currentTimeMillis();
+        log.info("[异步图片上传] 开始处理 - cardId: {}, 图片类型: {}, URL: {}", 
+            cardId, isQuestionImage ? "问题图片" : "答案图片", volcImageUrl);
+        
+        try {
+            // 1. 从豆包URL下载并上传到MinIO
+            String minioUrl = minioService.uploadFromUrl(volcImageUrl);
+            
+            if (minioUrl == null || minioUrl.isEmpty()) {
+                log.error("[异步图片上传] MinIO上传失败，返回URL为空 - cardId: {}", cardId);
+                return;
+            }
+            
+            // 2. 更新数据库
+            com.knowledge.questioncard.entity.QuestionCard card = new com.knowledge.questioncard.entity.QuestionCard();
+            card.setId(cardId);
+            if (isQuestionImage) {
+                card.setQuestionImage(minioUrl);
+            } else {
+                card.setAnswerImage(minioUrl);
+            }
+            
+            int updated = questionCardMapper.updateById(card);
+            
+            long endTime = System.currentTimeMillis();
+            if (updated > 0) {
+                log.info("[异步图片上传] 完成 - cardId: {}, MinIO URL: {}, 耗时: {}ms", 
+                    cardId, minioUrl, endTime - startTime);
+            } else {
+                log.error("[异步图片上传] 数据库更新失败 - cardId: {}, 受影响行数: {}", cardId, updated);
+            }
+            
+        } catch (Exception e) {
+            long endTime = System.currentTimeMillis();
+            log.error("[异步图片上传] 失败 - cardId: {}, 耗时: {}ms, 错误: {}", 
+                cardId, endTime - startTime, e.getMessage(), e);
         }
     }
 }

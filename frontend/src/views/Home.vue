@@ -11,6 +11,16 @@
           <el-button
             type="primary"
             plain
+            @click="$router.push('/battle-room')"
+            class="battle-button"
+            round
+          >
+            <el-icon><Trophy /></el-icon>
+            对战房间
+          </el-button>
+          <el-button
+            type="primary"
+            plain
             @click="$router.push('/share-plaza')"
             class="plaza-button"
             round
@@ -1249,7 +1259,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton, Share } from '@element-plus/icons-vue'
+import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton, Share, Trophy } from '@element-plus/icons-vue'
 import { questionBankApi } from '../api/questionBank'
 import * as shareApi from '../api/share'
 import { useUserStore } from '../stores/user'
