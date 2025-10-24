@@ -48,6 +48,13 @@ public class QuestionBankService {
     public List<QuestionCardDTO> saveStreamGeneratedCards(String cardsJson, String topic, String difficulty, String language, Long userId, String scenario) {
         try {
             log.info("收到的卡片JSON: {}", cardsJson);
+            
+            // 清理JSON字符串，转义控制字符
+            String cleanedJson = cardsJson
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+            
             // 创建题库
             QuestionBank bank = new QuestionBank();
             // 使用"AI生成 - 日期 - topic"格式作为题库名称
@@ -57,7 +64,7 @@ public class QuestionBankService {
             bank.setDescription("主题: " + topic + ", 难度: " + difficulty + ", 语言: " + language + 
                 (!scenario.isEmpty() ? ", 场景: " + scenario : ""));
             bank.setTopic(topic);
-            bank.setType("custom");
+            bank.setType("ai");
             bank.setDifficulty(difficulty);
             bank.setLanguage(language);
             bank.setUserId(String.valueOf(userId));
@@ -66,7 +73,7 @@ public class QuestionBankService {
             
             // 解析JSON并创建卡片
             ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode cardsArray = objectMapper.readTree(cardsJson);
+            JsonNode cardsArray = objectMapper.readTree(cleanedJson);
             
             List<QuestionCard> cards = new ArrayList<>();
             java.util.Date now = new java.util.Date();

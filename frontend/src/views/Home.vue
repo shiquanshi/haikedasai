@@ -579,7 +579,7 @@
                 circle
                 class="nav-button nav-prev"
               >
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
                   <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
               </el-button>
@@ -673,7 +673,7 @@
                 circle
                 class="nav-button nav-next"
               >
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-icon">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </el-button>
@@ -3946,22 +3946,22 @@ onMounted(async () => {
   align-items: center;
   gap: 40px;
   width: 100%;
-  height: 100vh;
   max-width: 95%;
   justify-content: center;
-  padding: 20px;
+  padding: 40px 20px;
   box-sizing: border-box;
+  min-height: 0;
 }
 
 /* 导航按钮样式 - 优化交互效果 */
 .nav-button {
-  width: 80px !important;
-  height: 80px !important;
+  width: 60px !important;
+  height: 60px !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   border: none !important;
   color: white !important;
   backdrop-filter: blur(15px) !important;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4) !important;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4) !important;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   flex-shrink: 0;
   position: relative;
@@ -4118,8 +4118,78 @@ onMounted(async () => {
   }
 }
 
-/* 响应式设计 */
-@media (max-width: 1024px) {
+/* 响应式设计 - PC端优化 */
+
+/* 超大屏幕 (>1600px) */
+@media (min-width: 1601px) {
+  .flip-card {
+    max-width: 1400px;
+    max-height: 700px;
+  }
+  
+  .card-content-wrapper {
+    padding: 70px 50px 50px 50px;
+    gap: 40px;
+  }
+  
+  .card-text-scrollable {
+    font-size: 17px;
+    line-height: 1.8;
+  }
+  
+  .card-img {
+    max-height: 500px;
+  }
+}
+
+/* 大屏幕 (1441px - 1600px) */
+@media (min-width: 1441px) and (max-width: 1600px) {
+  .flip-card {
+    max-width: 1300px;
+    max-height: 650px;
+  }
+  
+  .card-content-wrapper {
+    padding: 65px 45px 45px 45px;
+    gap: 35px;
+  }
+  
+  .card-text-scrollable {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+}
+
+/* 中等屏幕 (1025px - 1440px) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .flip-card {
+    max-width: 1100px;
+    max-height: 580px;
+  }
+  
+  .card-content-wrapper {
+    padding: 55px 35px 35px 35px;
+    gap: 25px;
+  }
+  
+  .card-text-scrollable {
+    font-size: 15px;
+    line-height: 1.65;
+    padding: 18px;
+  }
+  
+  .card-img {
+    max-height: 400px;
+  }
+  
+  .card-label-section {
+    font-size: 11px;
+    padding: 7px 18px;
+  }
+}
+
+/* 小屏PC (769px - 1024px) - 改为上下布局 */
+@media (min-width: 769px) and (max-width: 1024px) {
   .main-content {
     flex-direction: row;
     gap: 20px;
@@ -4143,6 +4213,45 @@ onMounted(async () => {
   
   .question-bank {
     max-height: 500px;
+  }
+  
+  /* 卡片改为上下布局 */
+  .flip-card {
+    max-width: 900px;
+    height: calc(100vh - 180px);
+    max-height: 650px;
+    min-height: 500px;
+  }
+  
+  .card-content-wrapper {
+    flex-direction: column;
+    padding: 50px 30px 30px 30px;
+    gap: 20px;
+  }
+  
+  .card-text-section {
+    min-height: 180px;
+    max-height: 300px;
+  }
+  
+  .card-text-scrollable {
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 16px;
+  }
+  
+  .card-image-section {
+    min-height: 150px;
+    max-height: 250px;
+  }
+  
+  .card-img {
+    max-height: 230px;
+  }
+  
+  .card-label-section {
+    font-size: 11px;
+    padding: 7px 16px;
   }
 }
 
@@ -4205,18 +4314,36 @@ onMounted(async () => {
   
   .card-container {
     height: 350px;
+    margin-top: -60px;
   }
   
   .card-content {
     padding: 40px 20px;
   }
   
+  /* 卡片内容改为上下布局 */
+  .card-content-wrapper {
+    flex-direction: column;
+    padding: 50px 20px 20px 20px;
+    gap: 15px;
+  }
+  
   .card-text-section {
     height: 120px;
+    min-height: 100px;
   }
   
   .card-text-scrollable {
     font-size: 18px;
+  }
+  
+  .card-image-section {
+    min-height: 100px;
+    max-height: 150px;
+  }
+  
+  .card-img {
+    max-height: 130px;
   }
   
   .cards-header {
