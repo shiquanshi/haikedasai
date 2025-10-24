@@ -85,12 +85,17 @@ public class QuestionBankService {
                     card.setQuestion(cardNode.get("question").asText());
                     card.setAnswer(cardNode.get("answer").asText());
                     
-                    // 处理可选的图片字段
+                    // 处理可选的图片字段（先保存豆包URL）
+                    String questionImageUrl = null;
+                    String answerImageUrl = null;
+                    
                     if (cardNode.has("questionImage") && !cardNode.get("questionImage").isNull()) {
-                        card.setQuestionImage(cardNode.get("questionImage").asText());
+                        questionImageUrl = cardNode.get("questionImage").asText();
+                        card.setQuestionImage(questionImageUrl);
                     }
                     if (cardNode.has("answerImage") && !cardNode.get("answerImage").isNull()) {
-                        card.setAnswerImage(cardNode.get("answerImage").asText());
+                        answerImageUrl = cardNode.get("answerImage").asText();
+                        card.setAnswerImage(answerImageUrl);
                     }
                     
                     card.setCreatedAt(now);
@@ -103,6 +108,31 @@ public class QuestionBankService {
                 batchInsertCards(cards);
                 // 更新题库卡片数量统计
                 updateBankStatistics(bank.getId());
+                
+                // 异步上传图片到MinIO并更新数据库
+                log.info("开始异步上传{}张卡片的图片到MinIO", cards.size());
+                for (int i = 0; i < cards.size(); i++) {
+                    QuestionCard card = cards.get(i);
+                    JsonNode cardNode = cardsArray.get(i);
+                    
+                    // 处理问题图片
+                    if (cardNode.has("questionImage") && !cardNode.get("questionImage").isNull()) {
+                        String questionImageUrl = cardNode.get("questionImage").asText();
+                        if (questionImageUrl != null && !questionImageUrl.isEmpty()) {
+                            volcEngineService.uploadImageToMinioAndUpdateDb(card.getId(), questionImageUrl, true);
+                            log.info("已触发卡片{}的问题图片异步上传: {}", card.getId(), questionImageUrl);
+                        }
+                    }
+                    
+                    // 处理答案图片
+                    if (cardNode.has("answerImage") && !cardNode.get("answerImage").isNull()) {
+                        String answerImageUrl = cardNode.get("answerImage").asText();
+                        if (answerImageUrl != null && !answerImageUrl.isEmpty()) {
+                            volcEngineService.uploadImageToMinioAndUpdateDb(card.getId(), answerImageUrl, false);
+                            log.info("已触发卡片{}的答案图片异步上传: {}", card.getId(), answerImageUrl);
+                        }
+                    }
+                }
             }
             
             // 转换为DTO返回
