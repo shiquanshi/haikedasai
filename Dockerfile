@@ -2,6 +2,13 @@
 FROM node:18-alpine AS frontend-build
 WORKDIR /frontend
 COPY frontend/ ./
+# 清理可能存在的依赖和缓存
+RUN rm -rf node_modules || true
+RUN rm -f package-lock.json || true
+# 使用npm cache clean清理缓存
+RUN npm cache clean --force
+# 先安装特定版本的element-plus，再安装其他依赖
+RUN npm install element-plus@2.3.14 --force
 RUN npm install --force
 RUN npm run build
 
