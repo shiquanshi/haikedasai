@@ -2619,7 +2619,6 @@ const handleSubmitQuickAdd = async () => {
   try {
     // 构建卡片数据
     const cardData = {
-      bankId: quickAddBankId.value,
       question: currentCard.value.question,
       answer: currentCard.value.answer,
       questionImage: currentCard.value.questionImage || '',
@@ -2627,7 +2626,7 @@ const handleSubmitQuickAdd = async () => {
     }
     
     // 调用API添加卡片
-    await questionBankApi.addCard(cardData)
+    await questionBankApi.addCard(quickAddBankId.value, cardData)
     
     ElMessage.success('卡片添加成功')
     showQuickAddDialog.value = false
@@ -3672,6 +3671,26 @@ initPage()
   color: rgba(255, 255, 255, 0.9);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 思考过程滚动条样式 */
+.thinking-process::-webkit-scrollbar {
+  width: 6px;
+}
+
+.thinking-process::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.thinking-process::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.thinking-process::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* 卡片文本 - 设置固定高度以显示滚动条 */

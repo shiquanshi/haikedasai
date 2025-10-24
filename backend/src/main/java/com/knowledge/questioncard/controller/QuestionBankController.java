@@ -108,7 +108,7 @@ public class QuestionBankController {
             // 使用专用线程池异步执行生成任务
             CompletableFuture.runAsync(() -> {
                 try {
-                // 流式生成卡片内容
+                // 流式生成卡片内容（此方法内部会等待所有图片生成完成后才返回）
                 String cardsJson = volcEngineService.generateCardsStream(topic, cardCount, difficulty, language, withImages, scenario, emitter);
                 
                 // 如果生成成功，保存到数据库
@@ -126,9 +126,11 @@ public class QuestionBankController {
                     log.info("✅ 流式生成并保存成功: {} 张卡片", savedCards.size());
                 }
                 
-                // 发送完成信号
+                // 确保所有数据（包括图片）都已发送完成后，再发送done信号并关闭连接
+                log.info("📡 所有数据已发送完成，准备关闭SSE连接");
                 emitter.send(SseEmitter.event().name("done").data("[DONE]"));
                 emitter.complete();
+                log.info("✅ SSE连接已正常关闭");
                 
                 } catch (Exception e) {
                     log.error("❌ 流式生成或保存失败", e);

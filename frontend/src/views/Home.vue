@@ -4716,6 +4716,26 @@ onMounted(async () => {
   padding: 5px;
 }
 
+/* 思考过程滚动条样式 */
+.thinking-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.thinking-content::-webkit-scrollbar-track {
+  background: rgba(79, 172, 254, 0.1);
+  border-radius: 4px;
+}
+
+.thinking-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.thinking-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #00f2fe 0%, #4facfe 100%);
+}
+
 .typing-cursor {
   display: inline-block;
   margin-left: 2px;
