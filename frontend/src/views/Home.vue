@@ -499,53 +499,51 @@
       <!-- 卡片展示区（覆盖整个宽度） -->
       <div class="cards-section full-width" v-if="showCards">
         <div class="cards-header">
-          <div class="header-left">
-            <h2>{{ topic }} - 学习卡片</h2>
-            <div class="card-progress" v-if="!isGenerating">
-              <span>进度：{{ currentCardIndex + 1 }} / {{ cards.length }}</span>
-              <el-button 
-                @click="toggleSelectionMode" 
-                :type="isSelectionMode ? 'success' : 'default'"
-                size="small"
-                style="margin-left: 20px"
-              >
-                {{ isSelectionMode ? '完成选题' : '选题模式' }}
-              </el-button>
-              <el-button 
-                @click="handleAddNewCard"
-                type="success"
-                size="small"
-                style="margin-left: 10px"
-                title="新增卡片到当前题库"
-              >
-                新增卡片
-              </el-button>
-              <el-button 
-                v-if="isSelectionMode && selectedCardIds.length > 0"
-                @click="showAddToBankDialog"
-                type="primary"
-                size="small"
-                style="margin-left: 10px"
-              >
-                添加到题库 ({{ selectedCardIds.length }})
-              </el-button>
-              <el-button 
-                v-if="isSelectionMode && selectedCardIds.length > 0"
-                @click="handleDeleteSelectedCards"
-                type="danger"
-                size="small"
-                style="margin-left: 10px"
-                :disabled="selectedCardIds.length === cards.length"
-                title="删除选中的卡片"
-              >
-                删除选中 ({{ selectedCardIds.length }})
-              </el-button>
-            </div>
-            <div class="card-progress generating" v-else>
-              <el-icon class="is-loading" style="margin-right: 8px"><Loading /></el-icon>
-              <span>正在生成中... 已生成 {{ cards.length }} 张卡片</span>
-            </div>
+          <div class="card-progress" v-if="!isGenerating">
+            <span>进度：{{ currentCardIndex + 1 }} / {{ cards.length }}</span>
+            <el-button 
+              @click="toggleSelectionMode" 
+              :type="isSelectionMode ? 'success' : 'default'"
+              size="small"
+              style="margin-left: 20px"
+            >
+              {{ isSelectionMode ? '完成选题' : '选题模式' }}
+            </el-button>
+            <el-button 
+              @click="handleAddNewCard"
+              type="success"
+              size="small"
+              style="margin-left: 10px"
+              title="新增卡片到当前题库"
+            >
+              新增卡片
+            </el-button>
+            <el-button 
+              v-if="isSelectionMode && selectedCardIds.length > 0"
+              @click="showAddToBankDialog"
+              type="primary"
+              size="small"
+              style="margin-left: 10px"
+            >
+              添加到题库 ({{ selectedCardIds.length }})
+            </el-button>
+            <el-button 
+              v-if="isSelectionMode && selectedCardIds.length > 0"
+              @click="handleDeleteSelectedCards"
+              type="danger"
+              size="small"
+              style="margin-left: 10px"
+              :disabled="selectedCardIds.length === cards.length"
+              title="删除选中的卡片"
+            >
+              删除选中 ({{ selectedCardIds.length }})
+            </el-button>
           </div>
+          <div class="card-progress generating" v-else>
+            <el-icon class="is-loading" style="margin-right: 8px"><Loading /></el-icon>
+            <span>正在生成中... 已生成 {{ cards.length }} 张卡片</span>
+          </div>
+          <h2>{{ topic }} - 学习卡片</h2>
           <el-button @click="backToHome" type="primary" size="large">返回</el-button>
         </div>
 
@@ -1175,6 +1173,7 @@
       v-model="showShareDialog"
       title="分享题库"
       width="500px"
+      @close="handleShareDialogClose"
     >
       <div v-if="!shareCode">
         <el-form label-width="120px">
@@ -2901,6 +2900,18 @@ const handleEditShareDialogClose = () => {
   }
 }
 
+// 处理分享对话框关闭
+const handleShareDialogClose = async () => {
+  // 重置分享表单
+  shareCode.value = ''
+  shareExpireHours.value = null
+  shareToPlaza.value = false
+  currentSharingBankId.value = null
+  
+  // 刷新分享列表
+  await loadSharedBanks()
+}
+
 // 确认生成分享码
 const confirmGenerateShare = async () => {
   if (!currentSharingBankId.value) return
@@ -3309,6 +3320,7 @@ onMounted(async () => {
   position: relative;
   z-index: 1;
   animation: fadeIn 0.8s ease-out;
+  margin-top: -40px;
 }
 
 /* 全屏宽度的卡片展示区 */
@@ -3477,9 +3489,10 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: white;
   width: 100%;
+  padding-top: 0;
 }
 
 .header-left {
@@ -3531,6 +3544,7 @@ onMounted(async () => {
   align-items: flex-start;
   justify-content: center;
   position: relative;
+  margin-top: -20px;
 }
 
 /* 田字格网格容器 */
@@ -3639,8 +3653,9 @@ onMounted(async () => {
   position: relative;
   width: 100%;
   max-width: 1200px;
-  height: calc(100vh - 180px);
-  max-height: 600px;
+  height: calc(100vh - 150px);
+  max-height: 700px;
+  min-height: 500px;
   cursor: pointer;
   transition: transform 0.3s ease;
   will-change: transform;
@@ -3700,12 +3715,12 @@ onMounted(async () => {
 /* 新的卡片内容包装器 - 左右布局 */
 .card-content-wrapper {
   width: 100%;
-  min-height: 100%;
-  padding: 60px 40px 40px 40px;
+  height: 100%;
+  padding: 60px 30px 30px 30px;
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
-  gap: 30px;
+  gap: 25px;
   align-items: stretch;
 }
 
@@ -3737,6 +3752,7 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   height: 100%;
+  min-height: 300px;
   margin-bottom: 0;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 15px;
@@ -3750,13 +3766,13 @@ onMounted(async () => {
 .card-text-scrollable {
   width: 100%;
   height: 100%;
-  padding: 20px;
+  padding: 18px;
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.8;
   text-align: center;
   word-wrap: break-word;
   word-break: break-word;
