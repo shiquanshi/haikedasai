@@ -2,8 +2,8 @@
 FROM node:18-alpine AS frontend-build
 WORKDIR /frontend
 
-# 先复制 package.json 和锁文件（利用 Docker 缓存，避免每次修改代码都重新安装依赖）
-COPY frontend/package.json frontend/package-lock.json ./
+# 只复制 package.json（不使用锁文件以解决依赖冲突问题）
+COPY frontend/package.json ./
 
 # 清理缓存并切换镜像源（解决国内下载慢问题）
 RUN rm -rf node_modules package-lock.json || true && \
