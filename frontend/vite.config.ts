@@ -22,8 +22,7 @@ export default defineConfig({
       },
       '/minio': {
         target: 'https://nohavebug.preview.huawei-zeabur.cn',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/minio/, '')
+        changeOrigin: true
       }
     }
   }
