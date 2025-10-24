@@ -1389,9 +1389,9 @@ const generateCards = async () => {
   cards.value = [] // 清空旧卡片
   currentCardIndex.value = 0 // 重置卡片索引
   isFlipped.value = false // 重置翻转状态
-  currentBankType.value = '' // 重置题库类型，允许显示添加题库和编辑按钮
+  currentBankType.value = 'ai' // 设置为ai类型，显示编辑按钮
   currentBankId.value = null // 重置题库ID
-  currentBankName.value = '' // 重置题库名称
+  currentBankName.value = topic.value // 使用主题作为题库名称
   
   // 启动加载文本打字机效果
   loadingText.value = '正在生成中，请稍候...'
@@ -1446,6 +1446,14 @@ const generateCards = async () => {
                   }
                 })
                 console.log(`✅ 已更新为${cards.value.length}张真实ID的卡片，同时保留图片数据`)
+                
+                // 🔥 关键修复：更新题库ID和类型，使操作按钮可用
+                if (parsed.data.length > 0 && parsed.data[0].bankId) {
+                  currentBankId.value = parsed.data[0].bankId
+                  // AI生成的题库类型为'ai'，但需要转换为'custom'才能进行编辑操作
+                  currentBankType.value = 'custom'
+                  console.log(`✅ 已更新题库信息: bankId=${currentBankId.value}, type=${currentBankType.value}`)
+                }
               }
               return
             }

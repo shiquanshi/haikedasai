@@ -57,7 +57,7 @@ public class QuestionBankService {
             bank.setDescription("主题: " + topic + ", 难度: " + difficulty + ", 语言: " + language + 
                 (!scenario.isEmpty() ? ", 场景: " + scenario : ""));
             bank.setTopic(topic);
-            bank.setType("ai");
+            bank.setType("custom");
             bank.setDifficulty(difficulty);
             bank.setLanguage(language);
             bank.setUserId(String.valueOf(userId));
