@@ -5,9 +5,12 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
   resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src')
-    }
+    alias: [
+      { find: '@', replacement: resolve(__dirname, 'src') },
+      // 解决element-plus模块解析问题的别名配置
+      { find: /^element-plus(\/(es|lib))?$/, replacement: 'element-plus' },
+      { find: /^element-plus\/(es|lib)\/(.*)$/, replacement: 'element-plus/$2' }
+    ]
   },
   define: {
     global: 'globalThis'
