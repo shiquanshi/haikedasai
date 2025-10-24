@@ -72,3 +72,4 @@ logging:
   level:
     root: INFO
     com.knowledge: DEBUG
+
