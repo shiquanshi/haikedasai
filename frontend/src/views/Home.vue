@@ -304,8 +304,9 @@
             </el-loading>
 
             <!-- 我的分享 -->
-            <el-divider v-if="userStore.isLoggedIn" content-position="left">我的分享</el-divider>
-            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingShared" element-loading-text="加载中...">
+            <div ref="sharedSectionRef">
+              <el-divider v-if="userStore.isLoggedIn" content-position="left">我的分享</el-divider>
+              <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingShared" element-loading-text="加载中...">
               <el-card
                 v-for="bank in sharedBanks"
                 :key="bank.id"
@@ -355,14 +356,16 @@
                 </div>
               </el-card>
               
-              <div v-if="userStore.isLoggedIn && !isLoadingShared && sharedBanks.length === 0" class="no-data">
-                暂无分享记录
-              </div>
-            </el-loading>
+                <div v-if="userStore.isLoggedIn && !isLoadingShared && sharedBanks.length === 0" class="no-data">
+                  暂无分享记录
+                </div>
+              </el-loading>
+            </div>
 
           <!-- 我的收藏 -->
-          <el-divider v-if="userStore.isLoggedIn" content-position="left">我的收藏</el-divider>
-          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingFavorites" element-loading-text="加载中...">
+          <div ref="favoriteSectionRef">
+            <el-divider v-if="userStore.isLoggedIn" content-position="left">我的收藏</el-divider>
+            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingFavorites" element-loading-text="加载中...">
             <el-card
               v-for="bank in favoriteBanks"
               :key="bank.id"
@@ -397,14 +400,16 @@
               style="margin-top: 20px; text-align: center;"
             />
             
-            <div v-if="userStore.isLoggedIn && !isLoadingFavorites && favoriteBanks.length === 0" class="no-data">
-              暂无收藏记录
-            </div>
-          </el-loading>
+              <div v-if="userStore.isLoggedIn && !isLoadingFavorites && favoriteBanks.length === 0" class="no-data">
+                暂无收藏记录
+              </div>
+            </el-loading>
+          </div>
 
           <!-- 历史生成记录 -->
-          <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
-          <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
+          <div ref="historySectionRef">
+            <el-divider v-if="userStore.isLoggedIn" content-position="left">历史生成记录</el-divider>
+            <el-loading v-if="userStore.isLoggedIn" v-loading="isLoadingHistory" element-loading-text="加载中...">
             <el-card
                 v-for="record in historyRecords"
                 :key="record.id"
@@ -463,10 +468,11 @@
               />
             </div>
             
-            <div v-if="userStore.isLoggedIn && !isLoadingHistory && historyRecords.length === 0" class="no-data">
-              暂无历史生成记录
-            </div>
-          </el-loading>
+              <div v-if="userStore.isLoggedIn && !isLoadingHistory && historyRecords.length === 0" class="no-data">
+                暂无历史生成记录
+              </div>
+            </el-loading>
+          </div>
             
             <!-- 创建题库按钮 -->
             <div class="create-bank-button-container">
@@ -1256,7 +1262,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, VideoPlay, Search, Loading, Plus, Download, Upload, Edit, Delete, HomeFilled, User, SwitchButton, Share, Trophy } from '@element-plus/icons-vue'
@@ -1453,10 +1459,12 @@ const isLoadingHistory = ref(false)
 const historyPage = ref(1)
 const historyPageSize = ref(10)
 const historyTotal = ref(0)
+const hasLoadedHistory = ref(false) // 是否已加载过历史记录
 
 // 分享记录相关
 const sharedBanks = ref<QuestionBank[]>([])
 const isLoadingShared = ref(false)
+const hasLoadedShared = ref(false) // 是否已加载过分享记录
 
 // 收藏记录相关
 const favoriteBanks = ref<QuestionBank[]>([])
@@ -1464,6 +1472,12 @@ const isLoadingFavorites = ref(false)
 const favoritePage = ref(1)
 const favoritePageSize = ref(10)
 const favoriteTotal = ref(0)
+const hasLoadedFavorites = ref(false) // 是否已加载过收藏记录
+
+// 懒加载相关的ref引用
+const historySectionRef = ref<HTMLElement | null>(null)
+const sharedSectionRef = ref<HTMLElement | null>(null)
+const favoriteSectionRef = ref<HTMLElement | null>(null)
 
 const questionImageFileList = ref<any[]>([])
 const answerImageFileList = ref<any[]>([])
@@ -1607,6 +1621,54 @@ const generateCards = async () => {
                 }
               })
               console.log(`✅ 已更新为${cards.value.length}张真实ID的卡片，同时更新了selectedCardIds并保留图片数据`)
+              
+              // 调用addCardContentsToBank将卡片添加到用户的题库中
+              if (userStore.isLoggedIn && userStore.userInfo) {
+                // 定义一个异步函数来处理保存到题库的操作
+                const saveCardsToBank = async () => {
+                  try {
+                    // 添加调试信息
+                    console.log('🔍 用户信息检查:', {
+                      isLoggedIn: userStore.isLoggedIn,
+                      userInfo: userStore.userInfo,
+                      userId: userStore.userInfo?.id
+                    });
+                    
+                    // 这里假设我们要将卡片添加到一个默认的或新创建的题库中
+                    // 在实际应用中，你可能需要让用户选择一个目标题库
+                    // 为了演示，我们创建一个新的题库来存放这些卡片
+                    const bankResponse = await questionBankApi.createCustomBank({
+                      name: `AI生成-${new Date().toLocaleDateString()}`,
+                      topic: topic.value,
+                      description: `基于主题"${topic.value}"由AI自动生成的闪卡`,
+                      difficulty: difficulty.value,
+                      language: language.value,
+                      userId: userStore.userInfo.id // 额外传递userId参数
+                    });
+                    
+                    const bankId = bankResponse.data.id;
+                    
+                    // 将卡片内容添加到新创建的题库中
+                    await questionBankApi.addCardContentsToBank({
+                      targetBankId: bankId,
+                      cardContents: cards.value.map(card => ({
+                        question: card.question,
+                        answer: card.answer,
+                        questionImage: card.questionImage,
+                        answerImage: card.answerImage
+                      }))
+                    });
+                    
+                    console.log('✅ 卡片已成功添加到用户题库中');
+                  } catch (error) {
+                    console.error('❌ 添加卡片到题库失败:', error);
+                    ElMessage.error('保存卡片到题库失败');
+                  }
+                };
+                
+                // 调用异步函数
+                saveCardsToBank();
+              }
             }
             return
           }
@@ -1886,6 +1948,11 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
       return
     }
     
+    // 如果已经加载过且不是翻页操作，直接返回
+    if (hasLoadedHistory.value && !loadMore && page === 1) {
+      return
+    }
+    
     isLoadingHistory.value = true
     const response = await questionBankApi.searchBanks({
       page: page,
@@ -1909,6 +1976,9 @@ const loadHistoryRecords = async (page: number = 1, loadMore: boolean = false) =
     
     // 更新总记录数
     historyTotal.value = pageResponse.total || 0
+    
+    // 标记已加载
+    hasLoadedHistory.value = true
   } catch (error) {
     console.error('加载历史记录失败:', error)
     ElMessage.error('加载历史记录失败')
@@ -1926,10 +1996,18 @@ const handleHistoryPageChange = async (page: number) => {
 // 加载分享记录
 const loadSharedBanks = async () => {
   try {
+    // 如果已经加载过，直接返回
+    if (hasLoadedShared.value) {
+      return
+    }
+    
     isLoadingShared.value = true
     const response = await questionBankApi.getSharedRecords()
     console.log('从后端获取的分享列表数据:', response.data)
     sharedBanks.value = response.data || []
+    
+    // 标记已加载
+    hasLoadedShared.value = true
   } catch (error) {
     console.error('加载分享记录失败:', error)
     ElMessage.error('加载分享记录失败')
@@ -1941,6 +2019,11 @@ const loadSharedBanks = async () => {
 // 加载收藏记录
 const loadFavoriteBanks = async (page: number = 1) => {
   try {
+    // 如果已经加载过且不是翻页操作，直接返回
+    if (hasLoadedFavorites.value && page === 1) {
+      return
+    }
+    
     isLoadingFavorites.value = true
     // 先获取收藏的题库ID列表
     const favResponse = await questionBankApi.getUserFavorites(userStore.userId)
@@ -1974,6 +2057,9 @@ const loadFavoriteBanks = async (page: number = 1) => {
     const start = (page - 1) * favoritePageSize.value
     const end = start + favoritePageSize.value
     favoriteBanks.value = allBanks.slice(start, end)
+    
+    // 标记已加载
+    hasLoadedFavorites.value = true
   } catch (error) {
     console.error('加载收藏记录失败:', error)
     ElMessage.error('加载收藏记录失败')
@@ -2119,6 +2205,14 @@ const showAddToBankDialog = async () => {
     ElMessage.warning('请先选择要添加的卡片')
     return
   }
+  
+  // 🔥 关键修复：检查是否包含临时ID（以temp_开头）
+  const hasTempIds = selectedCardIds.value.some(id => String(id).startsWith('temp_'))
+  if (hasTempIds) {
+    ElMessage.warning('卡片正在保存中，请稍等片刻再添加到题库')
+    return
+  }
+  
   // 打开对话框前加载所有题库（不使用分页，一次性加载所有）
   try {
     isLoadingDialogBanks.value = true
@@ -3027,15 +3121,39 @@ onMounted(async () => {
   loadSystemBanks()
   loadCustomBanks()
   
-  // 如果用户已登录，加载历史生成记录和分享记录
-  if (userStore.isLoggedIn) {
-    // 尝试获取用户信息
-    userStore.fetchUserInfo().then(() => {
-      loadHistoryRecords()
-      loadSharedBanks()
-      loadFavoriteBanks()
-    })
-  }
+  // 使用 nextTick 确保 DOM 渲染完成后再设置 observer
+  await nextTick()
+  
+  // 使用 Intersection Observer 实现懒加载
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && userStore.isLoggedIn) {
+          // 当元素进入视口时加载数据
+          if (entry.target === historySectionRef.value && !hasLoadedHistory.value) {
+            loadHistoryRecords()
+          } else if (entry.target === sharedSectionRef.value && !hasLoadedShared.value) {
+            loadSharedBanks()
+          } else if (entry.target === favoriteSectionRef.value && !hasLoadedFavorites.value) {
+            loadFavoriteBanks()
+          }
+        }
+      })
+    },
+    {
+      root: null,
+      rootMargin: '100px', // 提前100px开始加载
+      threshold: 0.1
+    }
+  )
+  
+  // 监听各个区域
+  if (historySectionRef.value) observer.observe(historySectionRef.value)
+  if (sharedSectionRef.value) observer.observe(sharedSectionRef.value)
+  if (favoriteSectionRef.value) observer.observe(favoriteSectionRef.value)
+  
+  // 保存observer实例以便清理
+  ;(window as any).__homeObserver = observer
   
   // 处理从分享详情页跳转过来的参数
   const bankId = route.query.bankId
@@ -3060,6 +3178,15 @@ onMounted(async () => {
     } catch (error) {
       console.error('跳转到指定卡片失败:', error)
     }
+  }
+})
+
+// 组件卸载时清理observer
+onUnmounted(() => {
+  const observer = (window as any).__homeObserver
+  if (observer) {
+    observer.disconnect()
+    delete (window as any).__homeObserver
   }
 })
 </script>

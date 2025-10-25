@@ -15,7 +15,7 @@ export const userApi = {
   // 用户登录
   login(params: LoginParams) {
     return request({
-      url: '/api/user/login',
+      url: '/user/login',
       method: 'post',
       data: params
     })
@@ -24,7 +24,7 @@ export const userApi = {
   // 用户注册
   register(params: RegisterParams) {
     return request({
-      url: '/api/user/register',
+      url: '/user/register',
       method: 'post',
       data: params
     })
@@ -33,7 +33,7 @@ export const userApi = {
   // 获取当前用户信息
   getCurrentUser() {
     return request({
-      url: '/api/user/info',
+      url: '/user/info',
       method: 'get'
     })
   }

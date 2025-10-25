@@ -12,7 +12,7 @@ export const imageApi = {
    */
   generateImage(params: ImageGenerateParams) {
     return request({
-      url: '/api/image/generate',
+      url: '/image/generate',
       method: 'post',
       data: params
     })

@@ -19,21 +19,22 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtInterceptor)
-                .addPathPatterns("/api/**") // 只拦截/api路径
+                .addPathPatterns("/api/**", "/question-bank/**") // 拦截/api和/question-bank路径
                 .excludePathPatterns(
                     "/api/user/register",  // 排除注册
                     "/api/user/login",     // 排除登录
                     "/api/user/validate-token", // 排除token验证
                     "/api/share/plaza",  // 排除分享广场(公开访问)
                     "/api/share/detail/**",  // 排除分享详情(公开访问)
-                    "/api/battle/**"  // 排除对战相关API
+                    "/api/battle/**",  // 排除对战相关API
+                    "/question-bank/share/**"  // 排除分享相关API
                 );
     }
     
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:3000", "http://localhost:3001")
+                .allowedOriginPatterns("http://localhost:3000", "http://localhost:3001", "http://localhost:3002")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

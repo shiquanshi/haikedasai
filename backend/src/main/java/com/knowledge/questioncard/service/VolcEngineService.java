@@ -1,5 +1,7 @@
 package com.knowledge.questioncard.service;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knowledge.questioncard.config.VolcEngineConfig;
 import com.volcengine.ark.runtime.model.completion.chat.ChatCompletionRequest;
 import com.volcengine.ark.runtime.model.completion.chat.ChatMessage;
@@ -36,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * 火山引擎AI服务
@@ -379,7 +382,7 @@ public class VolcEngineService {
                                     
                                     if (questionNode == null || answerNode == null) {
                                         log.warn("卡片字段缺失，跳过: {}", cardNode.toString());
-                                        return;
+                                        return new HashMap<>();
                                     }
                                     
                                     String question = questionNode.asText();
@@ -471,11 +474,11 @@ public class VolcEngineService {
                                     imageUrls.put("questionImage", questionImage);
                                     imageUrls.put("answerImage", answerImage);
                                     imageUrls.put("index", String.valueOf(cardIndex - 1));
-                                    return imageUrls
+                                    return imageUrls;
                                     
                                 } catch (Exception e) {
                                     log.error("处理卡片异常", e);
-                                    return null;
+                                    return new HashMap<>();
                                 }
                             }, sseTaskExecutor);
                             
@@ -510,7 +513,7 @@ public class VolcEngineService {
                         
                         long parallelEndTime = System.currentTimeMillis();
                         log.info("⏱️ [计时] 所有卡片图片任务已完成 - 总耗时:{}ms", parallelEndTime - parallelStartTime);
-                        log.info("⏱️ [计时总结] 整个卡片生成流程完成 - 总耗时:{}ms", parallelEndTime - startTime)
+                        log.info("⏱️ [计时总结] 整个卡片生成流程完成 - 总耗时:{}ms", parallelEndTime - startTime);
                     }
                 } catch (Exception e) {
                     log.error("生成图片描述失败", e);

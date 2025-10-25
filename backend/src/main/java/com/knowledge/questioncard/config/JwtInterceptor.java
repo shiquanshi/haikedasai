@@ -18,26 +18,26 @@ public class JwtInterceptor implements HandlerInterceptor {
     
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // è®°å½•è¯·æ±‚è·¯å¾„ç”¨äºè°ƒè¯•
+        // ¼ÇÂ¼ÇëÇóÂ·¾¶ÓÃÓÚµ÷ÊÔ
         String requestURI = request.getRequestURI();
         String contextPath = request.getContextPath();
         String servletPath = request.getServletPath();
-        log.info("JwtInterceptoræ‹¦æˆªåˆ°è¯·æ±‚: {} {}, contextPath={}, servletPath={}", request.getMethod(), requestURI, contextPath, servletPath);
+        log.info("JwtInterceptorÀ¹½Øµ½ÇëÇó: {} {}, contextPath={}, servletPath={}", request.getMethod(), requestURI, contextPath, servletPath);
         
-        // OPTIONSè¯·æ±‚ç›´æ¥æ”¾è¡Œ
+        // OPTIONSÇëÇóÖ±½Ó·ÅĞĞ
         if ("OPTIONS".equals(request.getMethod())) {
             return true;
         }
         
         String token = null;
         
-        // 1. ä¼˜å…ˆä»Headerè·å–token
+        // 1. ÓÅÏÈ´ÓHeader»ñÈ¡token
         String authHeader = request.getHeader(jwtConfig.getHeaderName());
         if (authHeader != null && authHeader.startsWith(jwtConfig.getTokenPrefix())) {
             token = authHeader.substring(jwtConfig.getTokenPrefix().length()).trim();
         }
         
-        // 2. å¦‚æœHeaderä¸­æ²¡æœ‰,å°è¯•ä»URLå‚æ•°è·å–(ç”¨äºSSEç­‰æ— æ³•è®¾ç½®Headerçš„åœºæ™¯)
+        // 2. Èç¹ûHeaderÖĞÃ»ÓĞ,³¢ÊÔ´ÓURL²ÎÊı»ñÈ¡(ÓÃÓÚSSEµÈÎŞ·¨ÉèÖÃHeaderµÄ³¡¾°)
         if (token == null || token.isEmpty()) {
             token = request.getParameter("token");
             if (token != null) {
@@ -45,17 +45,33 @@ public class JwtInterceptor implements HandlerInterceptor {
             }
         }
         
-        // 3. éªŒè¯token
+        // 3. ¼ì²éÊÇ·ñÊÖ¶¯´«µİÁËuserId²ÎÊı
+        String manualUserId = request.getParameter("userId");
+        if (manualUserId != null && !manualUserId.isEmpty()) {
+            try {
+                Long userId = Long.parseLong(manualUserId);
+                log.info("ÊÖ¶¯´«µİuserId: {}", userId);
+                request.setAttribute("userId", userId);
+                // ¿ÉÒÔÉèÖÃÄ¬ÈÏµÄusernameºÍrole
+                request.setAttribute("username", "manual_user_");
+                request.setAttribute("role", "USER");
+                return true;
+            } catch (NumberFormatException e) {
+                log.warn("ÊÖ¶¯´«µİµÄuserId¸ñÊ½ÎŞĞ§: {}", manualUserId);
+            }
+        }
+
+        // 4. ÑéÖ¤token
         if (token != null && !token.isEmpty() && jwtUtil.validateToken(token)) {
-            // å°†ç”¨æˆ·ä¿¡æ¯å­˜å…¥request attributes
+            // ½«ÓÃ»§ĞÅÏ¢´æÈërequest attributes
             request.setAttribute("userId", jwtUtil.getUserIdFromToken(token));
             request.setAttribute("username", jwtUtil.getUsernameFromToken(token));
             request.setAttribute("role", jwtUtil.getRoleFromToken(token));
             return true;
         }
         
-        // æœªè®¤è¯æˆ–tokenæ— æ•ˆ
-        log.warn("JWTéªŒè¯å¤±è´¥ - è¯·æ±‚è·¯å¾„: {}, Token: {}", requestURI, token != null ? "å­˜åœ¨ä½†æ— æ•ˆ" : "ä¸å­˜åœ¨");
+        // Î´ÈÏÖ¤»òtokenÎŞĞ§
+        log.warn("JWTÑéÖ¤Ê§°Ü - ÇëÇóÂ·¾¶: {}, Token: {}", requestURI, token != null ? "´æÔÚµ«ÎŞĞ§" : "²»´æÔÚ");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return false;
     }

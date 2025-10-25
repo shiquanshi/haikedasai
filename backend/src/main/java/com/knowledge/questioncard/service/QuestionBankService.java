@@ -648,8 +648,7 @@ public class QuestionBankService {
         
         // 检查权限：system类型题库允许所有用户添加卡片，custom类型题库只能创建者添加
         if ("custom".equals(targetBank.getType())) {
-            String userIdStr = String.valueOf(userId);
-            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userIdStr)) {
+            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userId)) {
                 throw new RuntimeException("无权限向此题库添加卡片");
             }
         } else if ("ai".equals(targetBank.getType())) {
@@ -712,8 +711,7 @@ public class QuestionBankService {
         
         // 检查权限：system类型题库允许所有用户添加卡片，custom类型题库只能创建者添加
         if ("custom".equals(targetBank.getType())) {
-            String userIdStr = String.valueOf(userId);
-            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userIdStr)) {
+            if (targetBank.getUserId() == null || !targetBank.getUserId().equals(userId)) {
                 throw new RuntimeException("无权限向此题库添加卡片");
             }
         } else if ("ai".equals(targetBank.getType())) {

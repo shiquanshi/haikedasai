@@ -60,22 +60,46 @@ public class JwtUtil {
      * 从Token中获取用户ID
      */
     public Long getUserIdFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        if (claims != null) {
-            Object userId = claims.get("userId");
-            if (userId instanceof Integer) {
-                return ((Integer) userId).longValue();
-            } else if (userId instanceof Long) {
-                return (Long) userId;
-            } else if (userId instanceof String) {
-                try {
-                    return Long.parseLong((String) userId);
-                } catch (NumberFormatException e) {
+        try {
+            Claims claims = getClaimsFromToken(token);
+            if (claims != null) {
+                Object userId = claims.get("userId");
+                log.info("[JWT调试] 从token提取userId: value={}, type={}", userId, userId != null ? userId.getClass().getName() : "null");
+                
+                if (userId == null) {
+                    log.warn("[JWT调试] token中不存在userId字段 - token前20位: {}", 
+                            token.substring(0, Math.min(20, token.length())));
+                    log.warn("[JWT调试] token中的所有claims: {}", claims);
+                    return null;
+                }
+                
+                if (userId instanceof Integer) {
+                    Long result = ((Integer) userId).longValue();
+                    log.info("[JWT调试] userId(Integer)转换成功: {}", result);
+                    return result;
+                } else if (userId instanceof Long) {
+                    log.info("[JWT调试] userId(Long)获取成功: {}", userId);
+                    return (Long) userId;
+                } else if (userId instanceof String) {
+                    try {
+                        Long result = Long.parseLong((String) userId);
+                        log.info("[JWT调试] userId(String)解析成功: {}", result);
+                        return result;
+                    } catch (NumberFormatException e) {
+                        log.warn("[JWT调试] userId(String)解析失败: {}", userId);
+                        return null;
+                    }
+                } else {
+                    log.warn("[JWT调试] userId类型不支持: {}, 值: {}", userId.getClass().getName(), userId);
                     return null;
                 }
             }
+            log.warn("[JWT调试] 从token提取claims失败");
+            return null;
+        } catch (Exception e) {
+            log.warn("[JWT调试] 提取userId时发生异常: {}", e.getMessage());
+            return null;
         }
-        return null;
     }
     
     /**

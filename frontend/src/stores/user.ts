@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { userApi, type LoginParams, type RegisterParams } from '../api/user'
 import { ElMessage } from 'element-plus'
 
@@ -10,25 +10,45 @@ export interface UserInfo {
 }
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref<string>(localStorage.getItem('token')?.trim() || '')
+  // 初始化时添加调试信息
+  const storedToken = localStorage.getItem('token')?.trim() || ''
+  console.log('🔑 初始化用户状态:', {
+    storedToken: storedToken ? '存在' : '不存在',
+    tokenLength: storedToken.length
+  });
+  
+  const token = ref<string>(storedToken)
   const userInfo = ref<UserInfo | null>(null)
   const isLoggedIn = computed(() => !!token.value)
+  
+  // 监听token变化
+  watchEffect(() => {
+    console.log('🔄 用户登录状态变化:', {
+      isLoggedIn: isLoggedIn.value,
+      userInfoExists: !!userInfo.value
+    });
+  });
 
   // 登录
   const login = async (params: LoginParams) => {
     try {
+      console.log('🔒 发起登录请求:', params)
       const response = await userApi.login(params)
+      console.log('🔐 登录响应:', response)
       if (response.token) {
         // trim()确保token没有多余的空格或换行符
         const cleanToken = response.token.trim()
         token.value = cleanToken
         userInfo.value = response.user
         localStorage.setItem('token', cleanToken)
+        console.log('✅ 登录成功，已存储token:', cleanToken.substring(0, 20) + '...')
         ElMessage.success('登录成功')
         return true
       }
+      console.warn('⚠️ 登录响应中没有token字段')
       return false
     } catch (error) {
+      console.error('❌ 登录失败:', error)
       ElMessage.error('登录失败')
       return false
     }

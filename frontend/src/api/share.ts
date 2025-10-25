@@ -58,7 +58,7 @@ export interface PlazaResponse {
 
 // 创建或更新分享
 export const createShare = (params: CreateShareParams) => {
-  return request.post<SharedBank>('/api/share/create', params)
+  return request.post<SharedBank>('/share/create', params)
 }
 
 // 获取分享大厅列表
@@ -68,34 +68,34 @@ export const getPlaza = (params: {
   page?: number
   pageSize?: number
 }) => {
-  return request.get<PlazaResponse>('/api/share/plaza', { params })
+  return request.get<PlazaResponse>('/share/plaza', { params })
 }
 
 // 根据分享码获取详情
 export const getShareDetail = (shareCode: string) => {
-  return request.get<SharedBank>(`/api/share/detail/${shareCode}`)
+  return request.get<SharedBank>(`/share/detail/${shareCode}`)
 }
 
 // 获取浏览统计
 export const getStatistics = (sharedBankId: number) => {
-  return request.get<any>(`/api/share/statistics/${sharedBankId}`)
+  return request.get<any>(`/share/statistics/${sharedBankId}`)
 }
 
 // 按日期获取浏览统计
 export const getStatisticsByDate = (sharedBankId: number, startDate: string, endDate: string) => {
-  return request.get<any>(`/api/share/statistics/${sharedBankId}/by-date`, {
+  return request.get<any>(`/share/statistics/${sharedBankId}/by-date`, {
     params: { startDate, endDate }
   })
 }
 
 // 获取我的分享列表
 export const getMyShares = () => {
-  return request.get<any[]>('/api/share/my-shares')
+  return request.get<any[]>('/share/my-shares')
 }
 
 // 更新分享
 export const updateShare = (params: CreateShareParams & { id: number }) => {
-  return request.post<SharedBank>('/api/share/create', params)
+  return request.post<SharedBank>('/share/create', params)
 }
 
 // 删除分享

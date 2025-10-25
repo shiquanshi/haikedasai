@@ -103,16 +103,19 @@ public class QuestionBankController {
             }
         });
         
-        // 使用异步任务执行生成操作，避免阻塞主线程
+        // 在异步任务执行前先获取userId,避免在异步线程中无法访问request attribute
+        final Long finalUserId = userId;
+        
+        // 使用异步任务执行生成操作,避免阻塞主线程
         CompletableFuture.runAsync(() -> {
             try {
-                // 流式生成卡片内容（此方法内部会等待所有图片生成完成后才返回）
+                // 流式生成卡片内容(此方法内部会等待所有图片生成完成后才返回)
                 String cardsJson = volcEngineService.generateCardsStream(topic, cardCount, difficulty, language, withImages, scenario, emitter);
                 
-                // 如果生成成功，保存到数据库
+                // 如果生成成功,保存到数据库
                 if (cardsJson != null && !cardsJson.trim().isEmpty()) {
                     List<QuestionCardDTO> savedCards = questionBankService.saveStreamGeneratedCards(
-                        cardsJson, topic, difficulty, language, userId, scenario);
+                        cardsJson, topic, difficulty, language, finalUserId, scenario);
                     
                     // 发送保存成功的卡片数据（包含真实ID）
                     ObjectMapper objectMapper = new ObjectMapper();
@@ -443,6 +446,10 @@ public class QuestionBankController {
             HttpServletRequest httpRequest) {
         try {
             Long userId = (Long) httpRequest.getAttribute("userId");
+            if (userId == null) {
+                log.warn("未找到用户ID，请确保已正确登录并携带有效的JWT Token");
+                return Result.error("未找到用户ID，请重新登录");
+            }
             
             List<QuestionCardDTO> cards = questionBankService.addCardsToBank(
                 request.getTargetBankId(), 
@@ -465,6 +472,10 @@ public class QuestionBankController {
             HttpServletRequest httpRequest) {
         try {
             Long userId = (Long) httpRequest.getAttribute("userId");
+            if (userId == null) {
+                log.warn("未找到用户ID，请确保已正确登录并携带有效的JWT Token");
+                return Result.error("未找到用户ID，请重新登录");
+            }
             Long targetBankId = Long.valueOf(request.get("targetBankId").toString());
             @SuppressWarnings("unchecked")
             List<Map<String, String>> cardContents = (List<Map<String, String>>) request.get("cardContents");
@@ -490,6 +501,12 @@ public class QuestionBankController {
             HttpServletResponse response) {
         try {
             Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                log.warn("未找到用户ID，请确保已正确登录并携带有效的JWT Token");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("未找到用户ID，请重新登录");
+                return;
+            }
             questionBankService.exportBankToExcel(bankId, userId, response);
         } catch (Exception e) {
             log.error("导出题库失败: {}", e.getMessage(), e);
@@ -522,6 +539,10 @@ public class QuestionBankController {
 
             // 获取用户信息
             Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                log.warn("未找到用户ID，请确保已正确登录并携带有效的JWT Token");
+                return Result.error("未找到用户ID，请重新登录");
+            }
 
             // 执行导入
             QuestionBankDTO bankDTO = questionBankService.importBankFromExcel(file, targetBankId, bankName, description, difficulty, language, userId);
@@ -541,7 +562,26 @@ public class QuestionBankController {
             @RequestBody Map<String, String> request,
             HttpServletRequest httpRequest) {
         try {
-            Long userId = (Long) httpRequest.getAttribute("userId");
+            // 首先检查请求体中是否手动传递了userId参数
+            Long userId = null;
+            String manualUserId = request.get("userId");
+            if (manualUserId != null && !manualUserId.isEmpty()) {
+                try {
+                    userId = Long.parseLong(manualUserId);
+                    log.info("手动传递userId: {}", userId);
+                } catch (NumberFormatException e) {
+                    log.warn("手动传递的userId格式无效: {}", manualUserId);
+                }
+            }
+            
+            // 如果没有手动传递userId，则从JWT拦截器设置的attribute中获取
+            if (userId == null) {
+                userId = (Long) httpRequest.getAttribute("userId");
+                if (userId == null) {
+                    log.warn("未找到用户ID，请确保已正确登录并携带有效的JWT Token");
+                    return Result.error("未找到用户ID，请重新登录");
+                }
+            }
             
             String question = request.get("question");
             String answer = request.get("answer");

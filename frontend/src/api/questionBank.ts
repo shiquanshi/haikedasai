@@ -4,7 +4,7 @@ export const questionBankApi = {
   // AI生成题库
   generateAIBank(params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string }) {
     return request({
-      url: '/api/question-bank/generate',
+      url: '/question-bank/generate',
       method: 'post',
       data: params,
       timeout: 120000 // AI生成需要更长时间,设置为120秒
@@ -21,7 +21,7 @@ export const questionBankApi = {
   ) {
     const token = localStorage.getItem('token')?.trim()
     // 使用相对路径,自动适配当前域名和协议
-    const url = `/api/question-bank/generate-stream?` +
+    const url = `/question-bank/generate-stream?` +
       `topic=${encodeURIComponent(params.topic)}&` +
       `scenario=${encodeURIComponent(params.scenario || '')}&` +
       `cardCount=${params.cardCount}&` +
@@ -120,7 +120,7 @@ export const questionBankApi = {
   generateAIBankBatch(params: { topic: string; scenario?: string; cardCount: number; difficulty: string; language: string; withImages?: boolean }) {
     const token = localStorage.getItem('token')?.trim()
     // 使用相对路径,自动适配当前域名和协议
-    const url = `/api/question-bank/generate-batch?` +
+    const url = `/question-bank/generate-batch?` +
       `topic=${encodeURIComponent(params.topic)}&` +
       `scenario=${encodeURIComponent(params.scenario || '')}&` +
       `cardCount=${params.cardCount}&` +
@@ -131,7 +131,7 @@ export const questionBankApi = {
     
     console.log('🔗 正在调用批量生成接口:', url)
     return request({
-      url: `/api/question-bank/generate-batch`,
+      url: `/question-bank/generate-batch`,
       method: 'get',
       params: {
         topic: params.topic,
@@ -148,7 +148,7 @@ export const questionBankApi = {
   // 创建自定义题库
   createCustomBank(params: { name: string; description?: string; topic: string; difficulty?: string; language?: string }) {
     return request({
-      url: '/api/question-bank/create',
+      url: '/question-bank/create',
       method: 'post',
       data: params
     })
@@ -157,7 +157,7 @@ export const questionBankApi = {
   // 获取系统推荐题库列表（支持分页）
   getSystemBanks(topic: string, page: number = 1, pageSize: number = 10) {
     return request({
-      url: '/api/question-bank/system',
+      url: '/question-bank/system',
       method: 'get',
       params: { topic, page, pageSize }
     })
@@ -166,7 +166,7 @@ export const questionBankApi = {
   // 获取用户自定义题库列表（支持分页）
   getUserCustomBanks(page: number = 1, pageSize: number = 10) {
     return request({
-      url: '/api/question-bank/custom',
+      url: '/question-bank/custom',
       method: 'get',
       params: { page, pageSize }
     })
@@ -175,7 +175,7 @@ export const questionBankApi = {
   // 获取指定题库的卡片
   getBankCards(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/cards`,
+      url: `/question-bank/${bankId}/cards`,
       method: 'get'
     })
   },
@@ -183,7 +183,7 @@ export const questionBankApi = {
   // 根据ID获取题库详情
   getBankById(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}`,
+      url: `/question-bank/${bankId}`,
       method: 'get'
     })
   },
@@ -191,7 +191,7 @@ export const questionBankApi = {
   // 上传自定义文档生成题库
   uploadCustomBank(formData: FormData) {
     return request({
-      url: '/api/question-bank/upload',
+      url: '/question-bank/upload',
       method: 'post',
       data: formData,
       headers: {
@@ -203,7 +203,7 @@ export const questionBankApi = {
   // 文本转语音
   textToSpeech(text: string) {
     return request({
-      url: '/api/tts/convert',
+      url: '/tts/convert',
       method: 'post',
       data: { text }
     })
@@ -219,12 +219,11 @@ export const questionBankApi = {
     type?: string
     difficulty?: string
     tags?: string
-    userId?: number
     minCards?: number
     maxCards?: number
   }) {
     return request({
-      url: '/api/question-bank/search',
+      url: '/question-bank/search',
       method: 'post',
       data: params
     })
@@ -233,7 +232,7 @@ export const questionBankApi = {
   // 增加题库浏览次数
   incrementViewCount(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/view`,
+      url: `/question-bank/${bankId}/view`,
       method: 'post'
     })
   },
@@ -241,7 +240,7 @@ export const questionBankApi = {
   // 收藏题库
   addFavorite(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/favorite`,
+      url: `/question-bank/${bankId}/favorite`,
       method: 'post'
     })
   },
@@ -249,7 +248,7 @@ export const questionBankApi = {
   // 取消收藏
   removeFavorite(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/favorite`,
+      url: `/question-bank/${bankId}/favorite`,
       method: 'delete'
     })
   },
@@ -257,7 +256,7 @@ export const questionBankApi = {
   // 检查是否已收藏
   checkFavorite(bankId: number) {
     return request({
-      url: `/api/question-bank/${bankId}/favorite/check`,
+      url: `/question-bank/${bankId}/favorite/check`,
       method: 'get'
     })
   },
@@ -265,7 +264,7 @@ export const questionBankApi = {
   // 获取用户收藏的题库ID列表
   getUserFavorites() {
     return request({
-      url: '/api/question-bank/favorites',
+      url: '/question-bank/favorites',
       method: 'get'
     })
   },
@@ -273,19 +272,20 @@ export const questionBankApi = {
   // 批量添加卡片到题库
   addCardsToBank(params: { targetBankId: number; cardIds: number[] }) {
     return request({
-      url: '/api/question-bank/add-cards',
+      url: '/question-bank/add-cards',
       method: 'post',
       data: params
     })
   },
 
   // 批量添加卡片内容到题库（用于AI生成的临时卡片）
+  // userId通过JWT Token自动传递，不需要在请求体中指定
   addCardContentsToBank(params: { 
     targetBankId: number; 
-    cardContents: Array<{ question: string; answer: string; questionImage?: string; answerImage?: string }> 
+    cardContents: Array<{ question: string; answer: string; questionImage?: string; answerImage?: string }>;
   }) {
     return request({
-      url: '/api/question-bank/add-card-contents',
+      url: '/question-bank/add-card-contents',
       method: 'post',
       data: params
     })
@@ -294,7 +294,7 @@ export const questionBankApi = {
   // 从Excel导入题库
   importBankFromExcel(formData: FormData) {
     return request({
-      url: '/api/question-bank/import',
+      url: '/question-bank/import',
       method: 'post',
       data: formData,
       headers: {
@@ -306,7 +306,7 @@ export const questionBankApi = {
   // 更新题库信息
   updateBank(params: { id: number; name: string; description: string; difficulty: string; language: string; tags?: string }) {
     return request({
-      url: `/api/question-bank/${params.id}`,
+      url: `/question-bank/${params.id}`,
       method: 'put',
       data: params
     })
@@ -315,7 +315,7 @@ export const questionBankApi = {
   // 删除题库
   deleteBank(id: number) {
     return request({
-      url: `/api/question-bank/${id}`,
+      url: `/question-bank/${id}`,
       method: 'delete'
     })
   },
@@ -323,7 +323,7 @@ export const questionBankApi = {
   // 删除单个题库卡片
   deleteCard(cardId: number) {
     return request({
-      url: `/api/question-bank/cards/${cardId}`,
+      url: `/question-bank/cards/${cardId}`,
       method: 'delete'
     })
   },
@@ -331,7 +331,7 @@ export const questionBankApi = {
   // 新增卡片到题库
   addCard(bankId: number, params: { question: string; answer: string; questionImage?: string; answerImage?: string }) {
     return request({
-      url: `/api/question-bank/${bankId}/card`,
+      url: `/question-bank/${bankId}/card`,
       method: 'post',
       data: params
     })
@@ -340,7 +340,7 @@ export const questionBankApi = {
   // 更新卡片
   updateCard(cardId: number, params: { question: string; answer: string; questionImage?: string; answerImage?: string }) {
     return request({
-      url: `/api/question-bank/cards/${cardId}`,
+      url: `/question-bank/cards/${cardId}`,
       method: 'put',
       data: params
     })
@@ -349,7 +349,7 @@ export const questionBankApi = {
   // 生成题库分享码
   generateShareCode(bankId: number, isPublic: boolean = true, shareTitle?: string, shareDescription?: string) {
     return request({
-      url: '/api/share/create',
+      url: '/share/create',
       method: 'post',
       data: {
         bankId,
@@ -363,7 +363,7 @@ export const questionBankApi = {
   // 更新分享信息
   updateShare(params: { id: number; bankId: number; shareTitle?: string; shareDescription?: string; isPublic: boolean; expireAt?: string }) {
     return request({
-      url: '/api/share/create',
+      url: '/share/create',
       method: 'post',
       data: params
     })
@@ -372,7 +372,7 @@ export const questionBankApi = {
   // 取消题库分享
   cancelShare(shareId: number) {
     return request({
-      url: `/api/share/delete/${shareId}`,
+      url: `/share/delete/${shareId}`,
       method: 'delete'
     })
   },
@@ -380,7 +380,7 @@ export const questionBankApi = {
   // 通过分享码获取题库
   getByShareCode(shareCode: string) {
     return request({
-      url: `/api/question-bank/shared/${shareCode}`,
+      url: `/question-bank/shared/${shareCode}`,
       method: 'get'
     })
   },
@@ -388,7 +388,7 @@ export const questionBankApi = {
   // 获取用户的分享记录
   getSharedRecords() {
     return request({
-      url: '/api/share/my-shares',
+      url: '/share/my-shares',
       method: 'get'
     })
   },
@@ -396,7 +396,7 @@ export const questionBankApi = {
   // 增加分享题库的导入次数
   incrementCopyCount(shareCode: string) {
     return request({
-      url: '/api/share/increment-copy',
+      url: '/share/increment-copy',
       method: 'post',
       params: { shareCode }
     })
