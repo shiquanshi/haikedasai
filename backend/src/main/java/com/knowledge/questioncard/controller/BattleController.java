@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +30,32 @@ public class BattleController {
     
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    
+    // 存储每个房间的倒计时线程，用于管理和终止
+    private final Map<String, List<Thread>> countdownThreads = new ConcurrentHashMap<>();
+    
+    // 终止该房间的所有倒计时线程
+    private void terminateAllCountdownThreads(String roomId) {
+        List<Thread> threads = countdownThreads.remove(roomId);
+        if (threads != null) {
+            for (Thread thread : threads) {
+                if (thread.isAlive()) {
+                    thread.interrupt();
+                }
+            }
+        }
+    }
+    
+    // 从跟踪列表中移除线程
+    private void removeThreadFromTracking(String roomId, Thread thread) {
+        List<Thread> threads = countdownThreads.get(roomId);
+        if (threads != null) {
+            threads.remove(thread);
+            if (threads.isEmpty()) {
+                countdownThreads.remove(roomId);
+            }
+        }
+    }
     
     /**
      * 获取房间信息 (REST API)
@@ -321,30 +348,61 @@ public class BattleController {
      * 启动倒计时
      */
     private void startCountdown(String roomId, int timeLimit) {
-        new Thread(() -> {
+        // 终止该房间的所有现有倒计时线程
+        terminateAllCountdownThreads(roomId);
+        
+        Thread countdownThread = new Thread(() -> {
             try {
+                log.info("开始倒计时: roomId={}, timeLimit={}", roomId, timeLimit);
+                
                 for (int remaining = timeLimit; remaining > 0; remaining--) {
+                    // 检查线程是否被中断
+                    if (Thread.currentThread().isInterrupted()) {
+                        log.info("倒计时线程被中断: roomId={}", roomId);
+                        break;
+                    }
+                    
                     Map<String, Object> data = new HashMap<>();
                     data.put("remaining", remaining);
                     BattleMessage message = new BattleMessage(BattleMessage.MessageType.COUNTDOWN, roomId, data);
                     messagingTemplate.convertAndSend("/topic/battle/" + roomId, message);
-                    Thread.sleep(1000);
+                    
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        log.info("倒计时线程睡眠被中断: roomId={}", roomId);
+                        Thread.currentThread().interrupt(); // 重新设置中断标志
+                        break;
+                    }
                 }
                 
-                // 倒计时结束，评分
-                BattleRoom room = roomService.getRoomById(roomId);
-                scoreAndFinishRound(room);
+                // 只有在线程未被中断的情况下才进行评分
+                if (!Thread.currentThread().isInterrupted()) {
+                    // 倒计时结束，评分
+                    BattleRoom room = roomService.getRoomById(roomId);
+                    scoreAndFinishRound(room);
+                }
                 
             } catch (Exception e) {
-                log.error("倒计时异常", e);
+                log.error("倒计时异常: roomId={}", roomId, e);
+            } finally {
+                // 从跟踪列表中移除当前线程
+                removeThreadFromTracking(roomId, Thread.currentThread());
             }
-        }).start();
+        }, "countdown-thread-" + roomId);
+        
+        // 将线程添加到跟踪列表
+        countdownThreads.computeIfAbsent(roomId, k -> new ArrayList<>()).add(countdownThread);
+        countdownThread.start();
     }
     
     /**
      * 评分并完成轮次
      */
     private void scoreAndFinishRound(BattleRoom room) {
+        // 终止该房间的所有倒计时线程，确保轮次结束后不会有残留的倒计时消息
+        terminateAllCountdownThreads(room.getRoomId());
+        
         try {
             log.info("开始评分: roomId={}, round={}", room.getRoomId(), room.getCurrentRound());
             

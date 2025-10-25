@@ -434,12 +434,21 @@ const handleRoomUpdate = (data: any) => {
       currentView.value = 'result'
     }
   } else {
-    // 倒计时更新 - 直接使用后端发送的值，确保前后端时间同步
+    // 倒计时更新 - 增加合理性验证，避免数值跳跃
     if (data.remaining !== undefined) {
-      countdown.value = data.remaining
-      // 当倒计时为0时自动提交答案
-      if (countdown.value <= 0 && !hasSubmitted.value) {
-        submitAnswer()
+      // 检查数值是否合理：必须是非负整数，且与当前值的差异不超过5秒
+      const newRemaining = Number(data.remaining)
+      if (Number.isInteger(newRemaining) && newRemaining >= 0) {
+        // 只有当新值合理时才更新（初值为0或与当前值相差不超过5秒）
+        if (countdown.value === 0 || Math.abs(newRemaining - countdown.value) <= 5) {
+          countdown.value = newRemaining
+          // 当倒计时为0时自动提交答案
+          if (countdown.value <= 0 && !hasSubmitted.value) {
+            submitAnswer()
+          }
+        } else {
+          console.warn('忽略不合理的倒计时更新:', {old: countdown.value, new: newRemaining})
+        }
       }
     }
   }
@@ -517,9 +526,11 @@ const handleScore = (data: any) => {
   if (data.round >= currentRoom.value?.totalRounds) {
     isGameFinished.value = true
   } else {
-    // 自动进入下一轮
+    // 自动进入下一轮 - 先显示题目生成状态
     setTimeout(() => {
-      currentView.value = 'playing'
+      currentView.value = 'generating'
+      isGenerating.value = true
+      startTypingEffect('正在生成下一轮题目，请稍候...')
     }, 5000)
   }
 }
