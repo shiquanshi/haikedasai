@@ -8,7 +8,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: quanshi666
-  
+
+
+
+
   # SQL初始化配置 (已禁用,使用DataInitializer代替)
   # sql:
   #   init:
