@@ -155,8 +155,8 @@ public class MinioService {
      * 获取文件访问URL
      */
     public String getFileUrl(String fileName) {
-        // 返回通过Nginx代理的相对路径
-        return "/minio/" + minioConfig.getBucketName() + "/" + fileName;
+        // 返回完整的可访问URL，直接存储到数据库
+        return "https://nohavebug.preview.huawei-zeabur.cn/question-card-images/" + fileName;
     }
 
     /**
