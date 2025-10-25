@@ -100,10 +100,10 @@ export const updateShare = (params: CreateShareParams & { id: number }) => {
 
 // 删除分享
 export const deleteShare = (shareId: number) => {
-  return request.delete<string>(`/api/share/delete/${shareId}`)
+  return request.delete<string>(`/share/delete/${shareId}`)
 }
 
 // 增加导入/复制次数
 export const incrementCopyCount = (shareCode: string) => {
-  return request.post<void>(`/api/share/increment-copy/${shareCode}`)
+  return request.post<void>(`/share/increment-copy/${shareCode}`)
 }

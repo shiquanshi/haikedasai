@@ -262,7 +262,7 @@ const loadRoomInfo = async () => {
 
   try {
     const response = await request.get(
-      `/api/battle/room/${roomId}`,
+      `/battle/room/${roomId}`,
       {
         headers: {
           'X-User-Id': userId.value.toString(),
@@ -692,7 +692,7 @@ const startRoomStatusCheck = () => {
     if (!roomId || !currentRoom.value) return
 
     try {
-      const response = await request.get(`/api/battle/room/${roomId}`)
+      const response = await request.get(`/battle/room/${roomId}`)
       if (response.success && response.room) {
         // 检查房间状态是否发生异常变化
         const newStatus = response.room.status
