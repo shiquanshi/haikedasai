@@ -72,6 +72,5 @@ logging:
   level:
     root: INFO
     com.knowledge: DEBUG
-  charset:
-    console: UTF-8
+
 
