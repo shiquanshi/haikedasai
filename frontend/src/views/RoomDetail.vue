@@ -367,6 +367,17 @@ const subscribeToRoom = () => {
         }
         return
       }
+      
+      // 处理轮次结束消息
+      if (message.type === 'ROUND_FINISHED') {
+        console.log('轮次结束，重置答题状态')
+        // 重置答题状态
+        myAnswer.value = ''
+        hasSubmitted.value = false
+        submittedPlayers.value = []
+        return
+      }
+      
       // BattleMessage的data字段才是真正的房间数据
       if (message.data) {
         handleRoomUpdate(message.data)
@@ -471,8 +482,8 @@ const handleQuestion = (data: any) => {
   isGenerating.value = false
   
   currentRound.value = data.round
-  // 移除前端初始化倒计时，完全依赖后端WebSocket推送的倒计时
-  // countdown.value = data.timeLimit
+  // 重置倒计时为题目时间限制
+  countdown.value = data.timeLimit
   myAnswer.value = ''
   hasSubmitted.value = false
   submittedPlayers.value = []
