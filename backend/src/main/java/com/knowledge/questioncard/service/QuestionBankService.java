@@ -67,11 +67,13 @@ public class QuestionBankService {
             bank.setType("ai");
             bank.setDifficulty(difficulty);
             bank.setLanguage(language);
-            bank.setUserId(String.valueOf(userId));
+            bank.setUserId(userId);
             bank.setCreatedAt(new java.util.Date());
             questionBankMapper.insert(bank);
             
             // 解析JSON并创建卡片
+            log.info("准备解析AI返回的JSON，长度: {}", cleanedJson.length());
+            log.info("AI返回的完整JSON内容: {}", cleanedJson);
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode cardsArray = objectMapper.readTree(cleanedJson);
             
@@ -79,7 +81,11 @@ public class QuestionBankService {
             java.util.Date now = new java.util.Date();
             
             if (cardsArray.isArray()) {
-                for (JsonNode cardNode : cardsArray) {
+                log.info("开始解析{}个卡片的JSON数据", cardsArray.size());
+                for (int idx = 0; idx < cardsArray.size(); idx++) {
+                    JsonNode cardNode = cardsArray.get(idx);
+                    log.info("解析第{}个卡片，原始JSON: {}", idx + 1, cardNode.toString());
+                    
                     QuestionCard card = new QuestionCard();
                     card.setBankId(bank.getId());
                     card.setQuestion(cardNode.get("question").asText());
@@ -89,22 +95,43 @@ public class QuestionBankService {
                     String questionImageUrl = null;
                     String answerImageUrl = null;
                     
-                    if (cardNode.has("questionImage") && !cardNode.get("questionImage").isNull()) {
-                        questionImageUrl = cardNode.get("questionImage").asText();
-                        card.setQuestionImage(questionImageUrl);
+                    log.info("检查第{}个卡片是否有questionImage字段: {}", idx + 1, cardNode.has("questionImage"));
+                    if (cardNode.has("questionImage")) {
+                        JsonNode qImgNode = cardNode.get("questionImage");
+                        log.info("questionImage节点: isNull={}, 值={}", qImgNode.isNull(), qImgNode.asText());
+                        if (!qImgNode.isNull()) {
+                            questionImageUrl = qImgNode.asText();
+                            card.setQuestionImage(questionImageUrl);
+                            log.info("第{}个卡片设置questionImage: {}", idx + 1, questionImageUrl);
+                        }
                     }
-                    if (cardNode.has("answerImage") && !cardNode.get("answerImage").isNull()) {
-                        answerImageUrl = cardNode.get("answerImage").asText();
-                        card.setAnswerImage(answerImageUrl);
+                    
+                    log.info("检查第{}个卡片是否有answerImage字段: {}", idx + 1, cardNode.has("answerImage"));
+                    if (cardNode.has("answerImage")) {
+                        JsonNode aImgNode = cardNode.get("answerImage");
+                        log.info("answerImage节点: isNull={}, 值={}", aImgNode.isNull(), aImgNode.asText());
+                        if (!aImgNode.isNull()) {
+                            answerImageUrl = aImgNode.asText();
+                            card.setAnswerImage(answerImageUrl);
+                            log.info("第{}个卡片设置answerImage: {}", idx + 1, answerImageUrl);
+                        }
                     }
                     
                     card.setCreatedAt(now);
                     cards.add(card);
+                    log.info("第{}个卡片添加完成，questionImage={}, answerImage={}", idx + 1, 
+                        card.getQuestionImage(), card.getAnswerImage());
                 }
             }
             
             // 批量插入数据库
             if (!cards.isEmpty()) {
+                log.info("准备批量插入{}张卡片到数据库", cards.size());
+                for (int i = 0; i < cards.size(); i++) {
+                    QuestionCard c = cards.get(i);
+                    log.info("卡片{}插入前数据检查: questionImage={}, answerImage={}", 
+                        i + 1, c.getQuestionImage(), c.getAnswerImage());
+                }
                 batchInsertCards(cards);
                 // 更新题库卡片数量统计
                 updateBankStatistics(bank.getId());
@@ -169,7 +196,7 @@ public class QuestionBankService {
             (!scenario.isEmpty() ? ", 场景: " + scenario : ""));
         bank.setTopic(topic);
         bank.setType("ai");
-        bank.setUserId(String.valueOf(userId));
+        bank.setUserId(userId);
         bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
 
@@ -286,7 +313,7 @@ public class QuestionBankService {
         bank.setType("custom");
         bank.setDifficulty(difficulty != null ? difficulty : "medium"); // 设置默认难度
         bank.setLanguage(language != null ? language : "中文"); // 设置默认语言
-        bank.setUserId(String.valueOf(userId));
+        bank.setUserId(userId);
         bank.setCreatedAt(new java.util.Date());
         questionBankMapper.insert(bank);
         
@@ -310,7 +337,7 @@ public class QuestionBankService {
             bank.setType("custom");
             bank.setDifficulty("medium"); // 设置默认难度
             bank.setLanguage("中文"); // 设置默认语言
-            bank.setUserId(String.valueOf(userId));
+            bank.setUserId(userId);
             bank.setCreatedAt(new java.util.Date());
             questionBankMapper.insert(bank);
 
@@ -800,7 +827,7 @@ public class QuestionBankService {
             bank.setType("custom");
             bank.setDifficulty(difficulty != null && !difficulty.trim().isEmpty() ? difficulty : "medium"); // 设置难度
             bank.setLanguage(language != null && !language.trim().isEmpty() ? language : "中文"); // 设置语言
-            bank.setUserId(String.valueOf(userId));
+            bank.setUserId(userId);
             bank.setCreatedAt(new java.util.Date());
             questionBankMapper.insert(bank);
             log.info("创建题库成功: {}", bank.getName());

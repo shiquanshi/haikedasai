@@ -18,7 +18,7 @@ public class QuestionBank {
     private String difficulty;
     private String language;
     private String generatedContent;
-    private String userId;
+    private Long userId;
     private Date updatedAt;
     private String shareCode; // 分享码
     private Date expireTime; // 分享过期时间

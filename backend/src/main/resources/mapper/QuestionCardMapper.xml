@@ -26,9 +26,13 @@
 
     <update id="updateById" parameterType="com.knowledge.questioncard.entity.QuestionCard">
         UPDATE question_cards
-        SET question = #{question},
-            answer = #{answer},
-            bank_id = #{bankId}
+        <set>
+            <if test="question != null">question = #{question},</if>
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="questionImage != null">question_image = #{questionImage},</if>
+            <if test="answerImage != null">answer_image = #{answerImage},</if>
+            <if test="bankId != null">bank_id = #{bankId},</if>
+        </set>
         WHERE id = #{id}
     </update>
 
