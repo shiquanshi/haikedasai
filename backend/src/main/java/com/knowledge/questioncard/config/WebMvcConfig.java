@@ -21,12 +21,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/api/**", "/question-bank/**") // 拦截/api和/question-bank路径
                 .excludePathPatterns(
-                    "/api/user/register",  // 排除注册
-                    "/api/user/login",     // 排除登录
-                    "/api/user/validate-token", // 排除token验证
-                    "/api/share/plaza",  // 排除分享广场(公开访问)
-                    "/api/share/detail/**",  // 排除分享详情(公开访问)
-                    "/api/battle/**",  // 排除对战相关API
+                    "/user/register",  // 排除注册
+                    "/user/login",     // 排除登录
+                    "/user/validate-token", // 排除token验证
+                    "/share/plaza",  // 排除分享广场(公开访问)
+                    "/share/detail/**",  // 排除分享详情(公开访问)
+                    "/battle/**",  // 排除对战相关API
                     "/question-bank/share/**"  // 排除分享相关API
                 );
     }
@@ -34,7 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:3000", "http://localhost:3001", "http://localhost:3002")
+                .allowedOriginPatterns("http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "https://nohavebug.gaodun.com")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
