@@ -47,7 +47,14 @@ export default defineConfig({
       '/battle': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => `/api${path}`
+        rewrite: (path) => `/api${path}`,
+        // 排除前端路由路径
+        bypass: (req, res, options) => {
+          // 如果请求路径以/battle-room开头，不进行代理，留给前端路由处理
+          if (req.url?.startsWith('/battle-room')) {
+            return req.url;
+          }
+        }
       },
       '/study-record': {
         target: 'http://localhost:8080',
