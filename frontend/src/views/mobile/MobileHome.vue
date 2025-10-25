@@ -14,6 +14,14 @@
           大厅
         </el-button>
         <el-button 
+          type="warning" 
+          size="small" 
+          @click="$router.push('/battle-room')"
+          class="battle-pc-button"
+        >
+          对战大厅(PC)
+        </el-button>
+        <el-button 
           type="danger" 
           size="small" 
           @click="handleLogout"
