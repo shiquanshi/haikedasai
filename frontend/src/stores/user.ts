@@ -20,6 +20,8 @@ export const useUserStore = defineStore('user', () => {
   const token = ref<string>(storedToken)
   const userInfo = ref<UserInfo | null>(null)
   const isLoggedIn = computed(() => !!token.value)
+  // 存储用户当前所在房间ID
+  const currentRoomId = ref<string | null>(null)
   
   // 监听token变化
   watchEffect(() => {
@@ -98,10 +100,24 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // 设置当前房间ID
+  const setCurrentRoomId = (roomId: string | null) => {
+    currentRoomId.value = roomId
+    console.log('🏠 用户房间状态更新:', { roomId: roomId || '无' })
+  }
+
+  // 清除当前房间ID
+  const clearCurrentRoomId = () => {
+    currentRoomId.value = null
+  }
+
   return {
     token,
     userInfo,
     isLoggedIn,
+    currentRoomId,
+    setCurrentRoomId,
+    clearCurrentRoomId,
     login,
     register,
     logout,

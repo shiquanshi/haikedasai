@@ -275,6 +275,9 @@ const loadRoomInfo = async () => {
       currentRoom.value = response.room
       console.log('房间信息已设置:', currentRoom.value)
       
+      // 设置当前房间ID到用户store
+      userStore.currentRoomId = roomId
+      
       // 检查房间状态并给出相应提示
       const status = response.room.status
       if (status === 'FINISHED') {
@@ -635,6 +638,8 @@ const leaveRoom = () => {
   if (!stompClient.value) {
     console.error('WebSocket未连接')
     ElMessage.error('WebSocket未连接，无法离开房间')
+    // 清除当前房间ID
+    userStore.currentRoomId = null
     // 直接跳转回大厅
     router.push('/battle-room')
     return
@@ -643,6 +648,8 @@ const leaveRoom = () => {
   if (!currentRoom.value) {
     console.error('房间信息不存在')
     ElMessage.error('房间信息不存在')
+    // 清除当前房间ID
+    userStore.currentRoomId = null
     router.push('/battle-room')
     return
   }
@@ -681,6 +688,9 @@ const leaveRoom = () => {
       scoreSubscription.value.unsubscribe()
       scoreSubscription.value = null
     }
+    
+    // 清除当前房间ID
+    userStore.currentRoomId = null
     
     // 跳转回大厅（不断开WebSocket，让BattleRoom页面复用）
     console.log('跳转回房间列表')

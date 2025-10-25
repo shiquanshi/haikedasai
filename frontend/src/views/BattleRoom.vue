@@ -5,6 +5,17 @@
       <div class="lobby-header">
         <h1>对战大厅</h1>
         <div class="header-buttons">
+          <div class="room-id-input-container">
+            <el-input 
+              v-model="roomIdToJoin" 
+              placeholder="输入房间号"
+              clearable
+              style="width: 200px; margin-right: 10px;"
+            />
+            <el-button type="primary" @click="joinRoomById">
+              进入房间
+            </el-button>
+          </div>
           <el-button @click="$router.push('/')">
             <el-icon><HomeFilled /></el-icon>
             返回首页
@@ -80,16 +91,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, HomeFilled } from '@element-plus/icons-vue'
 import SockJS from 'sockjs-client'
-import { Client } from '@stomp/stompjs'
+import { Stomp } from '@stomp/stompjs'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 
 // 房间列表
 const rooms = ref<any[]>([])
+const roomIdToJoin = ref('')
 
 // 当前用户信息（从userStore获取）
 const userStore = useUserStore()
@@ -251,6 +263,61 @@ const createRoom = async () => {
   }
 }
 
+// 通过房间号加入房间
+const joinRoomById = async () => {
+  if (!roomIdToJoin.value.trim()) {
+    ElMessage.warning('请输入房间号')
+    return
+  }
+  
+  const roomId = roomIdToJoin.value.trim()
+  
+  try {
+    // 检查用户是否已有房间
+    if (userStore.currentRoomId) {
+      // 如果用户已有房间并且和要加入的房间相同，直接跳转
+      if (userStore.currentRoomId === roomId) {
+        ElMessage.info('您已在该房间中，正在跳转...')
+        router.push(`/battle-room/${roomId}`)
+        // 清空输入框
+        roomIdToJoin.value = ''
+        return
+      }
+      
+      // 如果用户已有房间但想加入新房间，先离开老房间
+      try {
+        console.log('用户已有房间，尝试离开老房间:', userStore.currentRoomId)
+        if (stompClient && stompClient.connected) {
+          stompClient.publish({
+            destination: '/app/battle/leaveRoom',
+            body: JSON.stringify({
+              roomId: userStore.currentRoomId,
+              userId: userId.value.toString()
+            })
+          })
+        }
+        // 清除用户当前房间ID
+        userStore.currentRoomId = null
+        ElMessage.success('已离开原有房间')
+      } catch (error) {
+        console.error('离开老房间失败:', error)
+        // 即使离开失败，也继续尝试加入新房间
+      }
+    }
+    
+    // 尝试直接跳转到房间详情页
+    console.log('尝试直接进入房间:', roomId)
+    router.push(`/battle-room/${roomId}`)
+    
+    // 清空输入框
+    roomIdToJoin.value = ''
+  } catch (error) {
+    console.error('直接跳转失败，使用常规加入流程:', error)
+    // 如果直接跳转失败，回退到常规加入流程
+    await joinRoom(roomId)
+  }
+}
+
 // 加入房间
 const joinRoom = async (roomId: string) => {
   if (!stompClient) {
@@ -269,6 +336,35 @@ const joinRoom = async (roomId: string) => {
     return
   }
   joining.value = true
+
+  // 检查用户是否已有房间
+  if (userStore.currentRoomId) {
+    // 如果用户已有房间并且和要加入的房间相同，直接跳转
+    if (userStore.currentRoomId === roomId) {
+      joining.value = false
+      ElMessage.info('您已在该房间中，正在跳转...')
+      router.push(`/battle-room/${roomId}`)
+      return
+    }
+    
+    // 如果用户已有房间但想加入新房间，先离开老房间
+    try {
+      console.log('用户已有房间，尝试离开老房间:', userStore.currentRoomId)
+      stompClient.publish({
+        destination: '/app/battle/leaveRoom',
+        body: JSON.stringify({
+          roomId: userStore.currentRoomId,
+          userId: userId.value.toString()
+        })
+      })
+      // 清除用户当前房间ID
+      userStore.currentRoomId = null
+      ElMessage.success('已离开原有房间')
+    } catch (error) {
+      console.error('离开老房间失败:', error)
+      // 即使离开失败，也继续尝试加入新房间
+    }
+  }
 
   // 先订阅加入结果 - 注意：订阅路径要与后端发送路径对应
   // 后端使用 messagingTemplate.convertAndSendToUser(userId, "/queue/join", result)
