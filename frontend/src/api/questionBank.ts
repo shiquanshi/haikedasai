@@ -20,8 +20,8 @@ export const questionBankApi = {
     onThinking?: (thinkingContent: string) => void
   ) {
     const token = localStorage.getItem('token')?.trim()
-    // 使用相对路径,自动适配当前域名和协议
-    const url = `/question-bank/generate-stream?` +
+    // 使用/api前缀,与axios请求保持一致
+    const url = `/api/question-bank/generate-stream?` +
       `topic=${encodeURIComponent(params.topic)}&` +
       `scenario=${encodeURIComponent(params.scenario || '')}&` +
       `cardCount=${params.cardCount}&` +
