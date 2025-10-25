@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路由测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>路由访问测试</h1>
+    <button onclick="testRoute('/battle-room')">测试 /battle-room 路由</button>
+    <button onclick="testRoute('/')">测试 首页 路由</button>
+    <div id="result" class="result"></div>
+
+    <script>
+        async function testRoute(route) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `正在测试 ${route}...`;
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await axios.get(`http://localhost:3001${route}`);
+                resultDiv.innerHTML = `
+                    <h3>测试成功!</h3>
+                    <p>状态码: ${response.status}</p>
+                    <p>响应长度: ${response.data.length} 字符</p>
+                    <p>响应预览: ${response.data.substring(0, 200)}...</p>
+                `;
+                resultDiv.className = 'result success';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>测试失败!</h3>
+                    <p>错误信息: ${error.message}</p>
+                    ${error.response ? `<p>状态码: ${error.response.status}</p>` : ''}
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html>
