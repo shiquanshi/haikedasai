@@ -48,6 +48,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => `/api${path}`
       },
+      '/battle-room': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`
+      },
       '/study-record': {
         target: 'http://localhost:8080',
         changeOrigin: true,

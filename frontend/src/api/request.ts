@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-  const request = axios.create({
+const request = axios.create({
   baseURL: '/api',
   timeout: 60000, // 增加到60秒,适应AI生成等耗时操作
   headers: {
