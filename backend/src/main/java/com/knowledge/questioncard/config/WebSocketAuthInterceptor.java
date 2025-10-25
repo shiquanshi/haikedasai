@@ -51,9 +51,15 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             }
         } else if (accessor != null && accessor.getUser() != null) {
             // 对于非CONNECT命令，从session attributes中获取userId并设置到消息header
-            Object userId = accessor.getSessionAttributes().get("userId");
-            if (userId != null) {
-                accessor.setHeader("userId", userId);
+            if (accessor.getSessionAttributes() != null) {
+                Object userId = accessor.getSessionAttributes().get("userId");
+                if (userId != null) {
+                    try {
+                        accessor.setHeader("userId", userId);
+                    } catch (Exception e) {
+                        log.warn("设置WebSocket消息头失败", e);
+                    }
+                }
             }
         }
         
