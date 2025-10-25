@@ -4,7 +4,7 @@
     <div v-if="currentView === 'room'" class="room-view">
       <div class="room-header">
         <div class="room-title">
-          <h2>{{ currentRoom?.roomName }}</h2>
+          <h2>{{ currentRoom?.roomName }} <span class="room-id-text">(房间码: {{ currentRoom?.roomId }})</span></h2>
           <el-tag>{{ currentRoom?.status }}</el-tag>
         </div>
         <el-button @click="leaveRoom">离开房间</el-button>
@@ -232,8 +232,8 @@ const connectWebSocket = () => {
     return
   }
 
-  // 动态获取WebSocket URL，生产环境使用wss协议
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  // SockJS需要使用HTTP/HTTPS协议，内部会自动转换为WebSocket连接
+  const protocol = window.location.protocol
   const host = window.location.host
   const wsUrl = `${protocol}//${host}/api/ws`
   const socket = new SockJS(wsUrl)
@@ -276,7 +276,7 @@ const loadRoomInfo = async () => {
       console.log('房间信息已设置:', currentRoom.value)
       
       // 设置当前房间ID到用户store
-      userStore.currentRoomId = roomId
+      userStore.setCurrentRoomId(roomId)
       
       // 检查房间状态并给出相应提示
       const status = response.room.status
@@ -639,7 +639,7 @@ const leaveRoom = () => {
     console.error('WebSocket未连接')
     ElMessage.error('WebSocket未连接，无法离开房间')
     // 清除当前房间ID
-    userStore.currentRoomId = null
+    userStore.setCurrentRoomId(null)
     // 直接跳转回大厅
     router.push('/battle-room')
     return
@@ -649,7 +649,7 @@ const leaveRoom = () => {
     console.error('房间信息不存在')
     ElMessage.error('房间信息不存在')
     // 清除当前房间ID
-    userStore.currentRoomId = null
+    userStore.setCurrentRoomId(null)
     router.push('/battle-room')
     return
   }
@@ -690,7 +690,7 @@ const leaveRoom = () => {
     }
     
     // 清除当前房间ID
-    userStore.currentRoomId = null
+    userStore.setCurrentRoomId(null)
     
     // 跳转回大厅（不断开WebSocket，让BattleRoom页面复用）
     console.log('跳转回房间列表')
@@ -870,6 +870,13 @@ onUnmounted(() => {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 2px solid #f0f0f0;
+}
+
+.room-id-text {
+  font-size: 16px;
+  color: #409eff;
+  font-weight: 400;
+  margin-left: 12px;
 }
 
 .room-title {

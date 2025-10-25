@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    historyApiFallback: true,
     proxy: {
       // 处理已有/api前缀的请求
       '/api': {
@@ -44,11 +45,6 @@ export default defineConfig({
         rewrite: (path) => `/api${path}`
       },
       '/battle': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`
-      },
-      '/battle-room': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => `/api${path}`

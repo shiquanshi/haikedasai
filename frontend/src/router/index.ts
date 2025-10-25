@@ -45,15 +45,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/battle-room',
-      name: 'BattleRoom',
-      component: BattleRoom,
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/battle-room/:roomId',
       name: 'RoomDetail',
       component: () => import('../views/RoomDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/battle-room',
+      name: 'BattleRoom',
+      component: BattleRoom,
       meta: { requiresAuth: true }
     },
     // 手机端路由

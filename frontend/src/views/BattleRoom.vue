@@ -41,6 +41,9 @@
                 <span>玩家: {{ room.currentPlayers }}/{{ room.maxPlayers }}</span>
                 <span>轮次: {{ room.totalRounds }}</span>
               </div>
+              <div class="room-id">
+                <span>房间码: {{ room.roomId }}</span>
+              </div>
             </div>
             <el-button 
               type="primary" 
@@ -94,7 +97,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, HomeFilled } from '@element-plus/icons-vue'
 import SockJS from 'sockjs-client'
-import { Stomp } from '@stomp/stompjs'
+import { Client } from '@stomp/stompjs'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
@@ -133,8 +136,8 @@ const connectWebSocket = () => {
     return
   }
   
-  // 动态获取WebSocket URL，生产环境使用wss协议
-  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  // SockJS需要使用HTTP/HTTPS协议，内部会自动转换为WebSocket连接
+  const protocol = window.location.protocol
   const host = window.location.host
   const wsUrl = `${protocol}//${host}/api/ws-battle`
   const socket = new SockJS(wsUrl)
@@ -297,7 +300,7 @@ const joinRoomById = async () => {
           })
         }
         // 清除用户当前房间ID
-        userStore.currentRoomId = null
+        userStore.setCurrentRoomId(null)
         ElMessage.success('已离开原有房间')
       } catch (error) {
         console.error('离开老房间失败:', error)
@@ -305,16 +308,14 @@ const joinRoomById = async () => {
       }
     }
     
-    // 尝试直接跳转到房间详情页
-    console.log('尝试直接进入房间:', roomId)
-    router.push(`/battle-room/${roomId}`)
+    // 使用统一的joinRoom函数来处理加入房间逻辑，确保错误处理一致
+    await joinRoom(roomId)
     
     // 清空输入框
     roomIdToJoin.value = ''
   } catch (error) {
-    console.error('直接跳转失败，使用常规加入流程:', error)
-    // 如果直接跳转失败，回退到常规加入流程
-    await joinRoom(roomId)
+    console.error('加入房间失败:', error)
+    ElMessage.error('加入房间失败，请稍后重试')
   }
 }
 
@@ -358,7 +359,7 @@ const joinRoom = async (roomId: string) => {
         })
       })
       // 清除用户当前房间ID
-      userStore.currentRoomId = null
+      userStore.setCurrentRoomId(null)
       ElMessage.success('已离开原有房间')
     } catch (error) {
       console.error('离开老房间失败:', error)
@@ -375,10 +376,23 @@ const joinRoom = async (roomId: string) => {
     console.log('收到加入房间响应:', result)
     if (result.success) {
       ElMessage.success('加入房间成功')
-      // 跳转到房间详情页面
+      // 更新当前房间ID并跳转到房间详情页面
+      userStore.setCurrentRoomId(roomId)
       router.push(`/battle-room/${roomId}`)
     } else {
-      ElMessage.error(result.message || '加入失败')
+      // 改进"已在房间中"错误的处理逻辑
+      if (result.message === '已在房间中') {
+        ElMessage.info('您已在房间中，正在跳转...')
+        // 优先使用传入的roomId进行跳转，如果currentRoomId存在则使用currentRoomId
+        if (userStore.currentRoomId) {
+          router.push(`/battle-room/${userStore.currentRoomId}`)
+        } else {
+          // 即使currentRoomId为null，也尝试使用传入的roomId跳转
+          router.push(`/battle-room/${roomId}`)
+        }
+      } else {
+        ElMessage.error(result.message || '加入失败')
+      }
     }
     tempSub.unsubscribe()
   })
@@ -515,6 +529,12 @@ onActivated(() => {
   gap: 16px;
   font-size: 14px;
   color: #666;
+}
+
+.room-id {
+  font-size: 14px;
+  color: #409eff; /* 使用蓝色突出显示房间码 */
+  font-weight: 500;
 }
 
 /* 响应式设计 */
