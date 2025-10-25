@@ -32,6 +32,7 @@ public class BattleRoomService {
         room.setTopic(request.getTopic());
         room.setScenario(request.getScenario());
         room.setDifficulty(request.getDifficulty());
+        room.setTimeLimit(request.getTimeLimit() != null ? request.getTimeLimit() : 60); // 如果未设置则使用默认值60秒
         room.setCreateTime(LocalDateTime.now());
         
         // 房主自动加入房间

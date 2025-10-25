@@ -34,4 +34,8 @@ public class CreateRoomRequest {
     @NotBlank(message = "难度等级不能为空")
     @Pattern(regexp = "^(easy|medium|hard)$", message = "难度只能是easy、medium或hard")
     private String difficulty;
+    
+    @Min(value = 10, message = "答题时间不能少于10秒")
+    @Max(value = 300, message = "答题时间不能超过300秒")
+    private Integer timeLimit;
 }

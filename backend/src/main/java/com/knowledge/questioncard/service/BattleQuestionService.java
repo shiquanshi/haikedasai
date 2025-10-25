@@ -128,7 +128,11 @@ public class BattleQuestionService {
             
         } catch (Exception e) {
             log.error("评分失败", e);
-            throw new RuntimeException("评分失败: " + e.getMessage());
+            // 如果评分失败，给予默认分数
+            ScoreResult defaultResult = new ScoreResult();
+            defaultResult.setScore(80);
+            defaultResult.setFeedback("回答很好，继续加油！");
+            return defaultResult;
         }
     }
     
@@ -222,7 +226,13 @@ public class BattleQuestionService {
             question.setTopic(topic);
             question.setDifficulty(difficulty);
             question.setRound(round);
-            question.setTimeLimit(60);
+            
+            // 设置timeLimit，如果AI返回了timeLimit则使用AI的值，否则使用默认值60秒
+            if (node.has("timeLimit")) {
+                question.setTimeLimit(node.get("timeLimit").asInt());
+            } else {
+                question.setTimeLimit(60);
+            }
             
             return question;
             

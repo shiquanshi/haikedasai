@@ -20,6 +20,7 @@ public class BattleRoom {
     private String topic; // 答题主题
     private String scenario; // 学习场景
     private String difficulty; // 难度等级
+    private Integer timeLimit; // 答题时间限制（秒）
     private LocalDateTime createTime; // 创建时间
     
     // 使用线程安全的Map存储玩家
@@ -35,6 +36,7 @@ public class BattleRoom {
         this.players = new ConcurrentHashMap<>();
         this.status = RoomStatus.WAITING;
         this.currentRound = 0;
+        this.timeLimit = 60; // 默认答题时间60秒
     }
     
     /**
