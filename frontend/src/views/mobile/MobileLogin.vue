@@ -78,9 +78,9 @@ const loading = ref(false)
 const formRef = ref<FormInstance>()
 
 const form = reactive({
-  username: '',
+  username: '1234',
   email: '',
-  password: '',
+  password: '123456',
   confirmPassword: ''
 })
 
